@@ -63,6 +63,20 @@ fn changing_the_password_replaces_the_key() {
 }
 
 #[test]
+fn a_kept_key_reopens_only_its_own_file() {
+    let vault = sample();
+    let (_, key) = vault::unlock(&vault::seal(&vault, "pass one", FAST).unwrap(), "pass one").unwrap();
+    let kept = vault::SealingKey::from_bytes(&key.to_bytes()).unwrap();
+    let resealed = vault::seal_with(&vault, &key).unwrap();
+    assert_eq!(vault::unlock_with_key(&resealed, &kept).unwrap(), vault);
+
+    // Another password means another salt: the kept key is refused.
+    let other = vault::seal(&vault, "pass two", FAST).unwrap();
+    assert!(matches!(vault::unlock_with_key(&other, &kept), Err(Error::Decrypt)));
+    assert!(vault::SealingKey::from_bytes(&[0; 12]).is_err());
+}
+
+#[test]
 fn rejects_wrong_password_and_tampering() {
     let bytes = vault::seal(&sample(), "correct horse", FAST).unwrap();
     assert!(matches!(vault::open(&bytes, "wrong"), Err(Error::Decrypt)));

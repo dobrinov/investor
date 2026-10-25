@@ -71,3 +71,43 @@ export function recall(key: string): string | null {
     return null
   }
 }
+
+// The unlocked key, kept for this tab only so a refresh does not ask for the
+// password again. Closing the tab, locking or the idle lock removes it.
+const SESSION_KEY = 'investor.sessionKey'
+
+/** Whether a refresh may reopen the file without the password. On unless turned off. */
+export function staysUnlocked(): boolean {
+  return recall('stayUnlocked') !== '0'
+}
+
+export function setStaysUnlocked(on: boolean): void {
+  remember('stayUnlocked', on ? '1' : '0')
+  if (!on) forgetSessionKey()
+}
+
+export function keepSessionKey(key: Uint8Array): void {
+  if (!staysUnlocked()) return
+  try {
+    sessionStorage.setItem(SESSION_KEY, btoa(String.fromCharCode(...key)))
+  } catch {
+    // Storage blocked: the password is asked for after a refresh.
+  }
+}
+
+export function sessionKey(): Uint8Array | null {
+  try {
+    const text = sessionStorage.getItem(SESSION_KEY)
+    return text ? Uint8Array.from(atob(text), (c) => c.charCodeAt(0)) : null
+  } catch {
+    return null
+  }
+}
+
+export function forgetSessionKey(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY)
+  } catch {
+    // Nothing kept.
+  }
+}

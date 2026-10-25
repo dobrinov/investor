@@ -4,12 +4,18 @@
   import OpenScreen from './screens/OpenScreen.svelte'
   import Shell from './screens/Shell.svelte'
 
+  // A refresh reopens the file without the password when this tab kept the key.
+  let resuming = $state(true)
+  void app.resume().finally(() => (resuming = false))
+
   $effect(() => {
     document.documentElement.lang = i18n.lang
   })
 </script>
 
-{#if app.book && app.snapshot}
+{#if resuming}
+  <!-- Nothing to show while the browser copy is reopened. -->
+{:else if app.book && app.snapshot}
   <Shell />
 {:else}
   <OpenScreen />

@@ -284,6 +284,17 @@ export class Book {
     return new Book(Session.unlock(bytes, password))
   }
 
+  /** Reopens a draft with a key kept from `exportKey`; throws if it does not fit. */
+  static async resume(bytes: Uint8Array, key: Uint8Array): Promise<Book> {
+    await loadCore()
+    return new Book(Session.resume(bytes, key))
+  }
+
+  /** Opens the file without the password: handle like the password itself. */
+  exportKey(): Uint8Array {
+    return this.session.exportKey()
+  }
+
   /** Encrypted file contents. */
   seal(): Uint8Array {
     return this.session.seal()

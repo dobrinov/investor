@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { keepSessionKey, setStaysUnlocked, staysUnlocked } from '../lib/storage'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -31,6 +32,13 @@
       busy = false
     }
   }
+
+  let stay = $state(staysUnlocked())
+  function toggleStay(on: boolean): void {
+    stay = on
+    setStaysUnlocked(on)
+    if (on && app.book) keepSessionKey(app.book.exportKey())
+  }
 </script>
 
 <header>
@@ -57,6 +65,15 @@
   {/if}
 </section>
 
+<section class="card" aria-labelledby="stay-title">
+  <h2 id="stay-title">{t('settings.stayTitle')}</h2>
+  <label class="choice">
+    <input type="checkbox" checked={stay} onchange={(e) => toggleStay(e.currentTarget.checked)} />
+    {t('settings.stay')}
+  </label>
+  <p class="muted small">{t('settings.stayText')}</p>
+</section>
+
 <section class="card" aria-labelledby="file-title">
   <h2 id="file-title">{t('settings.fileTitle')}</h2>
   <dl>
@@ -75,6 +92,23 @@
   }
   h1 {
     font-size: 28px;
+  }
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    margin: 8px 0;
+  }
+  .choice input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+  .small {
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
   }
   h2 {
     font-size: 18px;

@@ -365,6 +365,9 @@ export const en = {
 
   'nav.settings': 'Settings',
   'settings.subtitle': 'Your file and how it is protected.',
+  'settings.stayTitle': 'Staying unlocked',
+  'settings.stay': 'Keep the file open when this tab reloads',
+  'settings.stayText': 'The key that opens your file is kept in this browser tab only, so a refresh does not ask for the password. Closing the tab, pressing Lock, or 15 minutes without activity removes it. Turn this off on a shared computer.',
   'settings.passwordTitle': 'Change password',
   'settings.passwordText': 'The file is re-encrypted with the new password. There is still no way to recover a forgotten one.',
   'settings.current': 'Current password',

@@ -75,6 +75,8 @@ impl Default for KdfParams {
     }
 }
 
+const KEY_BYTES: usize = 32 + 16 + 12;
+
 /// A key derived from the password. Kept in memory while a file is open so
 /// that saving does not repeat the deliberately slow key derivation.
 #[derive(Clone)]
@@ -96,6 +98,30 @@ impl SealingKey {
         let mut salt = [0u8; 16];
         OsRng.fill_bytes(&mut salt);
         Ok(Self { key: derive_key(password, &salt, params)?, salt, params })
+    }
+
+    /// The key with its salt and settings, so an open file can be resumed
+    /// without the password. Treat these bytes like the password itself.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(KEY_BYTES);
+        out.extend_from_slice(&self.key);
+        out.extend_from_slice(&self.salt);
+        for value in [self.params.memory_kib, self.params.iterations, self.params.lanes] {
+            out.extend_from_slice(&value.to_le_bytes());
+        }
+        out
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != KEY_BYTES {
+            return Err(Error::Decrypt);
+        }
+        let u32_at = |at: usize| u32::from_le_bytes(bytes[at..at + 4].try_into().expect("4 bytes"));
+        Ok(Self {
+            key: bytes[..32].try_into().expect("32 bytes"),
+            salt: bytes[32..48].try_into().expect("16 bytes"),
+            params: KdfParams { memory_kib: u32_at(48), iterations: u32_at(52), lanes: u32_at(56) },
+        })
     }
 
     /// Whether `password` is the one this key was derived from.
@@ -138,6 +164,22 @@ pub fn open(bytes: &[u8], password: &str) -> Result<Vault> {
 
 /// Decrypts a file and returns the key for saving it again.
 pub fn unlock(bytes: &[u8], password: &str) -> Result<(Vault, SealingKey)> {
+    let (params, salt) = read_header(bytes)?;
+    let key = SealingKey { key: derive_key(password, &salt, params)?, salt, params };
+    Ok((decrypt(bytes, &key)?, key))
+}
+
+/// Decrypts a file with a key kept from an earlier unlock. Fails when the
+/// file was sealed with another password.
+pub fn unlock_with_key(bytes: &[u8], key: &SealingKey) -> Result<Vault> {
+    let (params, salt) = read_header(bytes)?;
+    if params != key.params || salt != key.salt {
+        return Err(Error::Decrypt);
+    }
+    decrypt(bytes, key)
+}
+
+fn read_header(bytes: &[u8]) -> Result<(KdfParams, [u8; 16])> {
     if bytes.len() < HEADER_LEN || &bytes[..7] != MAGIC {
         return Err(Error::NotInvestFile);
     }
@@ -150,16 +192,17 @@ pub fn unlock(bytes: &[u8], password: &str) -> Result<(Vault, SealingKey)> {
     if params.memory_kib > MAX_MEMORY_KIB || params.iterations > MAX_ITERATIONS || params.lanes > 16 {
         return Err(Error::Decrypt);
     }
-    let (header, sealed) = bytes.split_at(HEADER_LEN);
-    let salt: [u8; 16] = header[21..37].try_into().expect("16 bytes");
-    let nonce = &header[37..49];
+    Ok((params, bytes[21..37].try_into().expect("16 bytes")))
+}
 
-    let key = SealingKey { key: derive_key(password, &salt, params)?, salt, params };
+fn decrypt(bytes: &[u8], key: &SealingKey) -> Result<Vault> {
+    let (header, sealed) = bytes.split_at(HEADER_LEN);
+    let nonce = &header[37..49];
     let cipher = Aes256Gcm::new_from_slice(&key.key).map_err(|e| Error::Crypto(e.to_string()))?;
     let plain = cipher
         .decrypt(Nonce::from_slice(nonce), Payload { msg: sealed, aad: header })
         .map_err(|_| Error::Decrypt)?;
-    Ok((serde_json::from_slice(&plain)?, key))
+    Ok(serde_json::from_slice(&plain)?)
 }
 
 fn derive_key(password: &str, salt: &[u8], params: KdfParams) -> Result<[u8; 32]> {

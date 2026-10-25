@@ -68,6 +68,11 @@
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   })
+
+  // The current screen goes in the address, so a refresh comes back to it.
+  $effect(() => {
+    history.replaceState(null, '', `#${app.view}`)
+  })
 </script>
 
 <div class="shell">

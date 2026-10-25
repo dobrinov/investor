@@ -76,6 +76,19 @@ impl Session {
         Ok(Session { vault, key })
     }
 
+    /// Reopens bytes sealed by this session's key, kept from an earlier unlock.
+    pub fn resume(bytes: &[u8], key: &[u8]) -> Result<Session, JsError> {
+        let key = SealingKey::from_bytes(key).map_err(js_error)?;
+        let vault = vault::unlock_with_key(bytes, &key).map_err(js_error)?;
+        Ok(Session { vault, key })
+    }
+
+    /// The key, so a refresh can reopen the file without the password.
+    #[wasm_bindgen(js_name = exportKey)]
+    pub fn export_key(&self) -> Vec<u8> {
+        self.key.to_bytes()
+    }
+
     /// The encrypted file contents, ready to save.
     pub fn seal(&self) -> Result<Vec<u8>, JsError> {
         vault::seal_with(&self.vault, &self.key).map_err(js_error)

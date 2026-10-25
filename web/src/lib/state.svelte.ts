@@ -1,10 +1,12 @@
-import type { Book, Plan, Snapshot } from './core'
+import type { Plan, Snapshot } from './core'
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
-import { saveDraft } from './storage'
+import { Book } from './core'
+import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
 
-export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax' | 'settings' | 'guide'
+const VIEWS = ['overview', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
+export type View = (typeof VIEWS)[number]
 
 class AppState {
   book = $state.raw<Book | null>(null)
@@ -27,6 +29,25 @@ class AppState {
     this.view = 'overview'
     this.refresh()
     useLanguage(this.snapshot!.settings.language)
+    keepSessionKey(book.exportKey())
+  }
+
+  /** Reopens the browser copy after a refresh, when this tab kept the key. */
+  async resume(): Promise<boolean> {
+    const key = sessionKey()
+    if (!key) return false
+    const draft = await loadDraft()
+    try {
+      if (!draft) throw new Error('no draft')
+      this.open(await Book.resume(draft.bytes, key), draft.fileName, { changes: draft.changes, handle: draft.handle })
+      // Stay on the screen the address names.
+      const view = location.hash.slice(1) as View
+      if (VIEWS.includes(view)) this.view = view
+      return true
+    } catch {
+      forgetSessionKey()
+      return false
+    }
   }
 
   openGuide(section: SectionId): void {
@@ -98,6 +119,7 @@ class AppState {
   /** The browser copy is re-encrypted with the new password straight away. */
   async changePassword(current: string, next: string): Promise<void> {
     this.book?.changePassword(current, next)
+    if (this.book) keepSessionKey(this.book.exportKey())
     await this.changed()
   }
 
@@ -110,6 +132,7 @@ class AppState {
   }
 
   lock(): void {
+    forgetSessionKey()
     this.book?.close()
     this.book = null
     this.snapshot = null
