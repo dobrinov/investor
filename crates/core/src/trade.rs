@@ -96,6 +96,10 @@ pub struct TradePreview {
     pub invested_after: Decimal,
     pub cash_before: Decimal,
     pub cash_after: Decimal,
+    /// Money to deposit at the broker for this trade, in the base currency:
+    /// what it spends beyond the cash already there. A plan does not need the
+    /// money today, so the projection counts it as deposited.
+    pub deposit: Decimal,
 }
 
 impl TradeInput {
@@ -205,7 +209,15 @@ pub fn preview(ledger: &Ledger, prices: &PriceBook, input: &TradeInput) -> Resul
     };
     let mut currencies: Vec<Currency> = entry.postings.iter().filter(|p| p.account.starts_with("Assets:Cash:")).map(|p| p.amount.currency.clone()).collect();
     currencies.dedup();
-    let cash = currencies.into_iter().map(|c| CashChange { before: cash_of(ledger, &c), after: cash_of(&after, &c), currency: c }).collect();
+    let cash: Vec<CashChange> = currencies.into_iter().map(|c| CashChange { before: cash_of(ledger, &c), after: cash_of(&after, &c), currency: c }).collect();
+    let deposit = cash
+        .iter()
+        .map(|c| {
+            let short = (-c.after).max(Decimal::ZERO) - (-c.before).max(Decimal::ZERO);
+            let rate = if c.currency == ledger.base_currency { Decimal::ONE } else { rate };
+            (short.max(Decimal::ZERO) * rate).round_dp(2)
+        })
+        .sum();
 
     let by_symbol = |l: &Ledger, p: &PriceBook| {
         let mut out = std::collections::BTreeMap::<String, Decimal>::new();
@@ -237,6 +249,7 @@ pub fn preview(ledger: &Ledger, prices: &PriceBook, input: &TradeInput) -> Resul
         invested_after: after_w.values().sum(),
         cash_before: total_cash(ledger),
         cash_after: total_cash(&after),
+        deposit,
         holdings,
         entry,
     })
@@ -249,9 +262,10 @@ pub struct TradeOutlook {
     pub preview: TradePreview,
     /// For a sale, when there is a tax pack for its year.
     pub tax: Option<TradeTax>,
-    /// Where all your money could be at the end of the projection, without and with the trade.
-    pub before: Band,
-    pub after: Band,
+    /// Where all your money could be each year of the projection, without and
+    /// with the trade. Both count the deposit, so they differ by the trade alone.
+    pub before: Vec<Band>,
+    pub after: Vec<Band>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -277,11 +291,12 @@ pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeIn
         }
         _ => None,
     };
-    let end = |cash: Decimal, invested: Decimal| {
+    let path = |cash: Decimal, invested: Decimal| {
         let input = WhatIfInput { cash: to_f64(cash), invested: to_f64(invested), retirement: None, ..settings.clone() };
-        whatif::what_if(&input, plan).plan.bands.pop().expect("year zero at least")
+        whatif::what_if(&input, plan).plan.bands
     };
-    let (before, after) = (end(preview.cash_before, preview.invested_before), end(preview.cash_after, preview.invested_after));
+    let deposit = preview.deposit;
+    let (before, after) = (path(preview.cash_before + deposit, preview.invested_before), path(preview.cash_after + deposit, preview.invested_after));
     Ok(TradeOutlook { preview, tax, before, after })
 }
 

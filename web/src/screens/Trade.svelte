@@ -2,11 +2,12 @@
   // Plan a trade: fill in a purchase or sale, see everything it changes —
   // cash, fees, gain and tax, holdings, the emergency fund, the long run and
   // the journal entry — and only then record it.
+  import Chart from '../components/Chart.svelte'
   import Help from '../components/Help.svelte'
   import type { Entry, FeeKind, TradeInput, TradeOutlook } from '../lib/core'
   import { packs, brokers } from '../lib/configs'
   import { date as formatDate, money, units as formatUnits, whole } from '../lib/format'
-  import { t } from '../lib/i18n.svelte'
+  import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
   const s = $derived(app.snapshot!)
@@ -56,7 +57,16 @@
     if (currency !== base && !form.fx_rate && fxKnown) form.fx_rate = String(Number(fxKnown))
   })
 
-  const decimal = (v: string) => v.trim().replace(',', '.')
+  // Accepts "168,81", "168.81", "23,882.00", "23.882,00" and "23 882,00": the
+  // last separator is the decimal one when both kinds appear, and repeated
+  // ones are grouping.
+  const decimal = (v: string) => {
+    const s = v.trim().replace(/[\s ']/g, '')
+    const comma = s.lastIndexOf(','), dot = s.lastIndexOf('.')
+    if (comma >= 0 && dot >= 0) return comma > dot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '')
+    const sep = comma >= 0 ? ',' : '.'
+    return s.split(sep).length > 2 ? s.split(sep).join('') : s.replace(',', '.')
+  }
 
   // Units from an amount: a purchase never spends more than the amount, a
   // sale raises at least it. Fractions go to six decimals.
@@ -107,7 +117,13 @@
 
   const percent = (v: number) => `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%`
   const feeShare = $derived(o && Number(o.value) > 0 ? Number(o.fees) / Number(o.value) : 0)
-  const short = $derived(o?.cash.some((c) => Number(c.after) < 0) ?? false)
+  const deposit = $derived(o ? Number(o.deposit) : 0)
+  // Cash after the trade once the deposit is in.
+  const cashAfter = $derived(o ? Number(o.cash_after) + deposit : 0)
+  const endBefore = $derived(o?.before.at(-1))
+  const endAfter = $derived(o?.after.at(-1))
+  const thisYear = now.getFullYear()
+  const compact = (v: number) => new Intl.NumberFormat(i18n.lang, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
 
   // The largest share of the investments, before and after the trade.
   function largest(side: 'before' | 'after'): { symbol: string; share: number } | undefined {
@@ -280,9 +296,9 @@
       <section class="card">
         <h3>{t('trade.cashTitle', { broker })}</h3>
         {#each o.cash as c (c.currency)}
-          <p class="change num"><span>{money(c.before, c.currency)}</span> → <strong class:bad={Number(c.after) < 0}>{money(c.after, c.currency)}</strong></p>
+          <p class="change num"><span>{money(c.before, c.currency)}</span> → <strong>{money(Math.max(0, Number(c.after)), c.currency)}</strong></p>
         {/each}
-        {#if short}<p class="notice">{t('trade.noCash')}</p>{/if}
+        {#if deposit > 0}<p class="muted small">{t('trade.deposit', { deposit: money(o.deposit, base) })}</p>{/if}
       </section>
 
       <section class="card">
@@ -330,21 +346,39 @@
       {#if bufferTarget > 0}
         <section class="card">
           <h3>{t('trade.bufferTitle')}</h3>
-          {#if Number(o.cash_after) < bufferTarget}
-            <p class="notice">{t('trade.bufferLow', { cash: whole(Number(o.cash_after), base), target: whole(bufferTarget, base) })}</p>
+          {#if cashAfter < bufferTarget}
+            <p class="notice">{t('trade.bufferLow', { cash: whole(cashAfter, base), target: whole(bufferTarget, base) })}</p>
           {:else}
-            <p>{t('trade.bufferOk', { cash: whole(Number(o.cash_after), base), target: whole(bufferTarget, base) })}</p>
+            <p>{t('trade.bufferOk', { cash: whole(cashAfter, base), target: whole(bufferTarget, base) })}</p>
           {/if}
         </section>
       {/if}
 
-      <section class="card">
-        <h3>{t('trade.futureTitle', { years: projectionYears })}</h3>
-        <p>{t('trade.futureText', { before: whole(o.before.p50, base), after: whole(o.after.p50, base) })}
-          <strong class:up={o.after.p50 >= o.before.p50} class:bad={o.after.p50 < o.before.p50}>({o.after.p50 >= o.before.p50 ? '+' : '−'}{whole(Math.abs(o.after.p50 - o.before.p50), base)})</strong></p>
-        <p class="muted small">{t('trade.futureBad', { before: whole(o.before.p10, base), after: whole(o.after.p10, base) })}</p>
-        <p class="muted small">{t('trade.futureNote')}</p>
-      </section>
+      {#if endBefore && endAfter}
+        <section class="card">
+          <h3>{t('trade.futureTitle', { years: projectionYears })}</h3>
+          <p>{t('trade.futureText', { before: whole(endBefore.p50, base), after: whole(endAfter.p50, base) })}
+            <strong class:up={endAfter.p50 >= endBefore.p50} class:bad={endAfter.p50 < endBefore.p50}>({endAfter.p50 >= endBefore.p50 ? '+' : '−'}{whole(Math.abs(endAfter.p50 - endBefore.p50), base)})</strong></p>
+          <div class="key muted small">
+            <span><i class="sw line"></i>{t('trade.withTrade')}</span>
+            <span><i class="sw dashed"></i>{t('trade.withoutTrade')}</span>
+            <span><i class="sw band"></i>{t('trade.range')}</span>
+          </div>
+          <Chart
+            label={t('trade.chartLabel', { years: projectionYears, before: whole(endBefore.p50, base), after: whole(endAfter.p50, base) })}
+            band={o.after.map((b) => ({ x: thisYear + b.year, low: b.p10, high: b.p90 }))}
+            lines={[
+              { points: o.before.map((b) => [thisYear + b.year, b.p50]), tone: 'muted', dashed: true },
+              { points: o.after.map((b) => [thisYear + b.year, b.p50]), tone: 'accent' },
+            ]}
+            xLabel={(x) => String(x)}
+            yLabel={compact}
+          />
+          <p class="muted small">{t('trade.futureBad', { before: whole(endBefore.p10, base), after: whole(endAfter.p10, base) })}</p>
+          {#if deposit > 0}<p class="muted small">{t('trade.futureDeposit', { deposit: whole(deposit, base) })}</p>{/if}
+          <p class="muted small">{t('trade.futureNote')}</p>
+        </section>
+      {/if}
 
       <section class="card">
         <h3>{t('trade.entryTitle')}</h3>
@@ -558,6 +592,24 @@
   .b.after,
   .sw.after {
     background: var(--accent);
+  }
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 8px 0;
+  }
+  .sw.line {
+    height: 3px;
+    background: var(--accent);
+  }
+  .sw.dashed {
+    height: 0;
+    border-top: 2px dashed var(--muted);
+    border-radius: 0;
+  }
+  .sw.band {
+    background: var(--accent-tint);
   }
   .sw {
     display: inline-block;

@@ -58,12 +58,24 @@ fn previewing_a_sale_changes_nothing() {
 }
 
 #[test]
+fn a_purchase_beyond_the_cash_needs_a_deposit() {
+    let (ledger, prices) = books();
+    // 98.75 EUR at the broker; 10 × 132.275 + 1.25 = 1324.00.
+    let p = trade::preview(&ledger, &prices, &trade(Side::Buy, "VUAA", "10", "132.275", "EUR")).unwrap();
+    assert_eq!(p.cash[0].after, dec("98.75") - dec("1324.00"));
+    assert_eq!(p.deposit, dec("1225.25"));
+    let small = trade::preview(&ledger, &prices, &trade(Side::Buy, "VUAA", "0.5", "132.275", "EUR")).unwrap();
+    assert_eq!(small.deposit, dec("0"));
+}
+
+#[test]
 fn a_foreign_purchase_uses_the_latest_rate() {
     let (ledger, prices) = books();
     let p = trade::preview(&ledger, &prices, &trade(Side::Buy, "AAPL", "1", "200", "USD")).unwrap();
     assert_eq!((p.fx_rate, p.value), (dec("0.93"), dec("186.00")));
     assert_eq!(p.cash[0].after, dec("516.46") - dec("201.25"));
     assert!(p.invested_after > p.invested_before && p.cash_after < p.cash_before);
+    assert_eq!(p.deposit, dec("0"));
 
     let mut no_rate = trade(Side::Buy, "AAPL", "1", "200", "GBP");
     no_rate.fx_rate = None;

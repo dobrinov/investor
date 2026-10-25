@@ -307,9 +307,12 @@ export interface TradeOutlook {
   invested_after: Decimal
   cash_before: Decimal
   cash_after: Decimal
+  /** Money to deposit for the trade, in the base currency; the projection counts it. */
+  deposit: Decimal
   tax: { treatment: Treatment; rate: Decimal; form: string; estimate: Decimal; verified: boolean } | null
-  before: Band
-  after: Band
+  /** Each year of the projection, without and with the trade. */
+  before: Band[]
+  after: Band[]
 }
 
 /** An unlocked book. Its key exists only inside this object. */
