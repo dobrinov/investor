@@ -1,7 +1,7 @@
 <script lang="ts">
   import { packs } from '../lib/configs'
   import type { Gains, Realization, Treatment } from '../lib/core'
-  import { date, money } from '../lib/format'
+  import { country, date, money } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -43,7 +43,7 @@
 </header>
 
 {#if years.length === 0}
-  <p class="notice">{t('tax.noPack', { country: s.settings.tax_residency })}</p>
+  <p class="notice">{t('tax.noPack', { country: country(s.settings.tax_residency) })}</p>
   <button class="btn ghost" onclick={() => app.openGuide('add-tax')}>{t('tax.howToAdd')}</button>
 {:else}
   <div class="controls">
@@ -56,7 +56,7 @@
   </div>
 
   {#if !pack}
-    <p class="notice">{t('tax.noPackForYear', { year: selectedYear, country: s.settings.tax_residency })}</p>
+    <p class="notice">{t('tax.noPackForYear', { year: selectedYear, country: country(s.settings.tax_residency) })}</p>
     <button class="btn ghost" onclick={() => app.openGuide('add-tax')}>{t('tax.howToAdd')}</button>
     <section class="card">
       <h2>{t('tax.sales', { year: selectedYear })}</h2>
@@ -90,6 +90,7 @@
     {#if !result.pack.verified}
       <p class="notice">{t('tax.draftPack', { id: result.pack.id, version: result.pack.version })}</p>
     {/if}
+    {#if result.pack.notes}<p class="muted pack-notes">{result.pack.notes}</p>{/if}
 
     <section class="summary" aria-label={t('tax.summary')}>
       <div class="card kpi">
@@ -97,10 +98,17 @@
         <span class="value num">{money(Number(result.summary.taxable_gains) + Number(result.summary.taxable_losses), result.pack.currency)}</span>
       </div>
       <div class="card kpi">
-        <span class="label">{t('tax.estimated', { rate: Number(result.rate) * 100 })}</span>
+        <span class="label">{result.banded ? t('tax.estimatedBands') : t('tax.estimated', { rate: +(Number(result.rate) * 100).toFixed(3) })}</span>
         <span class="value num">{money(result.summary.tax_due, result.pack.currency)}</span>
         <span class="hint">{result.form}</span>
       </div>
+      {#if result.allowance}
+        <div class="card kpi">
+          <span class="label">{t('tax.allowance')}</span>
+          <span class="value num">{money(result.summary.allowance_used, result.pack.currency)}</span>
+          <span class="hint">{t('tax.allowanceOf', { amount: money(result.allowance, result.pack.currency) })}</span>
+        </div>
+      {/if}
       <div class="card kpi">
         <span class="label">{t('tax.exemptTotal')}</span>
         <span class="value num">{money(result.summary.exempt, result.pack.currency)}</span>
@@ -192,5 +200,11 @@
   .value {
     font-size: 24px;
     font-weight: 500;
+  }
+  .pack-notes {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 820px;
   }
 </style>

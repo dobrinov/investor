@@ -106,7 +106,7 @@
     <div class="card kpi">
       <span class="label">{t('overview.netWorth')}</span>
       <span class="value num">{money(value + cash + privately, base)}</span>
-      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if s.private.length} · {t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
+      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if s.private.length}{' · '}{t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
     </div>
     <div class="card kpi">
       <span class="label">{t('overview.unrealised')}</span>
@@ -454,9 +454,13 @@
     .kpi:not(:first-child) .label {
       font-size: 12px;
     }
+    .kpi:not(:first-child) {
+      padding: 10px;
+    }
     .kpi:not(:first-child) .value {
-      font-size: 15px;
-      overflow-wrap: anywhere;
+      font-size: 14px;
+      white-space: nowrap;
+      letter-spacing: -0.02em;
     }
     .table-wrap {
       display: none;

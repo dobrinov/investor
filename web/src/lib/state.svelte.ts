@@ -20,8 +20,11 @@ class AppState {
   /** False when the browser refuses to keep a draft (private mode, blocked storage). */
   draftKept = $state(true)
   private handle = $state.raw<FileSystemFileHandle | undefined>()
+  /** The example portfolio is open: nothing is kept or saved. */
+  example = $state(false)
 
   open(book: Book, fileName: string, options: { handle?: FileSystemFileHandle; changes?: number } = {}): void {
+    this.example = false
     this.book = book
     this.fileName = fileName
     this.handle = options.handle
@@ -30,6 +33,19 @@ class AppState {
     this.refresh()
     useLanguage(this.snapshot!.settings.language)
     keepSessionKey(book.exportKey())
+  }
+
+  /** Opens the made-up example portfolio. It never touches the browser copy of your own file. */
+  async openExample(language: string): Promise<void> {
+    const today = new Date().toISOString().slice(0, 10)
+    const book = await Book.example(today, language)
+    this.example = true
+    this.book = book
+    this.fileName = 'example.invest'
+    this.handle = undefined
+    this.changes = 0
+    this.view = 'overview'
+    this.refresh()
   }
 
   /** Reopens the browser copy after a refresh, when this tab kept the key. */
@@ -67,7 +83,7 @@ class AppState {
   }
 
   async keepDraft(): Promise<void> {
-    if (!this.book) return
+    if (!this.book || this.example) return
     try {
       await saveDraft({ fileName: this.fileName, bytes: this.book.seal(), changes: this.changes, updatedAt: new Date().toISOString(), handle: this.handle })
       this.draftKept = true
@@ -83,13 +99,13 @@ class AppState {
 
   /** Saves into the opened file, or asks where when there is none. */
   async save(): Promise<void> {
-    if (!this.book) return
+    if (!this.book || this.example) return
     await this.saved(await saveFile(this.book.seal(), this.fileName, this.handle))
   }
 
   /** Saves to a new file; later saves go there. */
   async saveAs(): Promise<void> {
-    if (!this.book) return
+    if (!this.book || this.example) return
     await this.saved(await saveFileAs(this.book.seal(), this.fileName))
   }
 
@@ -148,6 +164,11 @@ class AppState {
     await this.changed()
   }
 
+  async setTaxResidency(country: string): Promise<void> {
+    this.book?.setTaxResidency(country)
+    await this.changed()
+  }
+
   async setPrice(symbol: string, date: string, amount: string, currency: string): Promise<void> {
     this.book?.setPrice(symbol, date, amount, currency)
     await this.changed()
@@ -174,7 +195,10 @@ class AppState {
   }
 
   lock(): void {
-    forgetSessionKey()
+    if (this.example) {
+      this.example = false
+      history.replaceState(null, '', location.pathname)
+    } else forgetSessionKey()
     this.book?.close()
     this.book = null
     this.snapshot = null

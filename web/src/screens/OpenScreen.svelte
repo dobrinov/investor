@@ -4,7 +4,8 @@
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import { Book } from '../lib/core'
   import { droppedFile, openInvestFile, savesInPlace, type OpenedFile } from '../lib/files'
-  import { dateTime } from '../lib/format'
+  import { countries } from '../lib/configs'
+  import { country, dateTime } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
   import { clearDraft, loadDraft, type Draft } from '../lib/storage'
@@ -178,7 +179,7 @@
             </label>
             <label class="field">{t('create.residency')}
               <select bind:value={residency}>
-                <option value="BG">{t('country.BG')}</option>
+                {#each countries() as c (c)}<option value={c}>{country(c)}</option>{/each}
               </select>
             </label>
           </div>
@@ -198,6 +199,7 @@
         <div class="choices">
           <button class="btn" onclick={choose}>{t('open.openFile')}</button>
           <button class="btn ghost" onclick={() => go('create')}>{t('open.createNew')}</button>
+          <button class="link example" onclick={() => app.openExample(i18n.lang)}>{t('example.open')}</button>
         </div>
         <p class="small muted">{t('open.dropHint')}</p>
       {/if}
@@ -365,5 +367,9 @@
       order: 4;
       color: var(--side-text);
     }
+  }
+  .example {
+    min-height: 44px;
+    align-self: center;
   }
 </style>

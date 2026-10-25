@@ -1,0 +1,25 @@
+# Austria, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against bmf.gv.at.
+
+[pack]
+id = "at-bmf"
+version = "2026.1"
+country = "AT"
+authority = "Bundesministerium für Finanzen (Finanzamt Österreich)"
+website = "https://www.bmf.gv.at"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Kapitalertragsteuer 27.5% on gains and dividends. Austrian brokers withhold it; gains at foreign brokers are declared on form E1kv. Funds that are not reporting funds are taxed differently and are not modelled."
+
+[capital_gains]
+rate = "0.275"
+form = "E 1kv"
+
+[dividends]
+rate = "0.275"
+form = "E 1kv"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-06-30"

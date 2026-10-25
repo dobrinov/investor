@@ -27,6 +27,9 @@ export const brokers: BrokerDef[] = Object.entries(brokerFiles)
   .map(([path, toml]) => ({ id: value(toml, 'id') ?? path, name: value(toml, 'name') ?? path, account: value(toml, 'account') ?? path, toml }))
   .sort((a, b) => a.name.localeCompare(b.name))
 
+/** Countries with tax rules, by code. */
+export const countries = (): string[] => [...new Set(packs.map((p) => p.country))].sort()
+
 export const packs: PackDef[] = Object.entries(packFiles)
   .map(([path, toml]) => {
     const [country, file] = path.split('/').slice(-2)

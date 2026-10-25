@@ -1,0 +1,32 @@
+# Spain, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against agenciatributaria.gob.es.
+
+[pack]
+id = "es-aeat"
+version = "2026.1"
+country = "ES"
+authority = "Agencia Tributaria (AEAT)"
+website = "https://sede.agenciatributaria.gob.es"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Savings income (gains and dividends together) is taxed by band: 19% up to EUR 6,000, 21% to EUR 50,000, 23% to EUR 200,000, 27% to EUR 300,000 and 30% above. A single sale is estimated at 19%. The two-month rule on buying back after a loss is not modelled. Holdings abroad over EUR 50,000 need form 720."
+
+[capital_gains]
+rate = "0.19"
+form = "Modelo 100 (Renta)"
+bands = [
+  { up_to = "6000", rate = "0.19" },
+  { up_to = "50000", rate = "0.21" },
+  { up_to = "200000", rate = "0.23" },
+  { up_to = "300000", rate = "0.27" },
+  { rate = "0.30" },
+]
+
+[dividends]
+rate = "0.19"
+form = "Modelo 100 (Renta)"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-06-30"

@@ -1,0 +1,25 @@
+# Italy, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against agenziaentrate.gov.it.
+
+[pack]
+id = "it-ade"
+version = "2026.1"
+country = "IT"
+authority = "Agenzia delle Entrate"
+website = "https://www.agenziaentrate.gov.it"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. 26% substitute tax on gains and dividends (12.5% on Italian and white-list government bonds, not modelled). With a foreign broker you declare gains in quadro RT and pay IVAFE, 0.2% a year on the value of foreign holdings, in quadro RW."
+
+[capital_gains]
+rate = "0.26"
+form = "Redditi PF, quadro RT"
+
+[dividends]
+rate = "0.26"
+form = "Redditi PF, quadro RM"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-10-31"

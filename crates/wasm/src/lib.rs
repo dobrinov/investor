@@ -56,6 +56,10 @@ struct Snapshot<'a> {
 struct Gains {
     pack: investor_core::jurisdiction::PackInfo,
     rate: String,
+    /// The year's tax is worked out by band, so `rate` is only the first band.
+    banded: bool,
+    /// Net gains up to this much a year are tax-free, in the pack's currency.
+    allowance: Option<String>,
     form: String,
     rows: Vec<GainRow>,
     summary: investor_core::jurisdiction::GainsSummary,
@@ -75,6 +79,15 @@ impl Session {
         let settings: Settings = serde_json::from_str(settings).map_err(js_error)?;
         let key = SealingKey::derive(password, KdfParams::default()).map_err(js_error)?;
         Ok(Session { vault: Vault::new(settings), key })
+    }
+
+    /// The example portfolio as of `today` (`YYYY-MM-DD`). It is never meant
+    /// to be saved; its key is a throwaway.
+    pub fn example(today: &str, language: &str) -> Result<Session, JsError> {
+        let today = today.parse().map_err(js_error)?;
+        let vault = investor_core::example::vault(today, language).map_err(js_error)?;
+        let key = SealingKey::derive("example", KdfParams { memory_kib: 8 * 1024, iterations: 1, lanes: 1 }).map_err(js_error)?;
+        Ok(Session { vault, key })
     }
 
     /// Opens the bytes of a `.invest` file.
@@ -142,6 +155,8 @@ impl Session {
         let summary = pack.summarize(&rows.iter().map(|r| r.realization.clone()).collect::<Vec<_>>());
         json(&Gains {
             rate: pack.capital_gains.rate.to_string(),
+            banded: !pack.capital_gains.bands.is_empty(),
+            allowance: pack.capital_gains.annual_exempt_amount.map(|a| a.to_string()),
             form: pack.capital_gains.form.clone(),
             pack: pack.pack,
             rows,
@@ -288,6 +303,17 @@ impl Session {
             return Err(JsError::new("wrong password"));
         }
         self.key = SealingKey::derive(new, KdfParams::default()).map_err(js_error)?;
+        Ok(())
+    }
+
+    /// Changes the country whose tax rules apply, e.g. `DE`.
+    #[wasm_bindgen(js_name = setTaxResidency)]
+    pub fn set_tax_residency(&mut self, country: &str) -> Result<(), JsError> {
+        let country = country.trim().to_ascii_uppercase();
+        if country.len() != 2 || !country.chars().all(|c| c.is_ascii_alphabetic()) {
+            return Err(JsError::new("a country is two letters, e.g. DE"));
+        }
+        self.vault.settings.tax_residency = country;
         Ok(())
     }
 

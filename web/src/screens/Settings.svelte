@@ -1,5 +1,7 @@
 <script lang="ts">
   import { keepSessionKey, setStaysUnlocked, staysUnlocked } from '../lib/storage'
+  import { countries } from '../lib/configs'
+  import { country } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -85,7 +87,15 @@
   <dl>
     <div><dt>{t('create.fileName')}</dt><dd class="num">{app.fileName}</dd></div>
     <div><dt>{t('create.baseCurrency')}</dt><dd>{s.settings.base_currency}</dd></div>
-    <div><dt>{t('create.residency')}</dt><dd>{s.settings.tax_residency}</dd></div>
+    <div>
+      <dt><label for="residency">{t('create.residency')}</label></dt>
+      <dd>
+        <select id="residency" class="input" value={s.settings.tax_residency} onchange={(e) => app.setTaxResidency(e.currentTarget.value)}>
+          {#each countries().includes(s.settings.tax_residency) ? countries() : [s.settings.tax_residency, ...countries()] as c (c)}<option value={c}>{country(c)}</option>{/each}
+        </select>
+        <span class="muted small">{t('settings.residencyHint')}</span>
+      </dd>
+    </div>
     <div><dt>{t('settings.entries')}</dt><dd class="num">{s.entries.length}</dd></div>
   </dl>
 </section>

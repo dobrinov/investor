@@ -1,0 +1,25 @@
+# Romania, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against anaf.ro.
+
+[pack]
+id = "ro-anaf"
+version = "2026.1"
+country = "RO"
+authority = "Agenția Națională de Administrare Fiscală (ANAF)"
+website = "https://www.anaf.ro"
+tax_year = 2026
+currency = "RON"
+verified = false
+notes = "Draft rules. From 2026 gains at foreign brokers are taxed at 16% on the net yearly result and dividends at 16%. Romanian brokers withhold a lower rate depending on how long you held. The health contribution (CASS) may also be due on investment income; not modelled."
+
+[capital_gains]
+rate = "0.16"
+form = "Declarația unică"
+
+[dividends]
+rate = "0.16"
+form = "Declarația unică"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-05-25"

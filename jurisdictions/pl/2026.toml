@@ -1,0 +1,25 @@
+# Poland, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against podatki.gov.pl.
+
+[pack]
+id = "pl-kas"
+version = "2026.1"
+country = "PL"
+authority = "Krajowa Administracja Skarbowa"
+website = "https://www.podatki.gov.pl"
+tax_year = 2026
+currency = "PLN"
+verified = false
+notes = "Draft rules. 19% flat tax on gains (PIT-38) and dividends. Amounts must be converted at the NBP rate of the working day before each trade; this uses the rates in your books. IKE and IKZE accounts are exempt and not modelled."
+
+[capital_gains]
+rate = "0.19"
+form = "PIT-38"
+
+[dividends]
+rate = "0.19"
+form = "PIT-38 / PIT-36"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-04-30"

@@ -47,6 +47,23 @@ pub struct CapitalGains {
     /// Venue codes as brokers write them (`IBIS`, `BVME.ETF`, MICs…).
     #[serde(default)]
     pub eu_regulated_venues: Vec<String>,
+    /// Net gains up to this much a year are tax-free, in the pack's currency.
+    #[serde(default)]
+    pub annual_exempt_amount: Option<Decimal>,
+    /// Progressive rates on the net taxable gain, lowest first. When given,
+    /// they replace `rate` for the year's total; `rate` stays the estimate
+    /// for a single sale.
+    #[serde(default)]
+    pub bands: Vec<RateBand>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RateBand {
+    /// Upper end of the band; none for the last one.
+    #[serde(default)]
+    pub up_to: Option<Decimal>,
+    pub rate: Decimal,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -74,6 +91,8 @@ pub struct GainsSummary {
     pub tax_due: Decimal,
     pub exempt: Decimal,
     pub unknown: Decimal,
+    /// The part of the net gain the annual allowance made tax-free.
+    pub allowance_used: Decimal,
 }
 
 impl JurisdictionPack {
@@ -105,8 +124,29 @@ impl JurisdictionPack {
                 Treatment::Taxable => summary.taxable_gains += r.gain,
             }
         }
-        let net = summary.taxable_gains + summary.taxable_losses;
-        summary.tax_due = (net.max(Decimal::ZERO) * self.capital_gains.rate).round_dp(2);
+        let net = (summary.taxable_gains + summary.taxable_losses).max(Decimal::ZERO);
+        summary.allowance_used = net.min(self.capital_gains.annual_exempt_amount.unwrap_or_default().max(Decimal::ZERO));
+        summary.tax_due = self.tax_on(net - summary.allowance_used).round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointAwayFromZero);
         summary
+    }
+
+    /// Tax on a year's net taxable gain: by band when the pack has bands,
+    /// otherwise at the flat rate.
+    pub fn tax_on(&self, gain: Decimal) -> Decimal {
+        if self.capital_gains.bands.is_empty() {
+            return gain * self.capital_gains.rate;
+        }
+        let (mut tax, mut floor) = (Decimal::ZERO, Decimal::ZERO);
+        for band in &self.capital_gains.bands {
+            let top = band.up_to.unwrap_or(Decimal::MAX).min(gain);
+            if top > floor {
+                tax += (top - floor) * band.rate;
+            }
+            match band.up_to {
+                Some(up_to) if up_to < gain => floor = up_to,
+                _ => break,
+            }
+        }
+        tax
     }
 }

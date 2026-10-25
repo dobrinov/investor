@@ -1,0 +1,26 @@
+# Ireland, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against revenue.ie.
+
+[pack]
+id = "ie-revenue"
+version = "2026.1"
+country = "IE"
+authority = "Revenue"
+website = "https://www.revenue.ie"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Capital gains tax 33% on shares, after an annual exemption of EUR 1,270. EU-domiciled ETFs are not under CGT: they pay exit tax and deemed disposal every 8 years, which is not modelled. CGT is paid by 15 December for January to November gains and by 31 January for December. Dividends are taxed as income at your marginal rate; 40% is assumed."
+
+[capital_gains]
+rate = "0.33"
+form = "Form 11 or CG1"
+annual_exempt_amount = "1270"
+
+[dividends]
+rate = "0.40"
+form = "Form 11"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-10-31"

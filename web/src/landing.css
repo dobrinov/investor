@@ -205,6 +205,85 @@ h3 {
   max-width: 760px;
 }
 
+.example {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 40px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 40px;
+}
+.example-text {
+  flex: 1 1 420px;
+  min-width: 0;
+}
+.example-text > p:not(.eyebrow) {
+  margin: 0 0 20px;
+  color: #c3ccd8;
+}
+.chips {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.chips li {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #1c2430;
+  font-weight: 600;
+  font-size: 15px;
+}
+.chips span {
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--muted);
+}
+.phone {
+  flex: 0 1 300px;
+  margin: 0 auto;
+}
+.phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 28px;
+  border: 8px solid #2a3442;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+.duo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 88px;
+}
+.duo figure {
+  margin: 0;
+}
+.duo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+.duo figcaption {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .example {
+    padding: 24px;
+  }
+}
+
 footer {
   display: flex;
   justify-content: space-between;

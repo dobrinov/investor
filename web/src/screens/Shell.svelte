@@ -61,7 +61,7 @@
   }
 
   function lock(): void {
-    if (app.changes > 0 && !confirm(t('shell.lockUnsaved'))) return
+    if (app.changes > 0 && !app.example && !confirm(t('shell.lockUnsaved'))) return
     app.lock()
   }
 
@@ -82,7 +82,7 @@
 
   $effect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (app.changes > 0) e.preventDefault()
+      if (app.changes > 0 && !app.example) e.preventDefault()
     }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
@@ -97,16 +97,27 @@
 <div class="shell">
   <header class="topbar">
     <span class="brand"><Logo size={26} /> Investor</span>
+    {#if app.example}
+      <button class="example-close" onclick={lock}>{t('example.close')}</button>
+    {:else}
     {#if app.changes > 0}<span class="dirty num">{t('shell.unsavedShort', { count: app.changes })}</span>{/if}
     <button class="save top-save" onclick={() => save()} disabled={saving}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
       {saving ? t('shell.saving') : t('shell.saveShort')}
     </button>
+    {/if}
   </header>
 
   <aside>
     <div class="brand"><Logo /> Investor</div>
 
+    {#if app.example}
+      <div class="file example">
+        <span class="name">{t('example.title')}</span>
+        <span>{t('example.text')}</span>
+      </div>
+      <button class="save" onclick={lock}>{t('example.close')}</button>
+    {:else}
     <div class="file">
       <span class="name num">{app.fileName}</span>
       {#if app.changes > 0}
@@ -122,6 +133,7 @@
     <button class="save-as" onclick={() => save(true)} disabled={saving}>{t('shell.saveAs')}</button>
     {#if !savesInPlace}<p class="save-note">{t('open.downloads')}</p>{/if}
     {#if saveError}<p class="save-error" role="alert">{saveError}</p>{/if}
+    {/if}
 
     <nav aria-label={t('nav.label')}>
       {#each nav as item (item.view)}
@@ -143,6 +155,7 @@
   </aside>
 
   <main>
+    {#if app.example}<p class="example-banner phone-only" role="status"><strong>{t('example.title')}</strong> {t('example.text')}</p>{/if}
     {#if saveError}<p class="save-error phone-only" role="alert">{saveError}</p>{/if}
     {#if app.view === 'overview'}
       <Overview />
@@ -180,6 +193,13 @@
 
   <dialog class="sheet" bind:this={more} aria-label={t('tab.more')} onclick={(e) => e.target === more && more?.close()}>
     <div class="sheet-body">
+      {#if app.example}
+      <div class="file dark">
+        <span class="name">{t('example.title')}</span>
+        <span>{t('example.text')}</span>
+        <button class="save" onclick={lock}>{t('example.close')}</button>
+      </div>
+      {:else}
       <div class="file dark">
         <span class="name num">{app.fileName}</span>
         {#if app.changes > 0}
@@ -194,6 +214,7 @@
         </div>
         {#if !savesInPlace}<p class="save-note">{t('open.downloads')}</p>{/if}
       </div>
+      {/if}
       <div class="more-nav">
         {#each nav.filter((n) => !tabs.some((tab) => tab.view === n.view)) as item (item.view)}
           <button class:on={app.view === item.view} aria-current={app.view === item.view ? 'page' : undefined} onclick={() => go(item.view)}>
@@ -341,6 +362,29 @@
   .tabbar,
   .phone-only {
     display: none;
+  }
+  .file.example {
+    background: #1e3a2a;
+    color: #cdeed6;
+  }
+  .example-close {
+    margin-left: auto;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: 10px;
+    background: none;
+    color: #fff;
+    font: 600 15px var(--sans);
+    cursor: pointer;
+  }
+  .example-banner {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #e6f4ea;
+    color: #1b4d2b;
+    font-size: 14px;
   }
   .sheet {
     margin: auto 0 0;

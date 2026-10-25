@@ -6,7 +6,7 @@
   import Help from '../components/Help.svelte'
   import type { Entry, FeeKind, TradeInput, TradeOutlook } from '../lib/core'
   import { packs, brokers } from '../lib/configs'
-  import { date as formatDate, decimal, money, units as formatUnits, whole } from '../lib/format'
+  import { country, date as formatDate, decimal, money, units as formatUnits, whole } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -317,7 +317,7 @@
             </p>
             {#if !o.tax.verified}<p class="muted small">{t('trade.taxUnverified')}</p>{/if}
           {:else}
-            <p class="muted small">{t('trade.noPack', { country: s.settings.tax_residency, year })}</p>
+            <p class="muted small">{t('trade.noPack', { country: country(s.settings.tax_residency), year })}</p>
           {/if}
         </section>
       {/if}

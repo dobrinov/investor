@@ -323,9 +323,13 @@ export interface GainRow extends Realization {
 export interface Gains {
   pack: { id: string; version: string; country: string; authority: string; website?: string; tax_year: number; currency: string; verified: boolean; notes?: string }
   rate: Decimal
+  /** The year's tax is worked out by band, so `rate` is only the first band. */
+  banded: boolean
+  /** Net gains up to this much a year are tax-free, in the pack's currency. */
+  allowance: Decimal | null
   form: string
   rows: GainRow[]
-  summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal }
+  summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal; allowance_used: Decimal }
 }
 
 export type FeeKind = 'commission' | 'fx_conversion' | 'exchange' | 'transaction_tax' | 'other'
@@ -380,6 +384,12 @@ export class Book {
   static async create(settings: Settings, password: string): Promise<Book> {
     await loadCore()
     return new Book(Session.create(JSON.stringify(settings), password))
+  }
+
+  /** The made-up example portfolio, dated so its prices are today's. */
+  static async example(today: string, language: string): Promise<Book> {
+    await loadCore()
+    return new Book(Session.example(today, language))
   }
 
   static async unlock(bytes: Uint8Array, password: string): Promise<Book> {
@@ -473,6 +483,10 @@ export class Book {
 
   removePrivate(id: string): void {
     this.session.removePrivate(id)
+  }
+
+  setTaxResidency(country: string): void {
+    this.session.setTaxResidency(country)
   }
 
   setPrice(symbol: string, date: string, amount: string, currency: string): void {

@@ -1,0 +1,25 @@
+# Portugal, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against portaldasfinancas.gov.pt.
+
+[pack]
+id = "pt-at"
+version = "2026.1"
+country = "PT"
+authority = "Autoridade Tributária e Aduaneira"
+website = "https://www.portaldasfinancas.gov.pt"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. 28% special rate on gains and dividends; you may choose to add them to your other income instead. Gains from foreign brokers go on Anexo J. Holdings kept under a year by high earners must be aggregated; not modelled."
+
+[capital_gains]
+rate = "0.28"
+form = "Modelo 3, Anexo J (Anexo G)"
+
+[dividends]
+rate = "0.28"
+form = "Modelo 3, Anexo J"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-06-30"

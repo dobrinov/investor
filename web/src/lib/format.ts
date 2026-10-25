@@ -32,6 +32,15 @@ export function month(ym: string): string {
   return new Intl.DateTimeFormat(i18n.lang, { month: 'short', year: 'numeric' }).format(new Date(`${ym}-01T00:00:00`))
 }
 
+/** A country's name in the interface language, e.g. `DE` → Germany. */
+export function country(code: string): string {
+  try {
+    return new Intl.DisplayNames([i18n.lang], { type: 'region' }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
 /**
  * A typed amount as a plain decimal string. Accepts "168,81", "168.81",
  * "23,882.00", "23.882,00" and "23 882,00": the last separator is the decimal

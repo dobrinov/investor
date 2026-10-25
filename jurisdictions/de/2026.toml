@@ -1,0 +1,27 @@
+# Germany, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check every value against the
+# official forms (elster.de) before relying on it.
+
+[pack]
+id = "de-bzst"
+version = "2026.1"
+country = "DE"
+authority = "Bundeszentralamt für Steuern / Finanzamt"
+website = "https://www.elster.de"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Abgeltungsteuer 25% plus 5.5% solidarity surcharge (26.375%); church tax, if you pay it, comes on top. The Sparer-Pauschbetrag (EUR 1,000 single, EUR 2,000 joint) covers gains and dividends together; this uses EUR 1,000 for gains only. Equity ETFs get a 30% partial exemption (Teilfreistellung) not modelled here. German brokers withhold the tax; gains at foreign brokers go on Anlage KAP."
+
+[capital_gains]
+rate = "0.26375"
+form = "Anlage KAP (and KAP-INV for funds)"
+annual_exempt_amount = "1000"
+
+[dividends]
+rate = "0.26375"
+form = "Anlage KAP"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-07-31"

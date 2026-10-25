@@ -1,0 +1,25 @@
+# France, tax year 2026.
+# DRAFT: not reviewed by a tax professional. Check against impots.gouv.fr.
+
+[pack]
+id = "fr-dgfip"
+version = "2026.1"
+country = "FR"
+authority = "Direction générale des Finances publiques (DGFiP)"
+website = "https://www.impots.gouv.fr"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Flat tax (PFU): 12.8% income tax plus social charges, which rise to 18.6% on most investment income from 2026, giving 31.4%; check the rate that applies to you. You can opt for the progressive scale instead. PEA and life-insurance wrappers have their own rules, not modelled."
+
+[capital_gains]
+rate = "0.314"
+form = "2074 and 2042 C"
+
+[dividends]
+rate = "0.314"
+form = "2042"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-05-31"

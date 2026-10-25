@@ -5,6 +5,7 @@
 //! desktop app and as WebAssembly in the browser edition.
 
 pub mod bank;
+pub mod example;
 mod error;
 pub mod import;
 pub mod jurisdiction;

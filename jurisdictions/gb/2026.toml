@@ -1,0 +1,26 @@
+# United Kingdom, tax year 2026/27 (6 April 2026 to 5 April 2027).
+# DRAFT: not reviewed by a tax professional. Check against gov.uk.
+
+[pack]
+id = "gb-hmrc"
+version = "2026.1"
+country = "GB"
+authority = "HM Revenue & Customs"
+website = "https://www.gov.uk/capital-gains-tax"
+tax_year = 2026
+currency = "GBP"
+verified = false
+notes = "Draft rules. The UK tax year runs 6 April to 5 April, but this adds up calendar-year sales. Capital gains tax is 18% within the basic-rate band and 24% above; 24% is assumed, after the GBP 3,000 annual exempt amount. Dividends over the GBP 500 allowance are taxed at 10.75%, 35.75% or 39.35% from April 2026; 35.75% is assumed. ISAs and pensions are tax-free and not modelled. Share matching (same-day, 30-day and pooling) is not FIFO and is not modelled."
+
+[capital_gains]
+rate = "0.24"
+form = "SA108 (Capital gains summary)"
+annual_exempt_amount = "3000"
+
+[dividends]
+rate = "0.3575"
+form = "SA100"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2028-01-31"

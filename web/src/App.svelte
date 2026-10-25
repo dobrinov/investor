@@ -6,7 +6,13 @@
 
   // A refresh reopens the file without the password when this tab kept the key.
   let resuming = $state(true)
-  void app.resume().finally(() => (resuming = false))
+  // `#example` (the marketing page links to it) opens the example portfolio.
+  void app
+    .resume()
+    .then(async (resumed) => {
+      if (!resumed && location.hash === '#example') await app.openExample(i18n.lang)
+    })
+    .finally(() => (resuming = false))
 
   $effect(() => {
     document.documentElement.lang = i18n.lang
