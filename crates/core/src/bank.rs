@@ -56,17 +56,6 @@ pub struct BankBalance {
     pub updated: Option<NaiveDate>,
 }
 
-fn slug(name: &str) -> String {
-    let mut out = String::new();
-    for c in name.trim().chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_uppercase());
-        } else if !out.is_empty() && !out.ends_with('-') {
-            out.push('-');
-        }
-    }
-    out.trim_end_matches('-').chars().take(32).collect::<String>().trim_end_matches('-').to_owned()
-}
 
 fn fingerprint(entry_id: &str) -> String {
     format!("{MANUAL}:bank:{entry_id}")
@@ -78,7 +67,7 @@ fn account(vault: &Vault, id: &str) -> Result<BankAccount> {
 
 /// Adds an account with its balance today. Returns the opening entry, if the balance is not zero.
 pub fn add(vault: &mut Vault, input: &NewAccount) -> Result<Option<JournalEntry>> {
-    let id = slug(&input.name);
+    let id = ledger::slug(&input.name);
     if id.is_empty() {
         return Err(Error::Trade("give the account a name with at least one letter or digit".into()));
     }

@@ -20,6 +20,38 @@ pub const INTEREST_INCOME: &str = "Income:Interest";
 pub const INTEREST_EXPENSE: &str = "Expenses:Interest";
 pub const WITHHOLDING_TAX: &str = "Expenses:Taxes:Withholding";
 
+/// An account segment made from a name typed by the user: Latin letters and
+/// digits in upper case, with Bulgarian (and Russian) Cyrillic transliterated
+/// by the official Bulgarian system, so "ОББ спестовна" becomes
+/// `OBB-SPESTOVNA`. Anything else turns into a single dash.
+pub fn slug(name: &str) -> String {
+    let mut out = String::new();
+    for c in name.trim().chars() {
+        let latin = translit(c);
+        if let Some(l) = latin {
+            out.push_str(l);
+        } else if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_uppercase());
+        } else if !out.is_empty() && !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    let out: String = out.trim_end_matches('-').chars().take(32).collect();
+    out.trim_end_matches('-').to_owned()
+}
+
+fn translit(c: char) -> Option<&'static str> {
+    let upper = c.to_uppercase().next()?;
+    Some(match upper {
+        'А' => "A", 'Б' => "B", 'В' => "V", 'Г' => "G", 'Д' => "D", 'Е' => "E", 'Ж' => "ZH", 'З' => "Z",
+        'И' => "I", 'Й' => "Y", 'К' => "K", 'Л' => "L", 'М' => "M", 'Н' => "N", 'О' => "O", 'П' => "P",
+        'Р' => "R", 'С' => "S", 'Т' => "T", 'У' => "U", 'Ф' => "F", 'Х' => "H", 'Ц' => "TS", 'Ч' => "CH",
+        'Ш' => "SH", 'Щ' => "SHT", 'Ъ' => "A", 'Ь' => "Y", 'Ю' => "YU", 'Я' => "YA",
+        'Ё' => "YO", 'Ы' => "Y", 'Э' => "E",
+        _ => return None,
+    })
+}
+
 pub fn cash_account(broker: &str, currency: &Currency) -> String {
     format!("Assets:Cash:{broker}:{currency}")
 }

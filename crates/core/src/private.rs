@@ -88,18 +88,6 @@ pub struct PrivateValuation {
     pub since: Option<NaiveDate>,
 }
 
-fn slug(name: &str) -> String {
-    let mut out = String::new();
-    for c in name.trim().chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_uppercase());
-        } else if !out.is_empty() && !out.ends_with('-') {
-            out.push('-');
-        }
-    }
-    let out: String = out.trim_end_matches('-').chars().take(32).collect();
-    out.trim_end_matches('-').to_owned()
-}
 
 fn fingerprint(entry_id: &str) -> String {
     format!("{MANUAL}:private:{entry_id}")
@@ -108,7 +96,7 @@ fn fingerprint(entry_id: &str) -> String {
 /// Records a new holding and the payment into it. Returns the entry.
 pub fn add(vault: &mut Vault, input: &PrivateInput) -> Result<JournalEntry> {
     let bad = |m: &str| Err(Error::Trade(m.into()));
-    let mut id = slug(&input.name);
+    let mut id = ledger::slug(&input.name);
     if id.is_empty() {
         return bad("give the holding a name with at least one letter or digit");
     }
@@ -222,12 +210,14 @@ pub fn total(vault: &Vault) -> Decimal {
 
 #[cfg(test)]
 mod tests {
-    use super::slug;
+    use crate::ledger::slug;
 
     #[test]
     fn ids_come_from_the_name() {
         assert_eq!(slug("IRIS co-invest 2025"), "IRIS-CO-INVEST-2025");
-        assert_eq!(slug("  Ферма / Farm (50%) "), "FARM-50");
-        assert_eq!(slug("Ферма"), "");
+        assert_eq!(slug("  Ферма / Farm (50%) "), "FERMA-FARM-50");
+        assert_eq!(slug("ОББ спестовна"), "OBB-SPESTOVNA");
+        assert_eq!(slug("Щастие"), "SHTASTIE");
+        assert_eq!(slug("!!!"), "");
     }
 }
