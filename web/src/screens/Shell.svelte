@@ -1,5 +1,6 @@
 <script lang="ts">
   import { desktop, savesInPlace } from '../lib/files'
+  import Assistant from '../components/Assistant.svelte'
   import ExitLink from '../components/ExitLink.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import Logo from '../components/Logo.svelte'
@@ -195,6 +196,8 @@
       {t('tab.more')}
     </button>
   </nav>
+
+  <Assistant />
 
   <dialog class="sheet" bind:this={more} aria-label={t('tab.more')} onclick={(e) => e.target === more && more?.close()}>
     <div class="sheet-body">

@@ -2,7 +2,8 @@ import type { BalanceInput, Entry, MetalInput, MetalPrice, PayoutInput, Plan, Pr
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type FileRef, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
-import { Book } from './core'
+import { Book, changesBook } from './core'
+import { packs } from './configs'
 import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
 
 const VIEWS = ['overview', 'trade', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
@@ -26,6 +27,7 @@ class AppState {
   open(book: Book, fileName: string, options: { handle?: FileRef; changes?: number } = {}): void {
     this.example = false
     this.book = book
+    book.setPacks(Object.fromEntries(packs.map((p) => [`${p.country}/${p.year}`, p.toml])))
     this.fileName = fileName
     this.handle = options.handle
     this.changes = options.changes ?? 0
@@ -41,6 +43,7 @@ class AppState {
     const book = await Book.example(today, language)
     this.example = true
     this.book = book
+    book.setPacks(Object.fromEntries(packs.map((p) => [`${p.country}/${p.year}`, p.toml])))
     this.fileName = 'example.invest'
     this.handle = undefined
     this.changes = 0
@@ -171,6 +174,14 @@ class AppState {
   async removeMetalEntry(id: string): Promise<void> {
     this.book?.removeMetalEntry(id)
     await this.changed()
+  }
+
+  /** Runs one of the assistant's tools; a tool that writes counts as a change to save. */
+  async assistantCall(name: string, args: unknown): Promise<unknown> {
+    if (!this.book) throw new Error('no file is open')
+    const result = this.book.assistantCall(name, args, new Date().toISOString().slice(0, 10))
+    if (changesBook(name)) await this.changed()
+    return result
   }
 
   async addPrivate(input: PrivateInput): Promise<Entry | undefined> {

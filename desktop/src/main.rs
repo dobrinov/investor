@@ -1,15 +1,18 @@
 //! Investor as a desktop app: the same web app in a native window, with
-//! native dialogs to open and save `.invest` files in place. Nothing here
-//! talks to the network; the app's files ship inside the bundle.
+//! native dialogs to open and save `.invest` files in place. The app's files
+//! ship inside the bundle; the only network traffic is to the AI model the
+//! person sets up in the assistant, and only when they use it.
 
 // No console window next to the app on Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::Duration;
 
 use percent_encoding::percent_decode_str;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager, RunEvent, State};
 use tauri_plugin_dialog::DialogExt;
@@ -73,6 +76,62 @@ async fn write_invest(request: Request<'_>) -> Result<(), String> {
     std::fs::rename(&temporary, &path).map_err(|e| e.to_string())
 }
 
+/// A request to the AI model the person set up: a local server such as
+/// Ollama or LM Studio, or a provider's API with their own key. Made here
+/// rather than in the web view, which may only talk to the app itself.
+#[derive(Deserialize)]
+struct ModelRequest {
+    method: String,
+    url: String,
+    #[serde(default)]
+    headers: HashMap<String, String>,
+    #[serde(default)]
+    body: Option<serde_json::Value>,
+}
+
+#[derive(Serialize)]
+struct ModelReply {
+    status: u16,
+    body: String,
+}
+
+#[tauri::command]
+async fn model_request(request: ModelRequest) -> Result<ModelReply, String> {
+    if !(request.url.starts_with("http://") || request.url.starts_with("https://")) {
+        return Err("the model's address must start with http:// or https://".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        // Errors come back as a status and body for the app to explain.
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .http_status_as_error(false)
+            .timeout_global(Some(Duration::from_secs(600)))
+            .build()
+            .into();
+        let mut response = match (request.method.as_str(), request.body) {
+            ("GET", _) => {
+                let mut call = agent.get(&request.url);
+                for (k, v) in &request.headers {
+                    call = call.header(k, v);
+                }
+                call.call()
+            }
+            (_, body) => {
+                let mut call = agent.post(&request.url);
+                for (k, v) in &request.headers {
+                    call = call.header(k, v);
+                }
+                call.send_json(body.unwrap_or(serde_json::Value::Null))
+            }
+        }
+        .map_err(|e| e.to_string())?;
+        let status = response.status().as_u16();
+        let body = response.body_mut().with_config().limit(32 * 1024 * 1024).read_to_string().map_err(|e| e.to_string())?;
+        Ok(ModelReply { status, body })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// The file the app was opened with, once.
 #[tauri::command]
 fn launch_file(launch: State<'_, Launch>) -> Option<Picked> {
@@ -85,7 +144,7 @@ fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Launch(Mutex::new(from_args)))
-        .invoke_handler(tauri::generate_handler![pick_invest, save_invest_as, read_invest, write_invest, launch_file])
+        .invoke_handler(tauri::generate_handler![pick_invest, save_invest_as, read_invest, write_invest, launch_file, model_request])
         .build(tauri::generate_context!())
         .expect("the app starts");
     app.run(|handle, event| {

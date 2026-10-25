@@ -1,6 +1,6 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
-import init, { Session, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
+import init, { Session, assistantInstructions, assistantWrites, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
 import { i18n, t, translates } from './i18n.svelte'
 
 let ready: Promise<unknown> | undefined
@@ -493,6 +493,19 @@ function guard(session: Session): Session {
   })
 }
 
+/** One of the assistant's tools, as the core describes it. */
+export interface AssistantTool {
+  name: string
+  description: string
+  input_schema: Record<string, unknown>
+}
+
+/** Guidance for the assistant's model; the core must be loaded. */
+export const assistantGuidance = (): string => assistantInstructions()
+
+/** Whether an assistant tool changes the book; the core must be loaded. */
+export const changesBook = (name: string): boolean => assistantWrites(name)
+
 /** An unlocked book. Its key exists only inside this object. */
 export class Book {
   private readonly session: Session
@@ -631,6 +644,20 @@ export class Book {
 
   removePrivate(id: string): void {
     this.session.removePrivate(id)
+  }
+
+  /** Tax packs for the assistant, keyed `CC/YEAR`. */
+  setPacks(packs: Record<string, string>): void {
+    this.session.setPacks(JSON.stringify(packs))
+  }
+
+  assistantTools(writes: boolean): AssistantTool[] {
+    return JSON.parse(this.session.assistantTools(writes))
+  }
+
+  /** Runs a tool; throws with a readable message when it fails. */
+  assistantCall(name: string, args: unknown, today: string): unknown {
+    return JSON.parse(this.session.assistantCall(name, JSON.stringify(args ?? {}), crypto.randomUUID(), today))
   }
 
   setTaxResidency(country: string): void {

@@ -49,6 +49,8 @@ fn json(value: &impl Serialize) -> Result<String, JsError> {
 pub struct Session {
     vault: Vault,
     key: SealingKey,
+    /// Tax packs by `CC/YEAR`, for the assistant's tools.
+    packs: std::collections::BTreeMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -102,13 +104,25 @@ struct GainRow {
     treatment: investor_core::jurisdiction::Treatment,
 }
 
+/// Guidance for the assistant's model, the same as the MCP server gives.
+#[wasm_bindgen(js_name = assistantInstructions)]
+pub fn assistant_instructions() -> String {
+    investor_core::assistant::INSTRUCTIONS.to_owned()
+}
+
+/// Whether an assistant tool changes the book.
+#[wasm_bindgen(js_name = assistantWrites)]
+pub fn assistant_writes(name: &str) -> bool {
+    investor_core::assistant::is_write(name)
+}
+
 #[wasm_bindgen]
 impl Session {
     /// Starts a new book. `settings` is JSON: `{"base_currency","language","tax_residency"}`.
     pub fn create(settings: &str, password: &str) -> Result<Session, JsError> {
         let settings: Settings = serde_json::from_str(settings).map_err(js_error)?;
         let key = SealingKey::derive(password, KdfParams::default()).map_err(core_error)?;
-        Ok(Session { vault: Vault::new(settings), key })
+        Ok(Session { vault: Vault::new(settings), key, packs: Default::default() })
     }
 
     /// The example portfolio as of `today` (`YYYY-MM-DD`). It is never meant
@@ -117,20 +131,20 @@ impl Session {
         let today = today.parse().map_err(js_error)?;
         let vault = investor_core::example::vault(today, language).map_err(core_error)?;
         let key = SealingKey::derive("example", KdfParams { memory_kib: 8 * 1024, iterations: 1, lanes: 1 }).map_err(core_error)?;
-        Ok(Session { vault, key })
+        Ok(Session { vault, key, packs: Default::default() })
     }
 
     /// Opens the bytes of a `.invest` file.
     pub fn unlock(bytes: &[u8], password: &str) -> Result<Session, JsError> {
         let (vault, key) = vault::unlock(bytes, password).map_err(core_error)?;
-        Ok(Session { vault, key })
+        Ok(Session { vault, key, packs: Default::default() })
     }
 
     /// Reopens bytes sealed by this session's key, kept from an earlier unlock.
     pub fn resume(bytes: &[u8], key: &[u8]) -> Result<Session, JsError> {
         let key = SealingKey::from_bytes(key).map_err(core_error)?;
         let vault = vault::unlock_with_key(bytes, &key).map_err(core_error)?;
-        Ok(Session { vault, key })
+        Ok(Session { vault, key, packs: Default::default() })
     }
 
     /// The key, so a refresh can reopen the file without the password.
@@ -290,6 +304,35 @@ impl Session {
     #[wasm_bindgen(js_name = removeBank)]
     pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {
         bank::remove(&mut self.vault, id).map_err(core_error)
+    }
+
+    /// The bundled tax packs, as JSON `{"BG/2026": "<toml>", ...}`, for the assistant.
+    #[wasm_bindgen(js_name = setPacks)]
+    pub fn set_packs(&mut self, packs: &str) -> Result<(), JsError> {
+        self.packs = serde_json::from_str(packs).map_err(js_error)?;
+        Ok(())
+    }
+
+    /// The assistant's tools as JSON `[{name, description, input_schema}]`.
+    #[wasm_bindgen(js_name = assistantTools)]
+    pub fn assistant_tools(&self, writes: bool) -> String {
+        investor_core::assistant::tools(writes).to_string()
+    }
+
+    /// Runs one of the assistant's tools. `args` is JSON; `stamp` is unique
+    /// per call; `today` is `YYYY-MM-DD`. Returns the result as JSON.
+    #[wasm_bindgen(js_name = assistantCall)]
+    pub fn assistant_call(&mut self, name: &str, args: &str, stamp: &str, today: &str) -> Result<String, JsError> {
+        let args: serde_json::Value = serde_json::from_str(args).map_err(bad_input)?;
+        let today = today.parse().map_err(bad_input)?;
+        let packs = &self.packs;
+        let lookup = |country: &str, year: i32| packs.get(&format!("{}/{year}", country.to_uppercase())).and_then(|t| JurisdictionPack::from_toml(t).ok());
+        let env = investor_core::assistant::Env { today, stamp: stamp.to_owned(), pack: &lookup };
+        // Work on a copy so a failed write leaves the book as it was.
+        let mut vault = self.vault.clone();
+        let out = investor_core::assistant::call(&mut vault, name, &args, &env).map_err(core_error)?;
+        self.vault = vault;
+        json(&out)
     }
 
     /// Records a purchase of coins or bars. `input` is JSON; returns the entry.
