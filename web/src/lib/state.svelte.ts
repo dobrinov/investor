@@ -1,7 +1,7 @@
 import type { BalanceInput, Entry, MetalInput, MetalPrice, PayoutInput, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
-import { saveFile, saveFileAs, type FileRef, type SaveResult } from './files'
-import { useLanguage } from './i18n.svelte'
+import { modifiedAt, saveFile, saveFileAs, type FileRef, type SaveResult } from './files'
+import { t, useLanguage } from './i18n.svelte'
 import { Book, changesBook } from './core'
 import { packs } from './configs'
 import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
@@ -21,15 +21,20 @@ class AppState {
   /** False when the browser refuses to keep a draft (private mode, blocked storage). */
   draftKept = $state(true)
   private handle = $state.raw<FileRef | undefined>()
+  /** The file's modification time when it was opened or last saved here, to
+   * notice changes made outside the app, e.g. by an assistant. */
+  private seen: number | null = null
   /** The example portfolio is open: nothing is kept or saved. */
   example = $state(false)
 
-  open(book: Book, fileName: string, options: { handle?: FileRef; changes?: number } = {}): void {
+  open(book: Book, fileName: string, options: { handle?: FileRef; changes?: number; modified?: number | null } = {}): void {
     this.example = false
     this.book = book
     book.setPacks(Object.fromEntries(packs.map((p) => [`${p.country}/${p.year}`, p.toml])))
     this.fileName = fileName
     this.handle = options.handle
+    this.seen = options.modified ?? null
+    if (options.modified === undefined && options.handle) void modifiedAt(options.handle).then((m) => (this.seen = m))
     this.changes = options.changes ?? 0
     this.view = 'overview'
     this.refresh()
@@ -58,7 +63,7 @@ class AppState {
     const draft = await loadDraft()
     try {
       if (!draft) throw new Error('no draft')
-      this.open(await Book.resume(draft.bytes, key), draft.fileName, { changes: draft.changes, handle: draft.handle })
+      this.open(await Book.resume(draft.bytes, key), draft.fileName, { changes: draft.changes, handle: draft.handle, modified: draft.modified })
       // Stay on the screen the address names.
       const view = location.hash.slice(1) as View
       if (VIEWS.includes(view)) this.view = view
@@ -88,7 +93,7 @@ class AppState {
   async keepDraft(): Promise<void> {
     if (!this.book || this.example) return
     try {
-      await saveDraft({ fileName: this.fileName, bytes: this.book.seal(), changes: this.changes, updatedAt: new Date().toISOString(), handle: this.handle })
+      await saveDraft({ fileName: this.fileName, bytes: this.book.seal(), changes: this.changes, updatedAt: new Date().toISOString(), handle: this.handle, modified: this.seen })
       this.draftKept = true
     } catch {
       this.draftKept = false
@@ -103,6 +108,10 @@ class AppState {
   /** Saves into the opened file, or asks where when there is none. */
   async save(): Promise<void> {
     if (!this.book || this.example) return
+    if (this.handle && this.seen !== null) {
+      const now = await modifiedAt(this.handle)
+      if (now !== null && now > this.seen + 1000 && !confirm(t('shell.changedOutside', { name: this.fileName }))) return
+    }
     await this.saved(await saveFile(this.book.seal(), this.fileName, this.handle))
   }
 
@@ -116,6 +125,7 @@ class AppState {
     if (!result.saved) return
     this.handle = result.handle ?? this.handle
     this.fileName = result.name ?? this.fileName
+    this.seen = this.handle ? await modifiedAt(this.handle) : null
     this.changes = 0
     await this.keepDraft()
   }

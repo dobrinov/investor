@@ -132,6 +132,13 @@ async fn model_request(request: ModelRequest) -> Result<ModelReply, String> {
     .map_err(|e| e.to_string())?
 }
 
+/// When the file was last changed, in milliseconds since 1970.
+#[tauri::command]
+async fn modified_invest(path: String) -> Result<u64, String> {
+    let modified = std::fs::metadata(&path).and_then(|m| m.modified()).map_err(|e| e.to_string())?;
+    Ok(modified.duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_millis() as u64)
+}
+
 /// The file the app was opened with, once.
 #[tauri::command]
 fn launch_file(launch: State<'_, Launch>) -> Option<Picked> {
@@ -144,7 +151,7 @@ fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(Launch(Mutex::new(from_args)))
-        .invoke_handler(tauri::generate_handler![pick_invest, save_invest_as, read_invest, write_invest, launch_file, model_request])
+        .invoke_handler(tauri::generate_handler![pick_invest, save_invest_as, read_invest, write_invest, launch_file, model_request, modified_invest])
         .build(tauri::generate_context!())
         .expect("the app starts");
     app.run(|handle, event| {

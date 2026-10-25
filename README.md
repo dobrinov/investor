@@ -11,7 +11,7 @@ server database, no tracking. Everything lives in one password-encrypted
 |------|------|
 | `crates/core` | Ledger, FIFO lots, config-driven importers, tax packs, `.invest` encryption. Pure Rust, compiles to WebAssembly. |
 | `crates/cli` | `investor` command for development and scripting. |
-| `crates/mcp` | `investor-mcp`: read-only MCP server so Claude Code can analyse your file. |
+| `crates/mcp` | `investor-mcp`: MCP server so any AI assistant can read your file and record changes you approve. |
 | `crates/wasm` and `web/` | The browser edition. |
 | `desktop/` | The desktop app (Tauri) for Windows, macOS and Linux, wrapping the web app. |
 | `brokers/` | One TOML file per broker or exchange statement format. |
@@ -50,12 +50,27 @@ To build the desktop app yourself: `cd desktop && npx @tauri-apps/cli@2 build`
 packages). Pushing a `v*` tag builds all three systems and publishes a release
 (`.github/workflows/desktop.yml`).
 
-## Ask Claude Code
+## Ask an AI assistant
 
-`investor-mcp` lets Claude Code read a saved `.invest` file and run the
-app's calculations: portfolio, plan and goals, projections with what-if
-moves, trade previews, realised gains with tax treatment, and the journal.
-It never writes to the file.
+Investor works without AI. If you want one, an assistant can read your
+portfolio, answer with the app's own calculations, help you plan, and record
+what you decide once you approve it.
+
+**In the desktop app**, the ✦ button in the bottom-right corner opens the
+assistant. Choose a model on your computer (Ollama or LM Studio, found
+automatically; nothing leaves your computer) or Anthropic or OpenAI with
+your own key. Reads run at once; every change shows an approval card and
+then counts as an unsaved change. On the website the button explains that
+the assistant needs the desktop app.
+
+**From your own AI tool**, `investor-mcp` serves the same tools over the
+Model Context Protocol to Claude Code, Claude Desktop, Cursor, VS Code, LM
+Studio or any other MCP client: portfolio, plan and goals, projections with
+what-if moves, trade previews, realised gains with tax treatment and the
+journal, plus writes for trades, bank balances, prices, coins and bars,
+private holdings and payouts, the profile, goals and saved moves. Each write
+keeps the previous version in `<file>.history/` (the last 20) and
+`undo_last_change` restores them; `--read-only` turns writing off.
 
 ```sh
 cargo build --release -p investor-mcp
@@ -64,9 +79,18 @@ cargo build --release -p investor-mcp
 claude mcp add investor -- "$PWD/target/release/investor-mcp" --file ~/Documents/portfolio.invest
 ```
 
-Elsewhere, set `INVESTOR_PASSWORD_COMMAND` to a command that prints the
-password (e.g. `pass show investor`). What Claude reads is sent to Anthropic
-as part of the conversation.
+Other clients take the same command and arguments, e.g.
+`{"mcpServers": {"investor": {"command": "/path/to/investor-mcp", "args": ["--file", "/path/to/portfolio.invest"]}}}`.
+Elsewhere than macOS, set `INVESTOR_PASSWORD_COMMAND` to a command that
+prints the password (e.g. `pass show investor`). With a cloud model, what the
+assistant reads is sent to that provider.
+
+**Skills**: `plugin/skills/` holds routines for a portfolio check-up,
+rehearsing and recording a trade, tax season, retirement and what-if, and
+adding a broker. In Claude Code:
+`/plugin install investor --marketplace dobrinov/investor` (the plugin starts
+`investor-mcp` from your `PATH` with `INVESTOR_FILE` set to your file). The
+desktop app offers the same skills as starters.
 
 ## `.invest` format
 

@@ -45,6 +45,16 @@ async function writePath(bytes: Uint8Array, path: string): Promise<void> {
   await tauri!.invoke('write_invest', bytes, { headers: { path: encodeURIComponent(path) } })
 }
 
+/** When the file was last changed on disk, in milliseconds; null if unknown. */
+export async function modifiedAt(handle: FileRef): Promise<number | null> {
+  try {
+    if ('path' in handle) return tauri ? ((await tauri.invoke('modified_invest', { path: handle.path })) as number) : null
+    return (await handle.getFile()).lastModified
+  } catch {
+    return null
+  }
+}
+
 /** The .invest file the desktop app was started with, if any. */
 export async function launchedFile(): Promise<OpenedFile | null> {
   if (!tauri) return null

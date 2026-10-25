@@ -113,28 +113,16 @@ export const en: Section[] = [
   },
   {
     id: 'claude',
-    title: 'Ask Claude Code about your investments',
+    title: "Ask an AI assistant",
     blocks: [
-      { p: 'If you use Claude Code on your computer, it can read your saved .invest file and run the same calculations as this app: your holdings, goals, projections, what-if moves, trade previews and tax. It only reads. It never changes the file, and you record trades yourself here.' },
-      { p: 'What you need: Claude Code, and Rust to build the connector once (rustup.rs). Then run, in a terminal:' },
+      { p: "An AI assistant can read your portfolio, answer questions with the app’s own figures, help you plan, and record what you decide once you approve it. It is optional: everything in Investor works without it." },
+      { p: "In the desktop app, press the ✦ button in the bottom-right corner and choose a model: one on your computer through Ollama or LM Studio (nothing leaves your computer), or Anthropic or OpenAI with your own API key. Every change it wants to make shows a card to approve, and becomes an unsaved change you save as usual. On the website the button explains why it needs the desktop app: your portfolio should not pass through a web page on its way to a model." },
+      { p: "You can also use your own AI tool. investor-mcp opens your saved file to any assistant that speaks the Model Context Protocol, such as Claude Code, Claude Desktop, Cursor, VS Code or LM Studio. You need Rust to build it once (rustup.rs). For Claude Code:" },
       { code: CLAUDE_SETUP },
-      { p: 'Not on a Mac? Instead of remember-password, set INVESTOR_PASSWORD_COMMAND to a command that prints the password, for example from your password manager.' },
-      {
-        list: [
-          'Claude reads the saved file. Save here first; changes that are only kept in this browser are not seen.',
-          'The password never goes into the chat. If Claude says it cannot open the file, it tells you which command to run in your terminal.',
-          'What Claude reads is sent to Anthropic to answer you, like anything else in a Claude Code conversation.',
-        ],
-      },
-      { p: 'Things to ask:' },
-      {
-        list: [
-          '“What do I hold, and how much is in cash?”',
-          '“Compare investing €10,000 at once with spreading it over 12 months, over 20 years.”',
-          '“What would selling 2 VUAA on Xetra change, including tax?”',
-          '“Am I on track for my goals? What would it take to retire at 60?”',
-        ],
-      },
+      { p: "Not on a Mac? Instead of remember-password, set INVESTOR_PASSWORD_COMMAND to a command that prints the password, for example from your password manager. Other tools take the same command and --file argument in their MCP settings. In Claude Code, /plugin install investor --marketplace dobrinov/investor adds ready-made skills: a monthly check-up, rehearsing a trade, tax season and retirement." },
+      { list: ["investor-mcp reads the saved file: save here first. If it changes the file while the app has it open, the app warns you before saving over those changes.", "Every change it makes keeps the previous version in a folder next to your file (the last 20), and it can undo them one by one. Start it with --read-only if it should never write.", "The password never goes into the chat. With a cloud model, your questions and the figures it looks up are sent to that provider."] },
+      { p: "Things to ask:" },
+      { list: ["“What do I hold, and how much is in cash?”", "“Compare investing €10,000 at once with spreading it over 12 months, over 20 years.”", "“I sold 2 VUAA on Xetra at 131.20 today. Record it and tell me the tax.”", "“Am I on track for my goals? What would it take to retire at 60?”"] },
     ],
   },
   {

@@ -11,6 +11,8 @@ export interface Draft {
   updatedAt: string
   /** The opened file, so saving after a refresh still goes back into it. */
   handle?: FileRef
+  /** When that file was last changed on disk as far as the app knows. */
+  modified?: number | null
 }
 
 const DB_NAME = 'investor'

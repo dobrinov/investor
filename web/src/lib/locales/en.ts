@@ -81,6 +81,7 @@ export const en = {
   'shell.exit': 'Exit',
   'shell.exitLong': 'Back to the website',
   'shell.exitHint': 'Back to the Investor website',
+  'shell.changedOutside': "{name} was changed outside the app since you opened it, for example by an AI assistant. Saving now replaces those changes with what you see here. To keep them, cancel, lock, and open the file again (your unsaved work here would be lost). Save anyway?",
   'shell.lock': 'Lock',
 
   'overview.subtitle': 'Amounts in {currency}',
