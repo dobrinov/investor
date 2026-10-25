@@ -203,7 +203,7 @@
       </label>
       <datalist id="known-symbols">{#each s.instruments as i (i.symbol)}<option value={i.symbol}>{i.name ?? ''}</option>{/each}</datalist>
       {#if form.symbol && !s.instruments.some((i) => i.symbol === form.symbol)}
-        <div class="row">
+        <div class="row fields">
           <label class="field">{t('trade.name')}<input bind:value={form.name} /></label>
           <label class="field">{t('trade.isin')}<input bind:value={form.isin} /></label>
         </div>
@@ -220,7 +220,7 @@
         {/each}
       </div>
     </div>
-    <div class="row">
+    <div class="row fields">
       {#if form.by === 'units'}
         <label class="field">{t('trade.units')}
           <input inputmode="decimal" bind:value={form.units} required />
@@ -244,7 +244,7 @@
     {#if form.by === 'amount'}
       <label class="choice"><input type="checkbox" checked={!!form.whole} onchange={(e) => (form.whole = e.currentTarget.checked ? '1' : '')} />{t('trade.wholeUnits')}</label>
     {/if}
-    <div class="row">
+    <div class="row fields">
       <label class="field">{t('trade.currency')}<input value={currency} oninput={(e) => (form.currency = e.currentTarget.value.trim().toUpperCase())} maxlength="3" /></label>
       <label class="field">{t('trade.date')}<input type="date" bind:value={form.date} /></label>
     </div>
@@ -262,7 +262,7 @@
 
     <fieldset>
       <legend>{t('trade.fees', { currency })}</legend>
-      <div class="row three">
+      <div class="row three fields">
         {#each feeKinds as k (k)}
           <label class="field">{t(`trade.fee.${k}` as 'trade.fee.commission')}<input inputmode="decimal" bind:value={form[k]} placeholder="0" /></label>
         {/each}
@@ -462,7 +462,6 @@
   }
   .row.three {
     grid-template-columns: repeat(3, 1fr);
-    align-items: end;
   }
   .pill {
     align-self: flex-start;

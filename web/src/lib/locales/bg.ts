@@ -80,6 +80,9 @@ export const bg: Record<Key, string> = {
   'shell.saveHint': 'Записва във {name}',
   'shell.lockUnsaved': 'Някои промени още не са във файла. Остават криптирани в този браузър. Заключване въпреки това?',
   'shell.privacy': 'Без акаунт, без сървър, без проследяване. Данните ви са само във файла .invest.',
+  'shell.exit': 'Изход',
+  'shell.exitLong': 'Към сайта',
+  'shell.exitHint': 'Обратно към сайта на Investor',
   'shell.lock': 'Заключи',
 
   'overview.subtitle': 'Сумите са в {currency}',

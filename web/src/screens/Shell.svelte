@@ -1,5 +1,6 @@
 <script lang="ts">
   import { savesInPlace } from '../lib/files'
+  import ExitLink from '../components/ExitLink.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import Logo from '../components/Logo.svelte'
   import { t } from '../lib/i18n.svelte'
@@ -106,10 +107,14 @@
       {saving ? t('shell.saving') : t('shell.saveShort')}
     </button>
     {/if}
+    <ExitLink label={false} />
   </header>
 
   <aside>
-    <div class="brand"><Logo /> Investor</div>
+    <div class="side-head">
+      <div class="brand"><Logo /> Investor</div>
+      <ExitLink />
+    </div>
 
     {#if app.example}
       <div class="file example">
@@ -223,6 +228,7 @@
           </button>
         {/each}
       </div>
+      <a class="more-exit" href="../">{t('shell.exitLong')}</a>
       <div class="more-bottom">
         <LanguagePicker light />
         <button class="lock" onclick={lock}>
@@ -258,6 +264,25 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+  .side-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .more-exit {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--ink);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .more-exit:hover {
+    background: var(--surface-2);
   }
   .brand {
     display: flex;

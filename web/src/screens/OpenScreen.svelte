@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import ExitLink from '../components/ExitLink.svelte'
   import Logo from '../components/Logo.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import { Book } from '../lib/core'
@@ -113,9 +114,12 @@
 </script>
 
 <div class="page" role="presentation" ondragover={(e) => e.preventDefault()} ondrop={dropped}>
+  <header class="site">
+    <a class="brand" href="../"><Logo size={30} /> Investor</a>
+    <ExitLink long />
+  </header>
   <div class="wrap">
     <section class="pitch">
-      <div class="brand"><Logo size={30} /> Investor</div>
       <h1>{t('open.headline')}</h1>
       <ul class="facts">
         <li><strong>{t('open.noAccount')}</strong><span>{t('open.noAccountText')}</span></li>
@@ -169,7 +173,7 @@
           <label class="field">{t('create.fileName')}
             <input bind:value={fileName} required />
           </label>
-          <div class="two">
+          <div class="two fields">
             <label class="field">{t('create.baseCurrency')}
               <select bind:value={baseCurrency}>
                 <option value="EUR">EUR</option>
@@ -217,9 +221,21 @@
     min-height: 100vh;
     background: var(--side);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 48px 16px;
+    gap: 32px;
+    padding: 20px 16px 48px;
+  }
+  .site {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .wrap {
+    margin-block: auto;
   }
   .wrap {
     width: 100%;
@@ -240,6 +256,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    text-decoration: none;
     color: #fff;
     font-weight: 600;
     font-size: 22px;

@@ -105,7 +105,7 @@
   <p class="muted small">{t('metal.intro')}</p>
 
   {#if form}
-    <form class="add" onsubmit={(e) => (e.preventDefault(), save())}>
+    <form class="add fields" onsubmit={(e) => (e.preventDefault(), save())}>
       <h3 class="wide">{form.side === 'buy' ? t('metal.buyTitle') : t('metal.sellTitle')}</h3>
       <label class="field">{t('metal.metal')}
         <select bind:value={form.metal}>
@@ -165,7 +165,7 @@
       </div>
 
       {#if pricing === h.metal}
-        <form class="price" onsubmit={(e) => (e.preventDefault(), savePrice(h.metal))}>
+        <form class="price fields" onsubmit={(e) => (e.preventDefault(), savePrice(h.metal))}>
           <div class="field">
             <label for="metal-price">{t('metal.price')}</label>
             <div class="pair">
@@ -181,9 +181,11 @@
           {#if price.currency.trim().toUpperCase() !== base}
             <label class="field">{t('private.rate', { currency: price.currency.trim().toUpperCase(), base })}<input inputmode="decimal" bind:value={price.fx_rate} required /></label>
           {/if}
-          <button class="btn">{t('common.save')}</button>
-          <button type="button" class="btn ghost" onclick={() => (pricing = null)}>{t('common.cancel')}</button>
           <p class="muted small wide">{t('metal.priceHint')}</p>
+          <div class="actions">
+            <button class="btn">{t('common.save')}</button>
+            <button type="button" class="btn ghost" onclick={() => (pricing = null)}>{t('common.cancel')}</button>
+          </div>
           {#if error}<p class="error wide" role="alert">{error}</p>{/if}
         </form>
       {/if}
@@ -243,7 +245,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px 16px;
-    align-items: end;
     padding: 16px;
     margin-bottom: 16px;
     border-radius: 8px;

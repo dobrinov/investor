@@ -79,7 +79,7 @@
   <p class="muted small">{t('private.intro')}</p>
 
   {#if adding}
-    <form class="add" onsubmit={(e) => (e.preventDefault(), add())}>
+    <form class="add fields" onsubmit={(e) => (e.preventDefault(), add())}>
       <label class="field wide">{t('private.name')}<input bind:value={form.name} placeholder={t('private.namePlaceholder')} required /></label>
       <label class="field">{t('private.paidOn')}<input type="date" bind:value={form.date} max={today} required /></label>
       <label class="field">{t('private.amount')}<input inputmode="decimal" bind:value={form.amount} required /></label>

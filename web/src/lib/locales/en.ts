@@ -78,6 +78,9 @@ export const en = {
   'shell.saveHint': 'Saves into {name}',
   'shell.lockUnsaved': 'Some changes are not saved to your file yet. They stay encrypted in this browser. Lock anyway?',
   'shell.privacy': 'No account, no server, no tracking. Your data exists only in your .invest file.',
+  'shell.exit': 'Exit',
+  'shell.exitLong': 'Back to the website',
+  'shell.exitHint': 'Back to the Investor website',
   'shell.lock': 'Lock',
 
   'overview.subtitle': 'Amounts in {currency}',

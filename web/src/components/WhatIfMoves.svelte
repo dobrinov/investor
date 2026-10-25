@@ -105,7 +105,7 @@
   {@const d = draft}
   <form class="editor" onsubmit={(e) => (e.preventDefault(), save())}>
     <h3>{t(`proj.kind.${d.kind}`)}</h3>
-    <div class="grid">
+    <div class="grid fields">
       <label class="field">{t('proj.name')}<input bind:value={d.name} placeholder={t('proj.namePlaceholder')} /></label>
       <label class="field">{t(`proj.amount.${d.kind}`, { currency: base })}<input type="number" min="0" step="100" required bind:value={d.amount} /></label>
       <label class="field">
@@ -141,7 +141,7 @@
       </fieldset>
       {#if d.asset}
         {@const a = d.asset}
-        <div class="grid">
+        <div class="grid fields">
           <label class="field">{t('proj.preset')}
             <select value={preset} onchange={(e) => choosePreset(e.currentTarget.value as Preset)}>
               {#each ['deposit', 'bonds', 'stocks', 'single', 'custom'] as const as p (p)}

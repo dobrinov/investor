@@ -120,7 +120,7 @@
     {#if !editingProfile}<button class="btn ghost" onclick={() => (editingProfile = true)}>{t('common.edit')}</button>{/if}
   </div>
   {#if editingProfile}
-    <form class="grid" onsubmit={(e) => (e.preventDefault(), saveProfile())}>
+    <form class="grid fields" onsubmit={(e) => (e.preventDefault(), saveProfile())}>
       {#each fields as f (f.key)}
         <div class="field">
           <div class="field-head">
@@ -204,7 +204,7 @@
 {#if draft}
   <section class="card">
     <h2>{draft.name || t('goals.newGoal')}</h2>
-    <form class="grid" onsubmit={(e) => (e.preventDefault(), saveGoal())}>
+    <form class="grid fields" onsubmit={(e) => (e.preventDefault(), saveGoal())}>
       <label class="field">{t('goals.name')}<input bind:value={draft.name} required /></label>
       {#if draft.kind === 'emergency_fund'}
         <label class="field">{t('goals.months')}<input type="number" min="1" max="24" bind:value={draft.target} required /></label>

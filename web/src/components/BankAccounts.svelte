@@ -88,7 +88,7 @@
   <p class="muted small">{t('bank.intro')}</p>
 
   {#if adding}
-    <form class="add" onsubmit={(e) => (e.preventDefault(), add())}>
+    <form class="add fields" onsubmit={(e) => (e.preventDefault(), add())}>
       <label class="field">{t('bank.name')}<input bind:value={form.name} placeholder={t('bank.namePlaceholder')} required /></label>
       <label class="field">{t('overview.currency')}<input bind:value={form.currency} maxlength="3" required /></label>
       <label class="field">{t('bank.balance')}<input inputmode="decimal" bind:value={form.balance} required /></label>

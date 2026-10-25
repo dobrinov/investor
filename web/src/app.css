@@ -144,6 +144,27 @@ h3 {
   color: var(--ink-2);
 }
 
+/* Fields side by side. Each field's label, control and hint sit in rows shared
+   with its neighbours (subgrid), so the controls line up even when one label
+   wraps onto two lines or only some fields have a hint. Anything else in the
+   grid, such as a heading or the buttons, takes a whole row. */
+.fields > .field {
+  grid-row: span 3;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+  align-content: start;
+}
+.field .hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.fields > :not(.field) {
+  grid-column: 1 / -1;
+}
+
 .field input,
 .field select,
 select.input,
