@@ -1,9 +1,10 @@
 import type { Book, Plan, Snapshot } from './core'
+import type { SectionId } from './guide/types'
 import { saveFile } from './files'
 import { useLanguage } from './i18n.svelte'
 import { saveDraft } from './storage'
 
-export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax' | 'settings'
+export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax' | 'settings' | 'guide'
 
 class AppState {
   book = $state.raw<Book | null>(null)
@@ -12,6 +13,8 @@ class AppState {
   /** Changes made since the file was last saved. */
   changes = $state(0)
   view = $state<View>('overview')
+  /** Section the guide should scroll to when it opens. */
+  guideSection = $state<SectionId | null>(null)
   /** False when the browser refuses to keep a draft (private mode, blocked storage). */
   draftKept = $state(true)
   private handle: FileSystemFileHandle | undefined
@@ -24,6 +27,11 @@ class AppState {
     this.view = 'overview'
     this.refresh()
     useLanguage(this.snapshot!.settings.language)
+  }
+
+  openGuide(section: SectionId): void {
+    this.guideSection = section
+    this.view = 'guide'
   }
 
   refresh(): void {

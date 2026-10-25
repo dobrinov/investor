@@ -92,7 +92,10 @@
           {/if}
         </div>
         {#if !item.brokerId && !item.report}
-          <p class="notice">{t('import.unknownFormat')}</p>
+          <p class="notice">
+            {t('import.unknownFormat')}
+            <button class="inline-link" onclick={() => app.openGuide('add-broker')}>{t('import.guideMissing')}</button>
+          </p>
         {/if}
         {#if item.report}
           <p class="result">{t('import.result', { added: item.report.added, duplicates: item.report.duplicates })}</p>
@@ -112,7 +115,11 @@
 <section class="card help">
   <h2>{t('import.howTitle')}</h2>
   <p>{t('import.howText')}</p>
-  <a href="https://github.com/dobrinov/investor/blob/main/docs/importing.md" target="_blank" rel="noreferrer">{t('import.howLink')}</a>
+  <div class="links">
+    <button class="btn ghost" onclick={() => app.openGuide('export-ibkr')}>{t('import.guideIbkr')}</button>
+    <button class="btn ghost" onclick={() => app.openGuide('export-revolut')}>{t('import.guideRevolut')}</button>
+    <button class="btn ghost" onclick={() => app.openGuide('add-broker')}>{t('import.guideMissing')}</button>
+  </div>
 </section>
 
 <style>
@@ -192,6 +199,20 @@
   .result {
     font-weight: 600;
     color: var(--accent);
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .inline-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
   }
   .help p {
     margin: 8px 0;

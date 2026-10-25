@@ -116,7 +116,6 @@ export const en = {
   'import.importAll': 'Import all',
   'import.howTitle': 'Exporting statements and adding brokers',
   'import.howText': 'Each broker is described by a small config file, so new brokers and exchanges can be added without changing the app. Rows a config does not recognise are listed, never silently dropped.',
-  'import.howLink': 'How to export statements and write a broker config',
 
   'tax.subtitle': 'Realised gains for your tax return, classified by your country’s rules.',
   'tax.noPack': 'There is no tax pack for {country} yet.',
@@ -317,6 +316,14 @@ export const en = {
   'help.pensionAge.without': '65 is assumed.',
   'help.pension.why': 'Reduces what your investments must pay you each month. The National Social Security Institute (NOI) can give you an estimate.',
   'help.pension.without': 'No pension is counted — the cautious assumption, so the plan may look worse than it is.',
+
+  'nav.guide': 'Guide',
+  'guide.subtitle': 'How to use Investor, export statements, and add what is missing.',
+  'guide.contents': 'Contents',
+  'import.guideIbkr': 'Exporting from IBKR',
+  'import.guideRevolut': 'Exporting from Revolut',
+  'import.guideMissing': 'My broker is missing',
+  'tax.howToAdd': 'How to add tax rules',
 } as const
 
 export type Key = keyof typeof en

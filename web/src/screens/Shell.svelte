@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n.svelte'
   import { app, type View } from '../lib/state.svelte'
   import Goals from './Goals.svelte'
+  import Guide from './Guide.svelte'
   import Import from './Import.svelte'
   import Ledger from './Ledger.svelte'
   import Overview from './Overview.svelte'
@@ -20,6 +21,7 @@
     { view: 'ledger', label: () => t('nav.ledger'), icon: 'M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h8' },
     { view: 'import', label: () => t('nav.import'), icon: 'M12 3v12M7 10l5 5 5-5M4 19h16' },
     { view: 'tax', label: () => t('nav.tax'), icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h7M14 3v5h5' },
+    { view: 'guide', label: () => t('nav.guide'), icon: 'M12 4c-2-1-5-1-8 0v15c3-1 6-1 8 0 2-1 5-1 8 0V4c-3-1-6-1-8 0zM12 4v15' },
     { view: 'settings', label: () => t('nav.settings'), icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4' },
   ]
 
@@ -115,6 +117,8 @@
       <Import />
     {:else if app.view === 'tax'}
       <Tax />
+    {:else if app.view === 'guide'}
+      <Guide />
     {:else}
       <Settings />
     {/if}

@@ -44,6 +44,7 @@
 
 {#if years.length === 0}
   <p class="notice">{t('tax.noPack', { country: s.settings.tax_residency })}</p>
+  <button class="btn ghost" onclick={() => app.openGuide('add-tax')}>{t('tax.howToAdd')}</button>
 {:else}
   <div class="controls">
     <label class="field">{t('tax.year')}
@@ -56,6 +57,7 @@
 
   {#if !pack}
     <p class="notice">{t('tax.noPackForYear', { year: selectedYear, country: s.settings.tax_residency })}</p>
+    <button class="btn ghost" onclick={() => app.openGuide('add-tax')}>{t('tax.howToAdd')}</button>
     <section class="card">
       <h2>{t('tax.sales', { year: selectedYear })}</h2>
       <div class="table-wrap">
