@@ -1,6 +1,6 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
-import init, { Session, brokerFit as fit } from './core-wasm/core.js'
+import init, { Session, brokerFit as fit, project as runProjection, retirement as runRetirement } from './core-wasm/core.js'
 
 let ready: Promise<unknown> | undefined
 
@@ -70,8 +70,72 @@ export interface Instrument {
   currency?: string
 }
 
+export type Risk = 'cautious' | 'balanced' | 'growth'
+export type Market = 'bear' | 'base' | 'bull'
+
+export interface Profile {
+  birth_year: number
+  monthly_spending: Decimal
+  monthly_investing: Decimal
+  risk: Risk
+  retirement_age: number
+  pension_age: number
+  monthly_pension: Decimal
+  retirement_spending: Decimal
+}
+
+export interface Goal {
+  id: string
+  name: string
+  kind: 'emergency_fund' | 'savings'
+  /** Amount, or months of spending for an emergency fund. */
+  target: Decimal
+  year?: number | null
+  monthly: Decimal
+}
+
+export interface Plan {
+  profile?: Profile | null
+  goals: Goal[]
+}
+
+export interface GoalStatus {
+  id: string
+  have: number
+  target: number
+  chance: number | null
+  needed_monthly: number | null
+  on_track: boolean
+}
+
+export interface Projection {
+  bands: { year: number; steady: number; p10: number; p50: number; p90: number }[]
+  chance_of_target: number | null
+}
+
+export interface RetirementYear {
+  age: number
+  start: number
+  growth: number
+  withdrawn: number
+  end: number
+  from_portfolio_monthly: number
+  pension_monthly: number
+  covered: boolean
+}
+
+export interface Retirement {
+  at_retirement: number
+  runs_out_at: number | null
+  chance_lasts: number
+  safe_monthly_spending: number
+  path: [number, number][]
+  years: RetirementYear[]
+}
+
 export interface Snapshot {
   settings: Settings
+  plan: Plan
   holdings: Holding[]
   cash: CashBalance[]
   trial_balance: TrialBalanceRow[]
@@ -146,6 +210,14 @@ export class Book {
     return JSON.parse(this.session.sales(year))
   }
 
+  setPlan(plan: Plan): void {
+    this.session.setPlan(JSON.stringify(plan))
+  }
+
+  goals(thisYear: number, market: Market): GoalStatus[] {
+    return JSON.parse(this.session.goals(thisYear, market))
+  }
+
   setLanguage(language: string): void {
     this.session.setLanguage(language)
   }
@@ -157,4 +229,23 @@ export class Book {
 
 export function brokerFit(brokerToml: string, text: string): number {
   return fit(brokerToml, text)
+}
+
+export function project(input: { start: number; monthly: number; years: number; market: Market; risk: Risk; target?: number }): Projection {
+  return JSON.parse(runProjection(JSON.stringify(input)))
+}
+
+export function retirement(input: {
+  start: number
+  age_now: number
+  retire_at: number
+  plan_until: number
+  monthly_investing: number
+  monthly_spending: number
+  pension_from: number
+  monthly_pension: number
+  market: Market
+  risk: Risk
+}): Retirement {
+  return JSON.parse(runRetirement(JSON.stringify(input)))
 }

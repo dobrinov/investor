@@ -48,7 +48,12 @@ RUSTC=$(rustup which rustc) CARGO_TARGET_DIR=target/wasm \
 
 ## Status
 
-Milestone 1 in progress: core ledger, importers (IBKR Flex, Revolut), `.invest`
-file, CLI. Next: WebAssembly bindings and the browser UI.
+Browser edition (`cd web && pnpm dev`): open/create/restore an encrypted
+`.invest` file, import IBKR and Revolut statements, overview, general ledger,
+goals, projections with retirement planning, and Bulgarian capital-gains
+reporting. English and Bulgarian.
+
+Next: market prices, a sandbox for planned trades, more languages, and the
+desktop edition with the Claude Code advisor.
 
 Tax packs are drafts and have not been reviewed by a tax professional.

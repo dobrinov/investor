@@ -10,6 +10,7 @@ pub mod jurisdiction;
 pub mod ledger;
 pub mod lots;
 mod money;
+pub mod plan;
 pub mod reports;
 pub mod vault;
 

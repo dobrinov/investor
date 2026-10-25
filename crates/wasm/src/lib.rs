@@ -7,6 +7,7 @@ use investor_core::import::{self, BrokerConfig};
 use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
+use investor_core::plan::{self, Market, Plan, ProjectionInput, RetirementInput};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -29,6 +30,7 @@ pub struct Session {
 #[derive(Serialize)]
 struct Snapshot<'a> {
     settings: &'a Settings,
+    plan: &'a Plan,
     holdings: Vec<Holding>,
     cash: Vec<CashBalance>,
     trial_balance: Vec<TrialBalanceRow>,
@@ -79,6 +81,7 @@ impl Session {
         entries.reverse();
         json(&Snapshot {
             settings: &self.vault.settings,
+            plan: &self.vault.plan,
             holdings: reports::holdings(ledger),
             cash: reports::cash(ledger),
             trial_balance: reports::trial_balance(ledger),
@@ -119,10 +122,45 @@ impl Session {
         json(&reports::realized_gains(&self.vault.ledger, year))
     }
 
+    /// Replaces the profile and goals. `plan` is JSON.
+    #[wasm_bindgen(js_name = setPlan)]
+    pub fn set_plan(&mut self, plan: &str) -> Result<(), JsError> {
+        self.vault.plan = serde_json::from_str(plan).map_err(js_error)?;
+        Ok(())
+    }
+
+    /// Progress on every goal, with today's money assigned in priority order.
+    pub fn goals(&self, this_year: i32, market: &str) -> Result<String, JsError> {
+        let market: Market = serde_json::from_value(serde_json::Value::String(market.to_owned())).map_err(js_error)?;
+        let ledger = &self.vault.ledger;
+        let cash: f64 = ledger
+            .balances()
+            .iter()
+            .filter(|(account, _)| account.starts_with("Assets:Cash:"))
+            .map(|(_, b)| plan::to_f64(b.base))
+            .sum();
+        let invested: f64 = reports::holdings(ledger).iter().map(|h| plan::to_f64(h.cost)).sum();
+        json(&plan::evaluate_goals(&self.vault.plan, cash, invested, this_year, market))
+    }
+
     #[wasm_bindgen(js_name = setLanguage)]
     pub fn set_language(&mut self, language: &str) {
         self.vault.settings.language = language.to_owned();
     }
+}
+
+/// Simulated growth of a portfolio. `input` and the result are JSON.
+#[wasm_bindgen]
+pub fn project(input: &str) -> Result<String, JsError> {
+    let input: ProjectionInput = serde_json::from_str(input).map_err(js_error)?;
+    json(&plan::project(&input))
+}
+
+/// Saving until retirement and drawing down after it. JSON in and out.
+#[wasm_bindgen]
+pub fn retirement(input: &str) -> Result<String, JsError> {
+    let input: RetirementInput = serde_json::from_str(input).map_err(js_error)?;
+    json(&plan::retirement(&input))
 }
 
 /// How well a broker config fits a statement, from 0 to 1.

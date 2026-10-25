@@ -3,15 +3,19 @@
   import Logo from '../components/Logo.svelte'
   import { t } from '../lib/i18n.svelte'
   import { app, type View } from '../lib/state.svelte'
+  import Goals from './Goals.svelte'
   import Import from './Import.svelte'
   import Ledger from './Ledger.svelte'
   import Overview from './Overview.svelte'
+  import Projections from './Projections.svelte'
   import Tax from './Tax.svelte'
 
   const IDLE_LOCK_MS = 15 * 60 * 1000
 
   const nav: { view: View; label: () => string; icon: string }[] = [
     { view: 'overview', label: () => t('nav.overview'), icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z' },
+    { view: 'goals', label: () => t('nav.goals'), icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z' },
+    { view: 'projections', label: () => t('nav.projections'), icon: 'M3 20h18M4 16l5-6 4 3 7-8' },
     { view: 'ledger', label: () => t('nav.ledger'), icon: 'M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h8' },
     { view: 'import', label: () => t('nav.import'), icon: 'M12 3v12M7 10l5 5 5-5M4 19h16' },
     { view: 'tax', label: () => t('nav.tax'), icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h7M14 3v5h5' },
@@ -99,6 +103,10 @@
   <main>
     {#if app.view === 'overview'}
       <Overview />
+    {:else if app.view === 'goals'}
+      <Goals />
+    {:else if app.view === 'projections'}
+      <Projections />
     {:else if app.view === 'ledger'}
       <Ledger />
     {:else if app.view === 'import'}

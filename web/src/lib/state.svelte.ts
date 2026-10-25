@@ -1,9 +1,9 @@
-import type { Book, Snapshot } from './core'
+import type { Book, Plan, Snapshot } from './core'
 import { saveFile } from './files'
 import { useLanguage } from './i18n.svelte'
 import { saveDraft } from './storage'
 
-export type View = 'overview' | 'ledger' | 'import' | 'tax'
+export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax'
 
 class AppState {
   book = $state.raw<Book | null>(null)
@@ -55,6 +55,11 @@ class AppState {
     this.fileName = result.name ?? this.fileName
     this.changes = 0
     await this.keepDraft()
+  }
+
+  async setPlan(plan: Plan): Promise<void> {
+    this.book?.setPlan(plan)
+    await this.changed()
   }
 
   setLanguage(lang: string): void {

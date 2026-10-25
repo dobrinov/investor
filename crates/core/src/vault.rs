@@ -22,6 +22,7 @@ use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 
 use crate::ledger::Ledger;
+use crate::plan::Plan;
 use crate::{Currency, Error, Result};
 
 const MAGIC: &[u8; 7] = b"INVEST\0";
@@ -36,6 +37,8 @@ const MAX_ITERATIONS: u32 = 16;
 pub struct Vault {
     pub settings: Settings,
     pub ledger: Ledger,
+    #[serde(default)]
+    pub plan: Plan,
 }
 
 /// Preferences that travel with the file.
@@ -51,7 +54,7 @@ pub struct Settings {
 impl Vault {
     pub fn new(settings: Settings) -> Self {
         let ledger = Ledger::new(settings.base_currency.clone());
-        Self { settings, ledger }
+        Self { settings, ledger, plan: Plan::default() }
     }
 }
 
