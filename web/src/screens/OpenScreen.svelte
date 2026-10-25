@@ -27,6 +27,15 @@
   onMount(async () => {
     draft = await loadDraft()
     if (draft) mode = 'restore'
+    // Installed from the browser, the app can be the one that opens .invest files.
+    const queue = (window as unknown as { launchQueue?: { setConsumer(consumer: (params: { files: readonly FileSystemHandle[] }) => void): void } }).launchQueue
+    queue?.setConsumer(async ({ files }) => {
+      const handle = files[0]
+      if (handle?.kind !== 'file') return
+      const file = await (handle as FileSystemFileHandle).getFile()
+      picked = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()), handle: handle as FileSystemFileHandle }
+      go('open')
+    })
   })
 
   function describe(e: unknown): string {
