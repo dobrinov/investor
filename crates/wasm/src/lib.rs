@@ -126,6 +126,11 @@ impl Session {
         })
     }
 
+    /// Deposits, withdrawals, buys and sells per month, as JSON.
+    pub fn flows(&self) -> Result<String, JsError> {
+        json(&reports::monthly_flows(&self.vault.ledger))
+    }
+
     /// Realised gains for a year without tax classification, as JSON.
     pub fn sales(&self, year: i32) -> Result<String, JsError> {
         json(&reports::realized_gains(&self.vault.ledger, year))
@@ -139,7 +144,8 @@ impl Session {
     }
 
     /// Progress on every goal, with today's money assigned in priority order.
-    pub fn goals(&self, this_year: i32, market: &str) -> Result<String, JsError> {
+    /// `pace` scales the planned monthly amounts (1 = as planned).
+    pub fn goals(&self, this_year: i32, market: &str, pace: f64) -> Result<String, JsError> {
         let market: Market = serde_json::from_value(serde_json::Value::String(market.to_owned())).map_err(js_error)?;
         let ledger = &self.vault.ledger;
         let cash: f64 = ledger
@@ -153,7 +159,7 @@ impl Session {
             .iter()
             .map(|v| plan::to_f64(v.value.unwrap_or(v.cost)))
             .sum();
-        json(&plan::evaluate_goals(&self.vault.plan, cash, invested, this_year, market))
+        json(&plan::evaluate_goals(&self.vault.plan, cash, invested, this_year, market, pace))
     }
 
     /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.
@@ -172,6 +178,17 @@ impl Session {
         let date = date.parse().map_err(js_error)?;
         let rate = rate.trim().replace(',', ".").parse().map_err(js_error)?;
         self.vault.prices.add_fx(Currency::new(currency).map_err(js_error)?, FxQuote { date, rate, source: QuoteSource::Manual });
+        Ok(())
+    }
+
+    /// Replaces the key after checking the current password. Saves made
+    /// afterwards need the new password; older copies keep the old one.
+    #[wasm_bindgen(js_name = changePassword)]
+    pub fn change_password(&mut self, current: &str, new: &str) -> Result<(), JsError> {
+        if !self.key.matches(current).map_err(js_error)? {
+            return Err(JsError::new("wrong password"));
+        }
+        self.key = SealingKey::derive(new, KdfParams::default()).map_err(js_error)?;
         Ok(())
     }
 

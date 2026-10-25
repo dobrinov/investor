@@ -8,6 +8,7 @@
   import Ledger from './Ledger.svelte'
   import Overview from './Overview.svelte'
   import Projections from './Projections.svelte'
+  import Settings from './Settings.svelte'
   import Tax from './Tax.svelte'
 
   const IDLE_LOCK_MS = 15 * 60 * 1000
@@ -19,6 +20,7 @@
     { view: 'ledger', label: () => t('nav.ledger'), icon: 'M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h8' },
     { view: 'import', label: () => t('nav.import'), icon: 'M12 3v12M7 10l5 5 5-5M4 19h16' },
     { view: 'tax', label: () => t('nav.tax'), icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h7M14 3v5h5' },
+    { view: 'settings', label: () => t('nav.settings'), icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4' },
   ]
 
   let saving = $state(false)
@@ -111,8 +113,10 @@
       <Ledger />
     {:else if app.view === 'import'}
       <Import />
-    {:else}
+    {:else if app.view === 'tax'}
       <Tax />
+    {:else}
+      <Settings />
     {/if}
   </main>
 </div>

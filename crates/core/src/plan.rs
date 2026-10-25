@@ -18,18 +18,28 @@ pub struct Plan {
     pub goals: Vec<Goal>,
 }
 
+/// Everything is optional: each missing value only switches off what needs it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Profile {
-    pub birth_year: i32,
-    pub monthly_spending: Decimal,
-    pub monthly_investing: Decimal,
+    #[serde(default)]
+    pub birth_year: Option<i32>,
+    /// Sizes the emergency fund.
+    #[serde(default)]
+    pub monthly_spending: Option<Decimal>,
+    #[serde(default)]
+    pub monthly_investing: Option<Decimal>,
+    #[serde(default = "Risk::default_level")]
     pub risk: Risk,
-    pub retirement_age: u32,
-    pub pension_age: u32,
+    #[serde(default)]
+    pub retirement_age: Option<u32>,
+    #[serde(default)]
+    pub pension_age: Option<u32>,
     /// Expected state pension per month, in today's money.
-    pub monthly_pension: Decimal,
+    #[serde(default)]
+    pub monthly_pension: Option<Decimal>,
     /// Spending per month once retired, in today's money.
-    pub retirement_spending: Decimal,
+    #[serde(default)]
+    pub retirement_spending: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +51,10 @@ pub enum Risk {
 }
 
 impl Risk {
+    fn default_level() -> Self {
+        Self::Balanced
+    }
+
     /// Yearly volatility of a typical portfolio at this risk level.
     pub fn volatility(self) -> f64 {
         match self {
@@ -358,13 +372,18 @@ pub struct GoalStatus {
     /// Monthly saving needed with average returns.
     pub needed_monthly: Option<f64>,
     pub on_track: bool,
+    /// Profile value the goal cannot be measured without, e.g. `monthly_spending`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub missing: Option<&'static str>,
 }
 
 /// Assigns today's money to goals in priority order — emergency funds from
 /// cash first, then savings goals by year — and estimates each one.
-pub fn evaluate_goals(plan: &Plan, cash: f64, invested: f64, this_year: i32, market: Market) -> Vec<GoalStatus> {
+/// `pace` scales every goal's monthly amount: 1.0 is the plan, 0.5 means
+/// only half of it actually gets saved.
+pub fn evaluate_goals(plan: &Plan, cash: f64, invested: f64, this_year: i32, market: Market, pace: f64) -> Vec<GoalStatus> {
     let risk = plan.profile.as_ref().map_or(Risk::Balanced, |p| p.risk);
-    let spending = plan.profile.as_ref().map_or(0.0, |p| to_f64(p.monthly_spending));
+    let spending = plan.profile.as_ref().and_then(|p| p.monthly_spending).map(to_f64);
     let mut cash_left = cash;
     let mut pool = invested;
     let mut statuses = Vec::with_capacity(plan.goals.len());
@@ -376,14 +395,25 @@ pub fn evaluate_goals(plan: &Plan, cash: f64, invested: f64, this_year: i32, mar
     });
     for i in order {
         let goal = &plan.goals[i];
-        let monthly = to_f64(goal.monthly);
+        let monthly = to_f64(goal.monthly) * pace;
         let status = match goal.kind {
-            GoalKind::EmergencyFund => {
-                let target = to_f64(goal.target) * spending;
-                let have = cash_left.min(target);
-                cash_left -= have;
-                GoalStatus { id: goal.id.clone(), have, target, chance: None, needed_monthly: None, on_track: have + 0.005 >= target }
-            }
+            GoalKind::EmergencyFund => match spending {
+                Some(spending) => {
+                    let target = to_f64(goal.target) * spending;
+                    let have = cash_left.min(target);
+                    cash_left -= have;
+                    GoalStatus { id: goal.id.clone(), have, target, chance: None, needed_monthly: None, on_track: have + 0.005 >= target, missing: None }
+                }
+                None => GoalStatus {
+                    id: goal.id.clone(),
+                    have: 0.0,
+                    target: 0.0,
+                    chance: None,
+                    needed_monthly: None,
+                    on_track: false,
+                    missing: Some("monthly_spending"),
+                },
+            },
             GoalKind::Savings => {
                 pool += cash_left;
                 cash_left = 0.0;
@@ -408,6 +438,7 @@ pub fn evaluate_goals(plan: &Plan, cash: f64, invested: f64, this_year: i32, mar
                     chance: projection.chance_of_target,
                     needed_monthly: Some(needed),
                     on_track: monthly + 0.005 >= needed,
+                    missing: None,
                 }
             }
         };
@@ -487,25 +518,33 @@ mod tests {
     fn goals_take_money_in_priority_order() {
         let plan = Plan {
             profile: Some(Profile {
-                birth_year: 1992,
-                monthly_spending: Decimal::from(1_400),
-                monthly_investing: Decimal::from(500),
+                birth_year: Some(1992),
+                monthly_spending: Some(Decimal::from(1_400)),
+                monthly_investing: Some(Decimal::from(500)),
                 risk: Risk::Balanced,
-                retirement_age: 60,
-                pension_age: 65,
-                monthly_pension: Decimal::from(650),
-                retirement_spending: Decimal::from(1_600),
+                retirement_age: Some(60),
+                pension_age: Some(65),
+                monthly_pension: Some(Decimal::from(650)),
+                retirement_spending: Some(Decimal::from(1_600)),
             }),
             goals: vec![
                 Goal { id: "house".into(), name: "House".into(), kind: GoalKind::Savings, target: Decimal::from(40_000), year: Some(2030), monthly: Decimal::from(400) },
                 Goal { id: "buffer".into(), name: "Buffer".into(), kind: GoalKind::EmergencyFund, target: Decimal::from(3), year: None, monthly: Decimal::ZERO },
             ],
         };
-        let s = evaluate_goals(&plan, 5_000.0, 10_000.0, 2026, Market::Base);
+        let s = evaluate_goals(&plan, 5_000.0, 10_000.0, 2026, Market::Base, 1.0);
         let buffer = s.iter().find(|g| g.id == "buffer").unwrap();
         let house = s.iter().find(|g| g.id == "house").unwrap();
         assert_eq!((buffer.have, buffer.target, buffer.on_track), (4_200.0, 4_200.0, true));
         assert_eq!(house.have, 10_800.0);
         assert!(house.needed_monthly.unwrap() > 400.0 && !house.on_track);
+
+        // Without monthly spending the emergency fund cannot be sized, and all
+        // the cash stays available to the next goal.
+        let mut without_spending = plan.clone();
+        without_spending.profile.as_mut().unwrap().monthly_spending = None;
+        let s = evaluate_goals(&without_spending, 5_000.0, 10_000.0, 2026, Market::Base, 1.0);
+        assert_eq!(s.iter().find(|g| g.id == "buffer").unwrap().missing, Some("monthly_spending"));
+        assert_eq!(s.iter().find(|g| g.id == "house").unwrap().have, 15_000.0);
     }
 }

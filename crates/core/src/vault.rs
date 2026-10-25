@@ -97,6 +97,11 @@ impl SealingKey {
         OsRng.fill_bytes(&mut salt);
         Ok(Self { key: derive_key(password, &salt, params)?, salt, params })
     }
+
+    /// Whether `password` is the one this key was derived from.
+    pub fn matches(&self, password: &str) -> Result<bool> {
+        Ok(derive_key(password, &self.salt, self.params)? == self.key)
+    }
 }
 
 pub fn seal(vault: &Vault, password: &str, params: KdfParams) -> Result<Vec<u8>> {

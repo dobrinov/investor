@@ -61,6 +61,12 @@ fn revolut_statement() {
     assert_eq!(gains[0].gain, dec("51.24"));
     assert_eq!(gains[0].venue, None, "Revolut does not report venues");
 
+    let flows = reports::monthly_flows(&ledger);
+    let march = flows.iter().find(|m| m.month == "2025-03").unwrap();
+    assert_eq!((march.deposited, march.bought), (dec("1100.00"), dec("614.81")));
+    let june = flows.iter().find(|m| m.month == "2025-06").unwrap();
+    assert_eq!((june.withdrawn, june.sold), (dec("500"), dec("614.81")));
+
     // Importing the same file again adds nothing.
     let again = import_statement(&mut ledger, &mut PriceBook::default(), &config, "revolut.csv", &repo("fixtures/revolut-trading.csv")).unwrap();
     assert_eq!((again.added, again.duplicates), (0, 6));

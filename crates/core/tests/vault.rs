@@ -50,6 +50,19 @@ fn resaves_with_the_unlocked_key() {
 }
 
 #[test]
+fn changing_the_password_replaces_the_key() {
+    let vault = sample();
+    let (_, key) = vault::unlock(&vault::seal(&vault, "old password", FAST).unwrap(), "old password").unwrap();
+    assert!(key.matches("old password").unwrap());
+    assert!(!key.matches("guess").unwrap());
+
+    let new_key = vault::SealingKey::derive("new password", FAST).unwrap();
+    let bytes = vault::seal_with(&vault, &new_key).unwrap();
+    assert!(vault::open(&bytes, "new password").is_ok());
+    assert!(matches!(vault::open(&bytes, "old password"), Err(Error::Decrypt)));
+}
+
+#[test]
 fn rejects_wrong_password_and_tampering() {
     let bytes = vault::seal(&sample(), "correct horse", FAST).unwrap();
     assert!(matches!(vault::open(&bytes, "wrong"), Err(Error::Decrypt)));

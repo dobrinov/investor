@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Help from '../components/Help.svelte'
+  import PlanVsActual from '../components/PlanVsActual.svelte'
   import type { Goal, Plan, Profile } from '../lib/core'
   import { money } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
@@ -8,21 +10,44 @@
   const base = $derived(s.settings.base_currency)
   const thisYear = new Date().getFullYear()
 
-  const defaults: Profile = {
-    birth_year: thisYear - 35,
-    monthly_spending: '1500',
-    monthly_investing: '300',
-    risk: 'balanced',
-    retirement_age: 65,
-    pension_age: 65,
-    monthly_pension: '0',
-    retirement_spending: '1500',
+  type Key = 'birth' | 'spending' | 'investing' | 'risk' | 'retirementAge' | 'retirementSpending' | 'pensionAge' | 'pension'
+  interface Field {
+    key: Key
+    prop: keyof Profile
+    kind: 'year' | 'age' | 'money' | 'risk'
+    label: () => string
   }
 
-  // Editable copies; saved to the file on "Save".
-  let profile = $state<Profile>({ ...defaults, ...(app.snapshot?.plan.profile ?? {}) })
+  const fields: Field[] = [
+    { key: 'birth', prop: 'birth_year', kind: 'year', label: () => t('goals.birthYear') },
+    { key: 'spending', prop: 'monthly_spending', kind: 'money', label: () => t('goals.spending', { currency: base }) },
+    { key: 'investing', prop: 'monthly_investing', kind: 'money', label: () => t('goals.investing', { currency: base }) },
+    { key: 'risk', prop: 'risk', kind: 'risk', label: () => t('goals.risk') },
+    { key: 'retirementAge', prop: 'retirement_age', kind: 'age', label: () => t('goals.retirementAge') },
+    { key: 'retirementSpending', prop: 'retirement_spending', kind: 'money', label: () => t('goals.retirementSpending', { currency: base }) },
+    { key: 'pensionAge', prop: 'pension_age', kind: 'age', label: () => t('goals.pensionAge') },
+    { key: 'pension', prop: 'monthly_pension', kind: 'money', label: () => t('goals.pension', { currency: base }) },
+  ]
+
+  const empty: Profile = {
+    birth_year: null,
+    monthly_spending: null,
+    monthly_investing: null,
+    risk: 'balanced',
+    retirement_age: null,
+    pension_age: null,
+    monthly_pension: null,
+    retirement_spending: null,
+  }
+
+  // Editable copy; saved to the file on "Save". Empty fields are allowed.
+  let profile = $state<Record<string, unknown>>({ ...empty, ...(app.snapshot?.plan.profile ?? {}) })
   let editingProfile = $state(!app.snapshot?.plan.profile)
   let draft = $state<Goal | null>(null)
+
+  const cash = $derived(
+    s.trial_balance.filter((r) => r.account.startsWith('Assets:Cash:')).reduce((sum, r) => sum + Number(r.debit) - Number(r.credit), 0),
+  )
 
   const statuses = $derived.by(() => {
     void app.snapshot
@@ -33,22 +58,32 @@
     await app.setPlan(plan)
   }
 
-  // Amounts travel to the core as exact decimal strings.
+  // Amounts travel to the core as exact decimal strings; blanks mean "not given".
   const decimal = (v: unknown) => String(v ?? '0').trim().replace(',', '.') || '0'
+  const optionalDecimal = (v: unknown) => {
+    const text = String(v ?? '').trim().replace(',', '.')
+    return text === '' ? null : text
+  }
+  const optionalNumber = (v: unknown) => (v === '' || v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v))
 
   async function saveProfile(): Promise<void> {
     const p = $state.snapshot(profile)
-    await save({
-      ...s.plan,
-      profile: {
-        ...p,
-        monthly_spending: decimal(p.monthly_spending),
-        monthly_investing: decimal(p.monthly_investing),
-        monthly_pension: decimal(p.monthly_pension),
-        retirement_spending: decimal(p.retirement_spending),
-      },
-    })
+    const next = { ...empty, risk: (p.risk as Profile['risk']) ?? 'balanced' } as Profile
+    for (const f of fields) {
+      if (f.kind === 'money') (next[f.prop] as unknown) = optionalDecimal(p[f.prop])
+      else if (f.kind !== 'risk') (next[f.prop] as unknown) = optionalNumber(p[f.prop])
+    }
+    await save({ ...s.plan, profile: next })
     editingProfile = false
+  }
+
+  function shown(f: Field, p: Profile): string {
+    const v = p[f.prop]
+    if (v === null || v === undefined || v === '') return t('goals.notGiven')
+    if (f.kind === 'risk') return t(`risk.${p.risk}`)
+    if (f.kind === 'money') return money(v as string, base)
+    if (f.kind === 'year') return `${v} · ${t('goals.ageNow', { age: thisYear - Number(v) })}`
+    return String(v)
   }
 
   function newGoal(kind: Goal['kind']): void {
@@ -86,34 +121,49 @@
   </div>
   {#if editingProfile}
     <form class="grid" onsubmit={(e) => (e.preventDefault(), saveProfile())}>
-      <label class="field">{t('goals.birthYear')}<input type="number" min="1920" max={thisYear} bind:value={profile.birth_year} required aria-describedby="why-birth" /><span class="why" id="why-birth">{t('goals.whyBirth')}</span></label>
-      <label class="field">{t('goals.spending', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_spending} required aria-describedby="why-spending" /><span class="why" id="why-spending">{t('goals.whySpending')}</span></label>
-      <label class="field">{t('goals.investing', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_investing} required aria-describedby="why-investing" /><span class="why" id="why-investing">{t('goals.whyInvesting')}</span></label>
-      <label class="field">{t('goals.risk')}
-        <select bind:value={profile.risk} aria-describedby="why-risk">
-          <option value="cautious">{t('risk.cautious')}</option>
-          <option value="balanced">{t('risk.balanced')}</option>
-          <option value="growth">{t('risk.growth')}</option>
-        </select>
-        <span class="why" id="why-risk">{t('goals.whyRisk')}</span>
-      </label>
-      <label class="field">{t('goals.retirementAge')}<input type="number" min="40" max="80" bind:value={profile.retirement_age} required aria-describedby="why-retire" /><span class="why" id="why-retire">{t('goals.whyRetirement')}</span></label>
-      <label class="field">{t('goals.retirementSpending', { currency: base })}<input inputmode="decimal" bind:value={profile.retirement_spending} required /></label>
-      <label class="field">{t('goals.pensionAge')}<input type="number" min="50" max="80" bind:value={profile.pension_age} required /></label>
-      <label class="field">{t('goals.pension', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_pension} required /></label>
+      {#each fields as f (f.key)}
+        <div class="field">
+          <div class="field-head">
+            <label for="profile-{f.key}">{f.label()}</label>
+            <Help about={f.label()} why={t(`help.${f.key}.why`)} without={t(`help.${f.key}.without`)} />
+          </div>
+          {#if f.kind === 'risk'}
+            <select id="profile-{f.key}" bind:value={profile.risk}>
+              <option value="cautious">{t('risk.cautious')}</option>
+              <option value="balanced">{t('risk.balanced')}</option>
+              <option value="growth">{t('risk.growth')}</option>
+            </select>
+          {:else if f.kind === 'money'}
+            <input id="profile-{f.key}" inputmode="decimal" placeholder={t('goals.optional')} bind:value={profile[f.prop]} />
+          {:else}
+            <input
+              id="profile-{f.key}"
+              type="number"
+              placeholder={t('goals.optional')}
+              min={f.kind === 'year' ? 1920 : 18}
+              max={f.kind === 'year' ? thisYear : 90}
+              bind:value={profile[f.prop]}
+            />
+          {/if}
+        </div>
+      {/each}
+      <p class="muted small all">{t('goals.allOptional')}</p>
       <div class="actions"><button class="btn">{t('common.save')}</button></div>
     </form>
   {:else if s.plan.profile}
     {@const p = s.plan.profile}
     <dl class="facts">
-      <div><dt>{t('goals.age')}</dt><dd>{thisYear - p.birth_year}</dd></div>
-      <div><dt>{t('goals.spendingShort')}</dt><dd class="num">{money(p.monthly_spending, base)}</dd></div>
-      <div><dt>{t('goals.investingShort')}</dt><dd class="num">{money(p.monthly_investing, base)}</dd></div>
-      <div><dt>{t('goals.risk')}</dt><dd>{t(`risk.${p.risk}`)}</dd></div>
-      <div><dt>{t('goals.retirementAge')}</dt><dd>{p.retirement_age}</dd></div>
+      {#each fields as f (f.key)}
+        <div>
+          <dt>{f.label()} <Help about={f.label()} why={t(`help.${f.key}.why`)} without={t(`help.${f.key}.without`)} /></dt>
+          <dd class:num={f.kind === 'money'} class:missing={p[f.prop] === null || p[f.prop] === undefined}>{shown(f, p)}</dd>
+        </div>
+      {/each}
     </dl>
   {/if}
 </section>
+
+<PlanVsActual plan={s.plan} {base} {cash} planned={statuses} />
 
 <section class="goals" aria-label={t('goals.list')}>
   {#each s.plan.goals as goal (goal.id)}
@@ -126,7 +176,9 @@
       <p class="muted when">
         {goal.kind === 'emergency_fund' ? t('goals.emergencyWhen', { months: goal.target }) : t('goals.savingsWhen', { year: goal.year ?? '—' })}
       </p>
-      {#if st}
+      {#if st?.missing}
+        <p class="notice">{t('goals.needsSpending')}</p>
+      {:else if st}
         <div class="bar" role="img" aria-label={t('goals.progress', { pct: Math.round((st.have / Math.max(1, st.target)) * 100) })}>
           <span style:width="{Math.min(100, (st.have / Math.max(1, st.target)) * 100)}%" class:warn={!st.on_track}></span>
         </div>
@@ -206,11 +258,23 @@
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
   }
-  .why {
-    font-weight: 400;
-    font-size: 12px;
-    line-height: 1.45;
+  .field-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 22px;
+  }
+  .all {
+    grid-column: 1 / -1;
+  }
+  .facts dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .missing {
     color: var(--muted);
+    font-weight: 400;
   }
   .actions {
     grid-column: 1 / -1;

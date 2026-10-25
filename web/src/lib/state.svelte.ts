@@ -3,7 +3,7 @@ import { saveFile } from './files'
 import { useLanguage } from './i18n.svelte'
 import { saveDraft } from './storage'
 
-export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax'
+export type View = 'overview' | 'goals' | 'projections' | 'ledger' | 'import' | 'tax' | 'settings'
 
 class AppState {
   book = $state.raw<Book | null>(null)
@@ -69,6 +69,12 @@ class AppState {
 
   async setFxRate(currency: string, date: string, rate: string): Promise<void> {
     this.book?.setFxRate(currency, date, rate)
+    await this.changed()
+  }
+
+  /** The browser copy is re-encrypted with the new password straight away. */
+  async changePassword(current: string, next: string): Promise<void> {
+    this.book?.changePassword(current, next)
     await this.changed()
   }
 

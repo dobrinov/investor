@@ -9,7 +9,7 @@
   const base = $derived(s.settings.base_currency)
   const profile = $derived(s.plan.profile)
   const thisYear = new Date().getFullYear()
-  const age = $derived(profile ? thisYear - profile.birth_year : 35)
+  const age = $derived(profile?.birth_year ? thisYear - profile.birth_year : null)
 
   const cash = $derived(
     s.trial_balance.filter((r) => r.account.startsWith('Assets:Cash:')).reduce((sum, r) => sum + Number(r.debit) - Number(r.credit), 0),
@@ -33,13 +33,14 @@
   let spendingOverride = $state<number | undefined>()
   let pensionOverride = $state<number | undefined>()
   let planUntil = $state(95)
-  const retireAt = $derived(retireOverride ?? profile?.retirement_age ?? 65)
-  const spending = $derived(spendingOverride ?? Number(profile?.retirement_spending ?? 0))
+  const retireAt = $derived(retireOverride ?? profile?.retirement_age ?? null)
+  // Without a retirement budget, today's spending is the starting point.
+  const spending = $derived(spendingOverride ?? Number(profile?.retirement_spending ?? profile?.monthly_spending ?? 0))
   const pension = $derived(pensionOverride ?? Number(profile?.monthly_pension ?? 0))
   const pensionAge = $derived(profile?.pension_age ?? 65)
 
   const plan = $derived(
-    profile
+    age !== null && retireAt !== null
       ? retirement({
           start,
           age_now: age,
@@ -55,7 +56,7 @@
       : undefined,
   )
   const rows = $derived(
-    plan?.years.filter((y, i) => i === 0 || (y.age - retireAt) % 5 === 0 || y.age === pensionAge || y.age === plan.runs_out_at) ?? [],
+    plan?.years.filter((y, i) => i === 0 || (y.age - (retireAt ?? 0)) % 5 === 0 || y.age === pensionAge || y.age === plan.runs_out_at) ?? [],
   )
 
   const compact = (v: number) => new Intl.NumberFormat(i18n.lang, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
@@ -117,7 +118,7 @@
 
 <section class="card retirement" aria-labelledby="ret-title">
   <h2 id="ret-title">{t('ret.title')}</h2>
-  {#if !profile}
+  {#if age === null || retireAt === null}
     <p class="notice">{t('ret.needProfile')}</p>
     <button class="btn" onclick={() => (app.view = 'goals')}>{t('ret.setProfile')}</button>
   {:else if plan}

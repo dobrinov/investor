@@ -119,3 +119,46 @@ pub fn totals_by_kind(ledger: &Ledger) -> BTreeMap<AccountKind, Decimal> {
     }
     totals
 }
+
+/// Money moved in one calendar month, in the base currency.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct MonthFlow {
+    /// `YYYY-MM`.
+    pub month: String,
+    pub deposited: Decimal,
+    pub withdrawn: Decimal,
+    /// Cost of securities bought.
+    pub bought: Decimal,
+    /// Cost basis of securities sold.
+    pub sold: Decimal,
+}
+
+/// What actually happened each month: money put in or taken out, and how
+/// much was bought or sold. Opening balances are not counted as deposits.
+pub fn monthly_flows(ledger: &Ledger) -> Vec<MonthFlow> {
+    let mut months: BTreeMap<String, MonthFlow> = BTreeMap::new();
+    for entry in &ledger.entries {
+        let key = entry.date.format("%Y-%m").to_string();
+        let flow = months.entry(key.clone()).or_insert_with(|| MonthFlow { month: key, ..Default::default() });
+        for p in &entry.postings {
+            if p.account == ledger::CONTRIBUTIONS {
+                // Contributions are credited when money comes in.
+                if p.base.is_sign_negative() {
+                    flow.deposited -= p.base;
+                } else {
+                    flow.withdrawn += p.base;
+                }
+            } else if entry.provisional.is_none() {
+                match p.units {
+                    Some(u) if u.is_sign_positive() => flow.bought += p.base,
+                    Some(u) if u.is_sign_negative() => flow.sold -= p.base,
+                    _ => {}
+                }
+            }
+        }
+    }
+    months
+        .into_values()
+        .filter(|m| !(m.deposited.is_zero() && m.withdrawn.is_zero() && m.bought.is_zero() && m.sold.is_zero()))
+        .collect()
+}
