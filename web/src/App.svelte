@@ -6,11 +6,13 @@
 
   // A refresh reopens the file without the password when this tab kept the key.
   let resuming = $state(true)
-  // `#example` (the marketing page links to it) opens the example portfolio.
+  // `#example` (the marketing page links to it) opens the example portfolio;
+  // `#example/trade` and the like come back to a screen after a refresh.
   void app
     .resume()
     .then(async (resumed) => {
-      if (!resumed && location.hash === '#example') await app.openExample(i18n.lang)
+      const [first, view] = location.hash.slice(1).split('/')
+      if (!resumed && first === 'example') await app.openExample(i18n.lang, view)
     })
     .finally(() => (resuming = false))
 

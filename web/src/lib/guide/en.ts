@@ -78,6 +78,40 @@ export const en: Section[] = [
     ],
   },
   {
+    id: 'example',
+    title: "Try the example portfolio first",
+    blocks: [
+      { p: "The example is a made-up investor with index funds, shares, a bond fund, gold on an exchange and as coins, crypto, a savings account, a startup stake and goals. Every screen works, so you can see what the app does before you import anything." },
+      { list: ["Open it from the start screen with \"Try the example portfolio\", or go to the address ending in #example.", "Change anything you like: nothing is saved, and the copy of your own file kept in this browser is never touched.", "\"Close example\" takes you back to the start screen."] },
+    ],
+  },
+  {
+    id: 'bank',
+    title: "Bank accounts",
+    blocks: [
+      { p: "Savings and current accounts have no statement to import, so you type the balance in now and then. The money counts as cash: it fills your emergency fund and shows in your net worth and projections." },
+      { steps: ["On Overview, choose \"Add a bank account\" and give it a name, such as \"UBB savings\", with its currency and today's balance.", "Whenever the balance changes, choose \"Update balance\" and type the whole new balance. The books record only the difference, as money added or taken out.", "For an account in another currency, give the exchange rate for that day."] },
+    ],
+  },
+  {
+    id: 'metals',
+    title: "Physical gold and silver",
+    blocks: [
+      { p: "Coins and bars you keep yourself are counted in grams of pure metal, so their cost, value and gains work like shares. A gold fund traded on an exchange, such as Xetra-Gold, is a normal holding instead: buy it on the Trade screen." },
+      { steps: ["On Overview, choose \"Add coins or bars\". Enter the pure metal in troy ounces or grams (a one-ounce coin holds one ounce even if it weighs more) and everything you paid, including the dealer's premium.", "Update the price now and then, per ounce or per gram. Until you do, the price you paid is used.", "When you sell, record what you received after the dealer's margin. The cost comes off your oldest purchases first."] },
+      { p: "On the Tax screen each sale shows when the metal was bought, because several countries tax gold by how long you held it. In Bulgaria the draft rules treat it as tax-free; check that with an accountant." },
+    ],
+  },
+  {
+    id: 'private',
+    title: "Private holdings and their payout",
+    blocks: [
+      { p: "Money in something without a market price, such as an employer's co-investment or a stake in a private company. It counts in your net worth at what you paid, or at a value you set, and stays out of projections because you cannot sell it when you like." },
+      { steps: ["On Overview, choose \"Add a private holding\": what you paid, when, in which currency and at what exchange rate, and how the money that comes back will be taxed.", "Set a value whenever you learn what it is worth.", "When the money comes back, choose \"Record payout\": the amount before tax, any tax your employer kept back, and whether it was taxed as employment income or as a capital gain."] },
+      { p: "The holding then closes. What you paid in comes back to you, and the difference is booked as income or as a gain. Employment income gets its own section on the Tax screen; a capital gain is listed with your other sales. If the money went into a bank account you track here, update its balance too. \"Undo payout\" takes it back out." },
+    ],
+  },
+  {
     id: 'claude',
     title: 'Ask Claude Code about your investments',
     blocks: [

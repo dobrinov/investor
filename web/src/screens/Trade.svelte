@@ -23,6 +23,11 @@
   )
 
   const feeKinds: FeeKind[] = ['commission', 'fx_conversion', 'other']
+  const feeTotal = $derived(feeKinds.reduce((sum, k) => sum + (Number(decimal(form[k] ?? '')) || 0), 0))
+  let extra = $state(typeof matchMedia === 'undefined' || matchMedia('(min-width: 721px)').matches)
+  $effect(() => {
+    if (currency !== base && !form.fx_rate) extra = true
+  })
 
   function blank(broker = ''): Record<string, string> {
     return { id: crypto.randomUUID(), side: 'buy', broker, otherBroker: '', symbol: '', name: '', isin: '', by: 'units', units: '1', amount: '', whole: '1', price: '', currency: '', date: today, venue: '', fx_rate: '', commission: '', fx_conversion: '', other: '' }
@@ -244,30 +249,39 @@
     {#if form.by === 'amount'}
       <label class="choice"><input type="checkbox" checked={!!form.whole} onchange={(e) => (form.whole = e.currentTarget.checked ? '1' : '')} />{t('trade.wholeUnits')}</label>
     {/if}
-    <div class="row fields">
-      <label class="field">{t('trade.currency')}<input value={currency} oninput={(e) => (form.currency = e.currentTarget.value.trim().toUpperCase())} maxlength="3" /></label>
-      <label class="field">{t('trade.date')}<input type="date" bind:value={form.date} /></label>
-    </div>
-    {#if currency !== base}
+    <!-- On a phone the less-used fields fold away; they open by themselves when a rate is needed. -->
+    <details class="extra" bind:open={extra}>
+      <summary>
+        <span>{t('trade.moreDetails')}</span>
+        <span class="muted">{formatDate(form.date)} · {currency}{#if feeTotal > 0} · {t('trade.feesShort', { fees: money(feeTotal, currency) })}{/if}{#if form.venue} · {form.venue}{/if}</span>
+      </summary>
+      <div class="extra-body">
+      <div class="row fields">
+        <label class="field">{t('trade.currency')}<input value={currency} oninput={(e) => (form.currency = e.currentTarget.value.trim().toUpperCase())} maxlength="3" /></label>
+        <label class="field">{t('trade.date')}<input type="date" bind:value={form.date} /></label>
+      </div>
+      {#if currency !== base}
+        <div class="field">
+          <span class="with-help"><label for="fx">{t('trade.fxRate', { base, currency })}</label><Help about={t('trade.fxRate', { base, currency })} why={t('trade.fxWhy', { base })} without={t('trade.fxWithout')} /></span>
+          <input id="fx" inputmode="decimal" bind:value={form.fx_rate} />
+        </div>
+      {/if}
       <div class="field">
-        <span class="with-help"><label for="fx">{t('trade.fxRate', { base, currency })}</label><Help about={t('trade.fxRate', { base, currency })} why={t('trade.fxWhy', { base })} without={t('trade.fxWithout')} /></span>
-        <input id="fx" inputmode="decimal" bind:value={form.fx_rate} />
+        <span class="with-help"><label for="venue">{t('trade.venue')}</label><Help about={t('trade.venue')} why={t('trade.venueWhy')} without={t('trade.venueWithout')} /></span>
+        <input id="venue" list="venues" bind:value={form.venue} autocapitalize="characters" />
+        <datalist id="venues">{#each ['XETR', 'XAMS', 'XPAR', 'XMIL', 'XBRU', 'XLIS', 'BVME', 'XBUL', 'LSE', 'NASDAQ', 'NYSE'] as v (v)}<option value={v}></option>{/each}</datalist>
       </div>
-    {/if}
-    <div class="field">
-      <span class="with-help"><label for="venue">{t('trade.venue')}</label><Help about={t('trade.venue')} why={t('trade.venueWhy')} without={t('trade.venueWithout')} /></span>
-      <input id="venue" list="venues" bind:value={form.venue} autocapitalize="characters" />
-      <datalist id="venues">{#each ['XETR', 'XAMS', 'XPAR', 'XMIL', 'XBRU', 'XLIS', 'BVME', 'XBUL', 'LSE', 'NASDAQ', 'NYSE'] as v (v)}<option value={v}></option>{/each}</datalist>
-    </div>
 
-    <fieldset>
-      <legend>{t('trade.fees', { currency })}</legend>
-      <div class="row three fields">
-        {#each feeKinds as k (k)}
-          <label class="field">{t(`trade.fee.${k}` as 'trade.fee.commission')}<input inputmode="decimal" bind:value={form[k]} placeholder="0" /></label>
-        {/each}
+      <fieldset>
+        <legend>{t('trade.fees', { currency })}</legend>
+        <div class="row three fields">
+          {#each feeKinds as k (k)}
+            <label class="field">{t(`trade.fee.${k}` as 'trade.fee.commission')}<input inputmode="decimal" bind:value={form[k]} placeholder="0" /></label>
+          {/each}
+        </div>
+      </fieldset>
       </div>
-    </fieldset>
+    </details>
 
     <div class="actions">
       <button class="btn record" disabled={!o || busy}>{busy ? t('trade.recording') : t('trade.record')}</button>
@@ -491,6 +505,55 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+  .extra {
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .extra summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    min-height: 40px;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .extra summary {
+    list-style: none;
+  }
+  .extra summary::-webkit-details-marker {
+    display: none;
+  }
+  .extra summary::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    margin-right: 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    align-self: center;
+    transition: transform 0.15s;
+  }
+  .extra[open] summary::before {
+    transform: rotate(45deg);
+  }
+  .extra summary .muted {
+    font-weight: 400;
+    font-size: 13px;
+  }
+  .extra[open] summary .muted {
+    display: none;
+  }
+  .extra-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 4px;
   }
   fieldset {
     border: 0;

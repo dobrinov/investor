@@ -91,7 +91,7 @@
 
   // The current screen goes in the address, so a refresh comes back to it.
   $effect(() => {
-    history.replaceState(null, '', `#${app.view}`)
+    history.replaceState(null, '', app.example ? `#example/${app.view}` : `#${app.view}`)
   })
 </script>
 

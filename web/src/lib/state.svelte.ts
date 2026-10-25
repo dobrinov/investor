@@ -36,7 +36,7 @@ class AppState {
   }
 
   /** Opens the made-up example portfolio. It never touches the browser copy of your own file. */
-  async openExample(language: string): Promise<void> {
+  async openExample(language: string, view?: string): Promise<void> {
     const today = new Date().toISOString().slice(0, 10)
     const book = await Book.example(today, language)
     this.example = true
@@ -44,7 +44,7 @@ class AppState {
     this.fileName = 'example.invest'
     this.handle = undefined
     this.changes = 0
-    this.view = 'overview'
+    this.view = VIEWS.includes(view as View) ? (view as View) : 'overview'
     this.refresh()
   }
 
