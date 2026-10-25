@@ -79,7 +79,7 @@ capital-gains reporting (physical metals by holding period) with
 draft tax packs for Austria, Bulgaria, Canada, France, Germany, Ireland,
 Italy, Poland, Portugal, Romania, Spain, the UK and the US. Works on phones. Open
 `/app/#example` for a made-up portfolio with ETFs, shares, bonds, gold (an ETC,
-a coin and a bar),
+a coin and a bar), shares in USD, CHF and DKK, a GBP account,
 crypto, a savings account and a private stake. English and Bulgarian. Claude Code can read the file through
 `investor-mcp`.
 

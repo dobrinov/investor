@@ -10,6 +10,11 @@ export function money(value: Decimal | number, currency?: string): string {
   }).format(Number(value))
 }
 
+/** An exchange rate: at least two decimals, up to six, so 0.134 is not shown as 0.13. */
+export function rate(value: Decimal | number): string {
+  return new Intl.NumberFormat(i18n.lang, { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(Number(value))
+}
+
 export function units(value: Decimal | number): string {
   return new Intl.NumberFormat(i18n.lang, { maximumFractionDigits: 8 }).format(Number(value))
 }

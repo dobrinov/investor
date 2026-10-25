@@ -3,7 +3,7 @@
   import PhysicalMetals from '../components/PhysicalMetals.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
   import type { Valuation } from '../lib/core'
-  import { date, money, units } from '../lib/format'
+  import { date, money, rate as formatRate, units } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -233,7 +233,7 @@
               {@const fx = fxRates.get(c)}
               <tr>
                 <td class="num">1 {c}</td>
-                <td class="num">{fx ? `${money(fx.rate)} ${base}` : '—'} <span class="muted small-inline">{fx ? `${date(fx.date)} · ${t(`source.${fx.source}`)}` : ''}</span></td>
+                <td class="num">{fx ? `${formatRate(fx.rate)} ${base}` : '—'} <span class="muted small-inline">{fx ? `${date(fx.date)} · ${t(`source.${fx.source}`)}` : ''}</span></td>
                 <td class="right"><button class="btn ghost small-btn" onclick={() => editFx(c)}>{t('overview.updateRate')}</button></td>
               </tr>
               {#if editingFx === c}

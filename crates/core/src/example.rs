@@ -1,6 +1,7 @@
 //! The example portfolio: a made-up investor with ETFs, shares, a bond fund,
-//! gold on an exchange and as a coin and a bar, crypto, a savings account and a private stake, booked through the
-//! same code as real trades. Dates count back from `today`, so prices are
+//! gold on an exchange and as a coin and a bar, crypto, bank accounts and a
+//! private stake, in euros, dollars, Swiss francs, Danish kroner and pounds,
+//! booked through the same code as real trades. Dates count back from `today`, so prices are
 //! always fresh. Every figure is invented.
 
 use std::str::FromStr;
@@ -66,13 +67,13 @@ impl Book {
         ])
     }
 
-    /// Converts euros to dollars at `rate` euros per dollar.
-    fn buy_dollars(&mut self, months: u32, broker: &str, dollars: &str, rate: &str) -> Result<()> {
-        let (usd, eur) = (cur("USD"), cur("EUR"));
-        let amount = d(dollars);
+    /// Converts euros to `currency` at `rate` euros per unit.
+    fn convert(&mut self, months: u32, broker: &str, currency: &str, amount: &str, rate: &str) -> Result<()> {
+        let (other, eur) = (cur(currency), cur("EUR"));
+        let amount = d(amount);
         let euros = (amount * d(rate)).round_dp(2);
-        self.post(self.ago(months), &format!("Convert {euros} EUR to {amount} USD"), vec![
-            Posting::new(ledger::cash_account(broker, &usd), Money::new(amount, usd), euros),
+        self.post(self.ago(months), &format!("Convert {euros} EUR to {amount} {currency}"), vec![
+            Posting::new(ledger::cash_account(broker, &other), Money::new(amount, other), euros),
             Posting::new(ledger::cash_account(broker, &eur), Money::new(-euros, eur), -euros),
         ])
     }
@@ -128,7 +129,7 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
 
     // Interactive Brokers: index funds, shares, bonds and gold.
     b.deposit(30, "IBKR", "12000")?;
-    b.buy_dollars(29, "IBKR", "5500", "0.92")?;
+    b.convert(29, "IBKR", "USD", "5500", "0.92")?;
     b.trade(29, Buy, "IBKR", "VWCE", "Vanguard FTSE All-World UCITS ETF (Acc)", "40", "98.00", "EUR", Some("XETR"), None)?;
     b.trade(29, Buy, "IBKR", "AAPL", "Apple Inc.", "15", "175.00", "USD", Some("NASDAQ"), Some("0.92"))?;
     b.trade(28, Buy, "IBKR", "EUNL", "iShares Core MSCI World UCITS ETF", "30", "80.00", "EUR", Some("XETR"), None)?;
@@ -138,6 +139,11 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     b.trade(17, Buy, "IBKR", "VWCE", "Vanguard FTSE All-World UCITS ETF (Acc)", "15", "112.00", "EUR", Some("XETR"), None)?;
     b.trade(16, Buy, "IBKR", "AGGH", "iShares Core Global Aggregate Bond UCITS ETF (EUR hedged)", "300", "4.85", "EUR", Some("XETR"), None)?;
     b.trade(14, Buy, "IBKR", "ASML", "ASML Holding N.V.", "3", "640.00", "EUR", Some("XAMS"), None)?;
+    // Shares priced in Swiss francs and Danish kroner.
+    b.convert(12, "IBKR", "CHF", "1000", "1.06")?;
+    b.trade(12, Buy, "IBKR", "NESN", "Nestlé S.A.", "10", "88.00", "CHF", Some("XSWX"), Some("1.06"))?;
+    b.convert(11, "IBKR", "DKK", "5200", "0.134")?;
+    b.trade(11, Buy, "IBKR", "NOVO-B", "Novo Nordisk A/S", "8", "640.00", "DKK", Some("XCSE"), Some("0.134"))?;
     b.dividend(8, "IBKR", "AAPL", "3.75", "0.56", "0.90")?;
     b.deposit(6, "IBKR", "4000")?;
     // A taxable sale in the US and a sale on an EU regulated market.
@@ -156,6 +162,13 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
         balance: BalanceInput { entry_id: "example-bank".into(), date: b.ago(1), balance: d("14000"), fx_rate: None },
     };
     bank::add(&mut b.vault, &savings)?;
+    // Pounds kept at Wise for trips to London.
+    let pounds = NewAccount {
+        name: "Wise GBP".into(),
+        currency: cur("GBP"),
+        balance: BalanceInput { entry_id: "example-wise".into(), date: b.ago(1), balance: d("2500"), fx_rate: Some(d("1.15")) },
+    };
+    bank::add(&mut b.vault, &pounds)?;
     let stake = PrivateInput {
         entry_id: "example-private".into(),
         name: "Startup stake (angel round)".into(),
@@ -189,12 +202,16 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
         ("ASML", "718.00", "EUR"),
         ("AAPL", "246.00", "USD"),
         ("MSFT", "512.00", "USD"),
+        ("NESN", "84.50", "CHF"),
+        ("NOVO-B", "410.00", "DKK"),
         ("BTC", "88400", "EUR"),
         ("ETH", "3120", "EUR"),
     ] {
         b.price(symbol, amount, currency);
     }
-    b.vault.prices.add_fx(cur("USD"), FxQuote { date: today - chrono::Days::new(1), rate: d("0.86"), source: QuoteSource::Statement });
+    for (currency, rate) in [("USD", "0.86"), ("CHF", "1.07"), ("DKK", "0.134"), ("GBP", "1.15")] {
+        b.vault.prices.add_fx(cur(currency), FxQuote { date: today - chrono::Days::new(1), rate: d(rate), source: QuoteSource::Statement });
+    }
 
     b.vault.plan = Plan {
         profile: Some(Profile {
@@ -226,12 +243,15 @@ mod tests {
         let today = NaiveDate::from_ymd_opt(2026, 10, 25).unwrap();
         let v = vault(today, "en").unwrap();
         let symbols: Vec<String> = prices::valuations(&v.ledger, &v.prices).into_iter().map(|x| x.symbol).collect();
-        for s in ["VWCE", "EUNL", "AGGH", "4GLD", "ASML", "AAPL", "MSFT", "BTC", "ETH"] {
+        for s in ["VWCE", "EUNL", "AGGH", "4GLD", "ASML", "AAPL", "MSFT", "NESN", "NOVO-B", "BTC", "ETH"] {
             assert!(symbols.contains(&s.to_string()), "{s} missing");
         }
         assert!(reports::cash(&v.ledger).iter().all(|c| c.amount >= Decimal::ZERO), "no cash goes negative");
         assert_eq!(reports::realized_gains(&v.ledger, 2026).len(), 2);
-        assert_eq!((v.banks.len(), v.private.len(), v.plan.goals.len()), (1, 1, 2));
+        assert_eq!((v.banks.len(), v.private.len(), v.plan.goals.len()), (2, 1, 2));
+        let currencies: std::collections::BTreeSet<String> = reports::cash(&v.ledger).into_iter().map(|c| c.currency.to_string()).collect();
+        assert_eq!(currencies.into_iter().collect::<Vec<_>>(), ["CHF", "DKK", "EUR", "GBP", "USD"]);
+        assert!(prices::valuations(&v.ledger, &v.prices).iter().all(|x| x.value.is_some()), "every holding has a value in EUR");
         assert_eq!(metal::holdings(&v)[0].value, Some(d("6040.43")));
     }
 }
