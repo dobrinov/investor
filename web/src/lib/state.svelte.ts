@@ -1,4 +1,4 @@
-import type { Entry, Plan, Snapshot, TradeInput } from './core'
+import type { Entry, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
@@ -114,6 +114,22 @@ class AppState {
 
   async undoTrade(id: string): Promise<void> {
     this.book?.undoTrade(id)
+    await this.changed()
+  }
+
+  async addPrivate(input: PrivateInput): Promise<Entry | undefined> {
+    const entry = this.book?.addPrivate(input)
+    await this.changed()
+    return entry
+  }
+
+  async setPrivateValue(id: string, date: string, amount: string): Promise<void> {
+    this.book?.setPrivateValue(id, date, amount)
+    await this.changed()
+  }
+
+  async removePrivate(id: string): Promise<void> {
+    this.book?.removePrivate(id)
     await this.changed()
   }
 

@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use chrono::{Datelike, Local};
 use investor_core::jurisdiction::JurisdictionPack;
-use investor_core::plan::{self, Market, Plan};
+use investor_core::plan::{self, Market, Plan, to_f64};
 use investor_core::prices;
+use investor_core::private;
 use investor_core::reports;
 use investor_core::trade::{self, TradeInput};
 use investor_core::vault::Vault;
@@ -35,7 +36,7 @@ pub fn list() -> Value {
     json!([
         {
             "name": "portfolio",
-            "description": "Holdings at their latest price (or cost), cash per broker and currency, net worth and unrealised gain. Start here.",
+            "description": "Holdings at their latest price (or cost), private holdings without a market price, cash per broker and currency, net worth and unrealised gain. Start here.",
             "inputSchema": { "type": "object", "properties": {} }
         },
         {
@@ -128,13 +129,15 @@ fn portfolio(v: &Vault) -> Result<Value> {
     let values = prices::valuations(&v.ledger, &v.prices);
     let (cash, invested) = whatif::starting_point(&v.ledger, &v.prices);
     let unrealised: Decimal = values.iter().filter_map(|x| x.gain).sum();
+    let private_total = to_f64(private::total(v));
     Ok(json!({
         "base_currency": v.settings.base_currency,
         "tax_residency": v.settings.tax_residency,
         "holdings": values,
+        "private": private::valuations(v),
         "cash": reports::cash(&v.ledger),
-        "totals": { "invested": round(invested), "cash": round(cash), "net_worth": round(invested + cash), "unrealised_gain": unrealised },
-        "note": "Holdings without a price are counted at cost. Cash in other currencies is at the rate when it arrived.",
+        "totals": { "invested": round(invested), "cash": round(cash), "private": round(private_total), "net_worth": round(invested + cash + private_total), "unrealised_gain": unrealised },
+        "note": "Holdings without a price are counted at cost. Cash in other currencies is at the rate when it arrived. Private holdings have no market price: they count at the value set by hand, else at cost, and are left out of projections because they cannot be sold at will.",
     }))
 }
 

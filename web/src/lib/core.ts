@@ -226,10 +226,46 @@ export interface Valuation {
   missing_fx: boolean
 }
 
+export type Payout = 'employment_income' | 'capital_gains' | 'unknown'
+
+/** Money in something without a market price, e.g. an employer co-investment. */
+export interface PrivateHolding {
+  id: string
+  name: string
+  currency: string
+  payout: Payout
+  condition: string
+  paid_from: string
+  /** A value set by hand, in `currency`. */
+  estimate?: { date: string; amount: Decimal }
+  /** What was paid, in `currency`. */
+  paid: Decimal
+  /** The same in the base currency. */
+  cost: Decimal
+  /** The estimate in the base currency, when there is one. */
+  value?: Decimal
+  since: string | null
+}
+
+export interface PrivateInput {
+  /** Chosen when the form opens, so adding twice adds once. */
+  entry_id: string
+  name: string
+  date: string
+  amount: Decimal
+  currency: string
+  fx_rate?: Decimal | null
+  paid_from: string
+  payout: Payout
+  condition: string
+}
+
 export interface Snapshot {
   settings: Settings
   plan: Plan
   valuations: Valuation[]
+  /** Outside the projections: they cannot be sold at will. */
+  private: PrivateHolding[]
   fx: [string, FxQuote][]
   holdings: Holding[]
   cash: CashBalance[]
@@ -390,6 +426,19 @@ export class Book {
 
   flows(): MonthFlow[] {
     return JSON.parse(this.session.flows())
+  }
+
+  addPrivate(input: PrivateInput): Entry {
+    return JSON.parse(this.session.addPrivate(JSON.stringify(input)))
+  }
+
+  /** An empty amount clears the value. */
+  setPrivateValue(id: string, date: string, amount: string): void {
+    this.session.setPrivateValue(id, date, amount)
+  }
+
+  removePrivate(id: string): void {
+    this.session.removePrivate(id)
   }
 
   setPrice(symbol: string, date: string, amount: string, currency: string): void {

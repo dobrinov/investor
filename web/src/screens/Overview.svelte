@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PrivateHoldings from '../components/PrivateHoldings.svelte'
   import type { Valuation } from '../lib/core'
   import { date, money, units } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
@@ -21,6 +22,8 @@
   const unpriced = $derived(s.valuations.filter((v) => v.value === undefined).length)
   const unrealised = $derived(s.valuations.reduce((sum, v) => sum + Number(v.gain ?? 0), 0))
   const cash = $derived(total('Assets:Cash'))
+  // Private holdings at the value set by hand, else at cost.
+  const privately = $derived(s.private.reduce((sum, p) => sum + Number(p.value ?? p.cost), 0))
   const contributed = $derived(-total('Equity:Contributions'))
   const opening = $derived(-total('Equity:OpeningBalances'))
   const realised = $derived(-total('Income:CapitalGains'))
@@ -32,7 +35,7 @@
 
   // Currencies that need a rate to show values in the base currency.
   const fxNeeded = $derived(
-    [...new Set([...s.valuations.map((v) => v.quote?.price.currency), ...s.cash.map((c) => c.currency)])].filter(
+    [...new Set([...s.valuations.map((v) => v.quote?.price.currency), ...s.cash.map((c) => c.currency), ...s.private.map((p) => p.currency)])].filter(
       (c): c is string => !!c && c !== base,
     ),
   )
@@ -95,12 +98,13 @@
     <p class="muted">{t('overview.emptyText')}</p>
     <button class="btn" onclick={() => (app.view = 'import')}>{t('overview.importFirst')}</button>
   </section>
+  <PrivateHoldings />
 {:else}
   <section class="kpis" aria-label={t('overview.keyFigures')}>
     <div class="card kpi">
       <span class="label">{t('overview.netWorth')}</span>
-      <span class="value num">{money(value + cash, base)}</span>
-      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}</span>
+      <span class="value num">{money(value + cash + privately, base)}</span>
+      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if s.private.length} · {t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
     </div>
     <div class="card kpi">
       <span class="label">{t('overview.unrealised')}</span>
@@ -173,6 +177,8 @@
       </table>
     </div>
   </section>
+
+  <PrivateHoldings />
 
   <div class="row">
     <section class="card" aria-labelledby="cash-title">

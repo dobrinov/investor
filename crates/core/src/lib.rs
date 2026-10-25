@@ -12,6 +12,7 @@ pub mod lots;
 mod money;
 pub mod plan;
 pub mod prices;
+pub mod private;
 pub mod reports;
 pub mod trade;
 pub mod vault;

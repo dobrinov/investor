@@ -9,6 +9,7 @@ use investor_core::ledger::{Instrument, JournalEntry};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
 use investor_core::plan::{self, Market, Plan, ProjectionInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
+use investor_core::private::{self, Estimate, PrivateInput, PrivateValuation};
 use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
 use investor_core::trade::{self, TradeInput};
@@ -37,6 +38,8 @@ struct Snapshot<'a> {
     plan: &'a Plan,
     holdings: Vec<Holding>,
     valuations: Vec<Valuation>,
+    /// Holdings without a market price, outside the projections.
+    private: Vec<PrivateValuation>,
     /// Latest rate per currency: units of the base currency for one unit.
     fx: Vec<(&'a Currency, &'a FxQuote)>,
     cash: Vec<CashBalance>,
@@ -104,6 +107,7 @@ impl Session {
             plan: &self.vault.plan,
             holdings: reports::holdings(ledger),
             valuations: prices::valuations(ledger, &self.vault.prices),
+            private: private::valuations(&self.vault),
             fx: self.vault.prices.fx.iter().filter_map(|(c, q)| Some((c, q.last()?))).collect(),
             cash: reports::cash(ledger),
             trial_balance: reports::trial_balance(ledger),
@@ -203,6 +207,32 @@ impl Session {
     #[wasm_bindgen(js_name = undoTrade)]
     pub fn undo_trade(&mut self, id: &str) -> Result<(), JsError> {
         trade::undo(&mut self.vault.ledger, id).map_err(js_error)
+    }
+
+    /// Records a private holding and the payment into it. `input` is JSON;
+    /// returns the new entry as JSON.
+    #[wasm_bindgen(js_name = addPrivate)]
+    pub fn add_private(&mut self, input: &str) -> Result<String, JsError> {
+        let input: PrivateInput = serde_json::from_str(input).map_err(js_error)?;
+        json(&private::add(&mut self.vault, &input).map_err(js_error)?)
+    }
+
+    /// Sets a private holding's value in its own currency, or clears it when
+    /// `amount` is empty. `date` is `YYYY-MM-DD`.
+    #[wasm_bindgen(js_name = setPrivateValue)]
+    pub fn set_private_value(&mut self, id: &str, date: &str, amount: &str) -> Result<(), JsError> {
+        let estimate = if amount.trim().is_empty() {
+            None
+        } else {
+            Some(Estimate { date: date.parse().map_err(js_error)?, amount: amount.trim().parse().map_err(js_error)? })
+        };
+        private::set_estimate(&mut self.vault, id, estimate).map_err(js_error)
+    }
+
+    /// Removes a private holding and its entries.
+    #[wasm_bindgen(js_name = removePrivate)]
+    pub fn remove_private(&mut self, id: &str) -> Result<(), JsError> {
+        private::remove(&mut self.vault, id).map_err(js_error)
     }
 
     /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.

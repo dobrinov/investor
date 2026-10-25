@@ -6,7 +6,7 @@
   import Help from '../components/Help.svelte'
   import type { Entry, FeeKind, TradeInput, TradeOutlook } from '../lib/core'
   import { packs, brokers } from '../lib/configs'
-  import { date as formatDate, money, units as formatUnits, whole } from '../lib/format'
+  import { date as formatDate, decimal, money, units as formatUnits, whole } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -57,16 +57,6 @@
     if (currency !== base && !form.fx_rate && fxKnown) form.fx_rate = String(Number(fxKnown))
   })
 
-  // Accepts "168,81", "168.81", "23,882.00", "23.882,00" and "23 882,00": the
-  // last separator is the decimal one when both kinds appear, and repeated
-  // ones are grouping.
-  const decimal = (v: string) => {
-    const s = v.trim().replace(/[\s ']/g, '')
-    const comma = s.lastIndexOf(','), dot = s.lastIndexOf('.')
-    if (comma >= 0 && dot >= 0) return comma > dot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '')
-    const sep = comma >= 0 ? ',' : '.'
-    return s.split(sep).length > 2 ? s.split(sep).join('') : s.replace(',', '.')
-  }
 
   // Units from an amount: a purchase never spends more than the amount, a
   // sale raises at least it. Fractions go to six decimals.

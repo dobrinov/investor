@@ -31,3 +31,16 @@ export function whole(value: number, currency: string): string {
 export function month(ym: string): string {
   return new Intl.DateTimeFormat(i18n.lang, { month: 'short', year: 'numeric' }).format(new Date(`${ym}-01T00:00:00`))
 }
+
+/**
+ * A typed amount as a plain decimal string. Accepts "168,81", "168.81",
+ * "23,882.00", "23.882,00" and "23 882,00": the last separator is the decimal
+ * one when both kinds appear, and repeated ones are grouping.
+ */
+export function decimal(v: string): string {
+  const s = v.trim().replace(/[\s ']/g, '')
+  const comma = s.lastIndexOf(','), dot = s.lastIndexOf('.')
+  if (comma >= 0 && dot >= 0) return comma > dot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '')
+  const sep = comma >= 0 ? ',' : '.'
+  return s.split(sep).length > 2 ? s.split(sep).join('') : s.replace(',', '.')
+}
