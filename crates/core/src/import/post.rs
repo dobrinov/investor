@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
 
@@ -23,18 +23,18 @@ pub fn post_events(ledger: &mut Ledger, prices: &mut PriceBook, config: &BrokerC
 
     // Real trades for a position replace any provisional opening balance made
     // from an earlier snapshot; that snapshot is reconciled again at the end.
-    let traded: BTreeSet<String> = events
-        .iter()
-        .filter_map(|e| match &e.kind {
-            EventKind::Buy { instrument, .. } | EventKind::Sell { instrument, .. } => {
-                Some(ledger::securities_account(&config.broker.account, &instrument.symbol))
-            }
-            _ => None,
-        })
-        .collect();
+    // Only trades on or before the snapshot's date can explain it.
+    let mut first_trade: BTreeMap<String, chrono::NaiveDate> = BTreeMap::new();
+    for e in &events {
+        if let EventKind::Buy { instrument, .. } | EventKind::Sell { instrument, .. } = &e.kind {
+            let account = ledger::securities_account(&config.broker.account, &instrument.symbol);
+            let first = first_trade.entry(account).or_insert(e.date);
+            *first = (*first).min(e.date);
+        }
+    }
     let mut replaced = Vec::new();
     ledger.entries.retain(|e| match &e.provisional {
-        Some(p) if traded.contains(&p.account) => {
+        Some(p) if first_trade.get(&p.account).is_some_and(|&d| d <= p.as_of) => {
             replaced.push(e.clone());
             false
         }

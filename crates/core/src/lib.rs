@@ -13,6 +13,7 @@ mod money;
 pub mod plan;
 pub mod prices;
 pub mod reports;
+pub mod trade;
 pub mod vault;
 pub mod whatif;
 

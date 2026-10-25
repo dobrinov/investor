@@ -29,6 +29,9 @@ pub enum Error {
     #[error("invalid config: {0}")]
     Config(String),
 
+    #[error("{0}")]
+    Trade(String),
+
     #[error("{file}, line {line}: {message}")]
     Import { file: String, line: usize, message: String },
 

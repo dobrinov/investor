@@ -457,6 +457,7 @@ name = "investor-wasm"
 version = "0.1.0"
 dependencies = [
  "investor-core",
+ "rust_decimal",
  "serde",
  "serde_json",
  "wasm-bindgen",

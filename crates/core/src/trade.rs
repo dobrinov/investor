@@ -1,0 +1,241 @@
+//! A purchase or sale entered by hand: previewed on a copy of the books
+//! first, then recorded through the same path as imported statements, so
+//! FIFO lots, fees and exchange rates are handled the same way.
+
+use chrono::NaiveDate;
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+
+use crate::import::{BrokerConfig, Event, EventKind, FeeCharge, FeeKind, Fx, FxRateMode, post_events};
+use crate::ledger::{self, Instrument, JournalEntry, Ledger, Source, Venue};
+use crate::prices::{self, PriceBook};
+use crate::{Currency, Error, Money, Result};
+
+/// Recorded trades carry this as their source broker.
+pub const MANUAL: &str = "manual";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Side {
+    Buy,
+    Sell,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeFee {
+    pub kind: FeeKind,
+    /// In the trade's currency.
+    pub amount: Decimal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradeInput {
+    /// Chosen when the form opens, so recording the same trade twice adds it once.
+    pub id: String,
+    pub date: NaiveDate,
+    /// Account segment, e.g. `IBKR` in `Assets:Cash:IBKR:EUR`.
+    pub broker: String,
+    pub side: Side,
+    pub symbol: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub isin: Option<String>,
+    pub units: Decimal,
+    /// Per unit, in `currency`.
+    pub price: Decimal,
+    pub currency: Currency,
+    #[serde(default)]
+    pub fees: Vec<TradeFee>,
+    /// Where the trade happens, e.g. `XETR`.
+    #[serde(default)]
+    pub venue: Option<String>,
+    /// Base currency for one unit of `currency`; the latest known rate when missing.
+    #[serde(default)]
+    pub fx_rate: Option<Decimal>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashChange {
+    pub currency: Currency,
+    pub before: Decimal,
+    pub after: Decimal,
+}
+
+/// Value of one instrument across all brokers, in the base currency.
+#[derive(Debug, Clone, Serialize)]
+pub struct Weight {
+    pub symbol: String,
+    pub before: Decimal,
+    pub after: Decimal,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TradePreview {
+    /// The entry as it would be recorded.
+    pub entry: JournalEntry,
+    /// Trade amount in the base currency, before fees.
+    pub value: Decimal,
+    /// All fees in the base currency.
+    pub fees: Decimal,
+    /// The rate used, base currency for one unit of the trade currency.
+    pub fx_rate: Decimal,
+    /// FIFO cost of the units sold.
+    pub cost: Option<Decimal>,
+    /// Realised gain (negative for a loss) of a sale.
+    pub gain: Option<Decimal>,
+    pub units_before: Decimal,
+    pub units_after: Decimal,
+    /// Cash at this broker, per currency the trade touches.
+    pub cash: Vec<CashChange>,
+    pub holdings: Vec<Weight>,
+    pub invested_before: Decimal,
+    pub invested_after: Decimal,
+    pub cash_before: Decimal,
+    pub cash_after: Decimal,
+}
+
+impl TradeInput {
+    fn check(&self) -> Result<()> {
+        let bad = |m: &str| Err(Error::Trade(m.into()));
+        let valid = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c));
+        if !valid(&self.broker) {
+            return bad("the broker name may use only letters, digits, - _ and .");
+        }
+        if !valid(&self.symbol) {
+            return bad("the symbol may use only letters, digits, - _ and .");
+        }
+        if self.units <= Decimal::ZERO {
+            return bad("the number of units must be more than zero");
+        }
+        if self.price < Decimal::ZERO || self.fees.iter().any(|f| f.amount < Decimal::ZERO) {
+            return bad("prices and fees cannot be negative");
+        }
+        Ok(())
+    }
+
+    /// Only the account name and dust matter when posting; no CSV rules are needed.
+    fn config(&self) -> Result<BrokerConfig> {
+        let text = format!("[broker]\nid = \"{MANUAL}\"\nname = \"Entered by hand\"\naccount = \"{}\"\n\n[csv]\n", self.broker);
+        Ok(toml::from_str(&text)?)
+    }
+
+    fn event(&self, base: &Currency, prices: &PriceBook) -> Result<(Event, Decimal)> {
+        let rate = if &self.currency == base {
+            Decimal::ONE
+        } else {
+            self.fx_rate
+                .or_else(|| prices.fx.get(&self.currency).and_then(|q| q.last()).map(|q| q.rate))
+                .ok_or_else(|| Error::Trade(format!("enter the exchange rate: how many {base} for one {}", self.currency)))?
+        };
+        let instrument = Instrument {
+            symbol: self.symbol.clone(),
+            name: self.name.clone().filter(|n| !n.trim().is_empty()),
+            isin: self.isin.clone().filter(|n| !n.trim().is_empty()),
+            currency: Some(self.currency.clone()),
+        };
+        let amount = Money::new((self.units * self.price).round_dp(2), self.currency.clone());
+        let fees = self
+            .fees
+            .iter()
+            .filter(|f| !f.amount.is_zero())
+            .map(|f| FeeCharge { kind: f.kind, amount: Money::new(f.amount, self.currency.clone()) })
+            .collect();
+        let kind = match self.side {
+            Side::Buy => EventKind::Buy { instrument, units: self.units, amount, fees },
+            Side::Sell => EventKind::Sell { instrument, units: self.units, amount, fees },
+        };
+        let event = Event {
+            date: self.date,
+            kind,
+            fx: Some(Fx { currency: self.currency.clone(), rate, mode: FxRateMode::Multiply }),
+            venue: self.venue.as_ref().filter(|v| !v.trim().is_empty()).map(|v| Venue { code: v.trim().to_uppercase(), assumed: false }),
+            source: Source { broker: MANUAL.into(), file: MANUAL.into(), line: 0, fingerprint: format!("{MANUAL}:{}", self.id) },
+        };
+        Ok((event, rate))
+    }
+}
+
+/// Books the trade. Returns the new entry.
+pub fn record(ledger: &mut Ledger, prices: &mut PriceBook, input: &TradeInput) -> Result<JournalEntry> {
+    input.check()?;
+    let (event, _) = input.event(&ledger.base_currency, prices)?;
+    let fingerprint = event.source.fingerprint.clone();
+    if ledger.contains_fingerprint(&fingerprint) {
+        return Err(Error::Trade("this trade is already recorded".into()));
+    }
+    // Work on copies so a refused trade leaves the books untouched.
+    let (mut l, mut p) = (ledger.clone(), prices.clone());
+    post_events(&mut l, &mut p, &input.config()?, vec![event]).map_err(|e| match e {
+        Error::Import { message, .. } => Error::Trade(message),
+        e => e,
+    })?;
+    let entry = l.entries.iter().find(|e| e.source.as_ref().is_some_and(|s| s.fingerprint == fingerprint)).cloned().expect("just posted");
+    (*ledger, *prices) = (l, p);
+    Ok(entry)
+}
+
+/// What recording the trade would change, without changing anything.
+pub fn preview(ledger: &Ledger, prices: &PriceBook, input: &TradeInput) -> Result<TradePreview> {
+    let (mut after, mut after_prices) = (ledger.clone(), prices.clone());
+    let entry = record(&mut after, &mut after_prices, input)?;
+    let (_, rate) = input.event(&ledger.base_currency, prices)?;
+
+    let account = ledger::securities_account(&input.broker, &input.symbol);
+    let base_of = |kinds: &[&str]| -> Decimal { entry.postings.iter().filter(|p| kinds.iter().any(|k| p.account.starts_with(k))).map(|p| p.base).sum() };
+    let fees = base_of(&["Expenses:"]);
+    let gain = (input.side == Side::Sell).then(|| -base_of(&[ledger::CAPITAL_GAINS]));
+    let cost = (input.side == Side::Sell).then(|| -base_of(&[account.as_str()]));
+
+    let cash_of = |l: &Ledger, currency: &Currency| {
+        l.balances().get(&ledger::cash_account(&input.broker, currency)).and_then(|b| b.amounts.get(currency).copied()).unwrap_or_default()
+    };
+    let mut currencies: Vec<Currency> = entry.postings.iter().filter(|p| p.account.starts_with("Assets:Cash:")).map(|p| p.amount.currency.clone()).collect();
+    currencies.dedup();
+    let cash = currencies.into_iter().map(|c| CashChange { before: cash_of(ledger, &c), after: cash_of(&after, &c), currency: c }).collect();
+
+    let by_symbol = |l: &Ledger, p: &PriceBook| {
+        let mut out = std::collections::BTreeMap::<String, Decimal>::new();
+        for v in prices::valuations(l, p) {
+            *out.entry(v.symbol).or_default() += v.value.unwrap_or(v.cost);
+        }
+        out
+    };
+    let (before_w, after_w) = (by_symbol(ledger, prices), by_symbol(&after, &after_prices));
+    let mut symbols: Vec<&String> = before_w.keys().chain(after_w.keys()).collect();
+    symbols.sort();
+    symbols.dedup();
+    let holdings = symbols
+        .into_iter()
+        .map(|s| Weight { symbol: s.clone(), before: before_w.get(s).copied().unwrap_or_default(), after: after_w.get(s).copied().unwrap_or_default() })
+        .collect();
+    let total_cash = |l: &Ledger| l.balances().iter().filter(|(a, _)| a.starts_with("Assets:Cash:")).map(|(_, b)| b.base).sum();
+
+    Ok(TradePreview {
+        value: (input.units * input.price * rate).round_dp(2),
+        fees,
+        fx_rate: rate,
+        cost,
+        gain,
+        units_before: ledger.units_at(&account, NaiveDate::MAX),
+        units_after: after.units_at(&account, NaiveDate::MAX),
+        cash,
+        invested_before: before_w.values().sum(),
+        invested_after: after_w.values().sum(),
+        cash_before: total_cash(ledger),
+        cash_after: total_cash(&after),
+        holdings,
+        entry,
+    })
+}
+
+/// Removes a trade entered by hand, if it is the latest entry in the books.
+pub fn undo(ledger: &mut Ledger, id: &str) -> Result<()> {
+    let latest = ledger.entries.iter().map(|e| e.id.as_str()).max();
+    let manual = ledger.entries.iter().any(|e| e.id == id && e.source.as_ref().is_some_and(|s| s.broker == MANUAL));
+    if latest != Some(id) || !manual {
+        return Err(Error::Trade("only the latest trade entered by hand can be undone".into()));
+    }
+    ledger.entries.retain(|e| e.id != id);
+    Ok(())
+}

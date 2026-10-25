@@ -1,11 +1,11 @@
-import type { Plan, Snapshot } from './core'
+import type { Entry, Plan, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
 import { Book } from './core'
 import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
 
-const VIEWS = ['overview', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
+const VIEWS = ['overview', 'trade', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
 export type View = (typeof VIEWS)[number]
 
 class AppState {
@@ -103,6 +103,17 @@ class AppState {
 
   async setPlan(plan: Plan): Promise<void> {
     this.book?.setPlan(plan)
+    await this.changed()
+  }
+
+  async recordTrade(input: TradeInput): Promise<Entry | undefined> {
+    const entry = this.book?.recordTrade(input)
+    await this.changed()
+    return entry
+  }
+
+  async undoTrade(id: string): Promise<void> {
+    this.book?.undoTrade(id)
     await this.changed()
   }
 

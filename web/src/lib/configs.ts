@@ -11,6 +11,8 @@ function value(toml: string, key: string): string | undefined {
 export interface BrokerDef {
   id: string
   name: string
+  /** Segment used in account names, e.g. IBKR. */
+  account: string
   toml: string
 }
 
@@ -22,7 +24,7 @@ export interface PackDef {
 }
 
 export const brokers: BrokerDef[] = Object.entries(brokerFiles)
-  .map(([path, toml]) => ({ id: value(toml, 'id') ?? path, name: value(toml, 'name') ?? path, toml }))
+  .map(([path, toml]) => ({ id: value(toml, 'id') ?? path, name: value(toml, 'name') ?? path, account: value(toml, 'account') ?? path, toml }))
   .sort((a, b) => a.name.localeCompare(b.name))
 
 export const packs: PackDef[] = Object.entries(packFiles)

@@ -11,7 +11,9 @@ use investor_core::plan::{self, Market, Plan, ProjectionInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
 use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
-use investor_core::whatif::{self, WhatIfInput};
+use investor_core::trade::{self, TradeInput, TradePreview};
+use investor_core::whatif::{self, Band, WhatIfInput};
+use rust_decimal::Decimal;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -43,6 +45,27 @@ struct Snapshot<'a> {
     instruments: Vec<&'a Instrument>,
     /// Newest first.
     entries: Vec<&'a JournalEntry>,
+}
+
+#[derive(Serialize)]
+struct TradeOutlook {
+    #[serde(flatten)]
+    preview: TradePreview,
+    /// For a sale, how the tax pack treats it.
+    tax: Option<TradeTax>,
+    /// Where all your money could be in `years`, without and with the trade.
+    before: Band,
+    after: Band,
+}
+
+#[derive(Serialize)]
+struct TradeTax {
+    treatment: investor_core::jurisdiction::Treatment,
+    rate: String,
+    form: String,
+    /// Tax on this gain alone, before netting other gains and losses of the year.
+    estimate: String,
+    verified: bool,
 }
 
 #[derive(Serialize)]
@@ -190,6 +213,46 @@ impl Session {
         let mut input: WhatIfInput = serde_json::from_str(input).map_err(js_error)?;
         (input.cash, input.invested) = self.holdings_value();
         json(&whatif::what_if(&input, &self.vault.plan))
+    }
+
+    /// What a trade would change, without changing anything. `input` is a
+    /// trade as JSON; `pack_toml` the tax pack for the trade's year, if any;
+    /// `what_if` the projection settings as for `whatIf`.
+    #[wasm_bindgen(js_name = previewTrade)]
+    pub fn preview_trade(&self, input: &str, pack_toml: Option<String>, what_if: &str) -> Result<String, JsError> {
+        let input: TradeInput = serde_json::from_str(input).map_err(js_error)?;
+        let preview = trade::preview(&self.vault.ledger, &self.vault.prices, &input).map_err(js_error)?;
+        let tax = match (&preview.gain, pack_toml) {
+            (Some(gain), Some(toml)) => {
+                let pack = JurisdictionPack::from_toml(&toml).map_err(js_error)?;
+                let treatment = pack.treatment(preview.entry.venue.as_ref());
+                let rate = pack.capital_gains.rate;
+                let due = if treatment == investor_core::jurisdiction::Treatment::Taxable { ((*gain).max(Decimal::ZERO) * rate).round_dp(2) } else { Decimal::ZERO };
+                Some(TradeTax { treatment, rate: rate.to_string(), form: pack.capital_gains.form.clone(), estimate: due.to_string(), verified: pack.pack.verified })
+            }
+            _ => None,
+        };
+        let mut settings: WhatIfInput = serde_json::from_str(what_if).map_err(js_error)?;
+        settings.retirement = None;
+        let end = |cash: Decimal, invested: Decimal| {
+            let input = WhatIfInput { cash: plan::to_f64(cash), invested: plan::to_f64(invested), ..settings.clone() };
+            whatif::what_if(&input, &self.vault.plan).plan.bands.pop().expect("year zero at least")
+        };
+        let (before, after) = (end(preview.cash_before, preview.invested_before), end(preview.cash_after, preview.invested_after));
+        json(&TradeOutlook { preview, tax, before, after })
+    }
+
+    /// Books a trade. Returns the new entry as JSON.
+    #[wasm_bindgen(js_name = recordTrade)]
+    pub fn record_trade(&mut self, input: &str) -> Result<String, JsError> {
+        let input: TradeInput = serde_json::from_str(input).map_err(js_error)?;
+        json(&trade::record(&mut self.vault.ledger, &mut self.vault.prices, &input).map_err(js_error)?)
+    }
+
+    /// Removes the latest trade entered by hand.
+    #[wasm_bindgen(js_name = undoTrade)]
+    pub fn undo_trade(&mut self, id: &str) -> Result<(), JsError> {
+        trade::undo(&mut self.vault.ledger, id).map_err(js_error)
     }
 
     /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.

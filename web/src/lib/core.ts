@@ -270,6 +270,48 @@ export interface Gains {
   summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal }
 }
 
+export type FeeKind = 'commission' | 'fx_conversion' | 'exchange' | 'transaction_tax' | 'other'
+
+export interface TradeInput {
+  /** Chosen when the form opens, so recording twice adds the trade once. */
+  id: string
+  date: string
+  /** Account segment, e.g. IBKR. */
+  broker: string
+  side: 'buy' | 'sell'
+  symbol: string
+  name?: string | null
+  isin?: string | null
+  units: Decimal
+  /** Per unit, in `currency`. */
+  price: Decimal
+  currency: string
+  fees: { kind: FeeKind; amount: Decimal }[]
+  venue?: string | null
+  /** Base currency for one unit of `currency`. */
+  fx_rate?: Decimal | null
+}
+
+export interface TradeOutlook {
+  entry: Entry
+  value: Decimal
+  fees: Decimal
+  fx_rate: Decimal
+  cost: Decimal | null
+  gain: Decimal | null
+  units_before: Decimal
+  units_after: Decimal
+  cash: { currency: string; before: Decimal; after: Decimal }[]
+  holdings: { symbol: string; before: Decimal; after: Decimal }[]
+  invested_before: Decimal
+  invested_after: Decimal
+  cash_before: Decimal
+  cash_after: Decimal
+  tax: { treatment: Treatment; rate: Decimal; form: string; estimate: Decimal; verified: boolean } | null
+  before: Band
+  after: Band
+}
+
 /** An unlocked book. Its key exists only inside this object. */
 export class Book {
   private constructor(private readonly session: Session) {}
@@ -328,6 +370,19 @@ export class Book {
   /** `today` is YYYY-MM. */
   whatIf(input: { today: string; years: number; market: Market; spend_goals: boolean; retirement?: RetireInput }): WhatIf {
     return JSON.parse(this.session.whatIf(JSON.stringify(input)))
+  }
+
+  /** Throws with a readable message when the trade cannot be made. */
+  previewTrade(input: TradeInput, packToml: string | null, whatIf: { today: string; years: number; market: Market; spend_goals: boolean }): TradeOutlook {
+    return JSON.parse(this.session.previewTrade(JSON.stringify(input), packToml ?? undefined, JSON.stringify(whatIf)))
+  }
+
+  recordTrade(input: TradeInput): Entry {
+    return JSON.parse(this.session.recordTrade(JSON.stringify(input)))
+  }
+
+  undoTrade(id: string): void {
+    this.session.undoTrade(id)
   }
 
   flows(): MonthFlow[] {
