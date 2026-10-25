@@ -1,7 +1,12 @@
 name: Desktop app
 
-# Builds the desktop app for Windows, macOS and Linux and attaches the
-# installers to a GitHub release. Push a tag such as v0.1.0 to release.
+# Builds the desktop app for Windows, macOS and Linux, and investor-mcp for
+# each, and attaches them to a GitHub release. Push a tag such as v0.2.0.
+#
+# macOS builds are signed and notarized when these repository secrets exist
+# (scripts/apple-signing-secrets.sh sets them): APPLE_CERTIFICATE,
+# APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_TEAM_ID,
+# APPLE_ID, APPLE_PASSWORD. Without them the builds are unsigned.
 on:
   push:
     tags: ['v*']
@@ -11,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  app:
     strategy:
       fail-fast: false
       matrix:
@@ -26,6 +31,8 @@ jobs:
             args: ''
             targets: wasm32-unknown-unknown
     runs-on: ${{ matrix.os }}
+    env:
+      SIGN_MAC: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -54,6 +61,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: pnpm config set script-shell "C:\\Program Files\\Git\\bin\\bash.exe"
+      - name: Signing and notarization for macOS
+        if: runner.os == 'macOS' && env.SIGN_MAC == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            {
+              echo "$name<<END_OF_SECRET"
+              printenv "$name"
+              echo "END_OF_SECRET"
+            } >> "$GITHUB_ENV"
+          done
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,10 +94,87 @@ jobs:
             - **macOS** (Apple silicon and Intel): the `.dmg` file
             - **Linux**: the `.AppImage`, `.deb` or `.rpm` file
 
-            The app is not signed yet, so your system will warn the first time you open it.
-            On macOS, right-click the app, choose Open, then Open again. On Windows, choose
-            More info, then Run anyway.
+            On Windows the app is not signed yet, so the first start shows a warning:
+            choose More info, then Run anyway.
 
-            Your portfolio stays in your .invest file; the app never connects to the internet.
+            `investor-mcp-*` lets any AI assistant that speaks the Model Context Protocol
+            read your file and record changes you approve; see the README.
+
+            Your portfolio stays in your .invest file. The only network traffic is to an
+            AI model you set up in the assistant, and only when you use it.
           releaseDraft: false
           prerelease: false
+
+  mcp:
+    needs: app
+    if: github.ref_type == 'tag'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macos-universal
+          - os: ubuntu-22.04
+            name: linux-x86_64
+          - os: windows-latest
+            name: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    env:
+      SIGN_MAC: ${{ secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        shell: bash
+        run: |
+          mkdir -p out
+          if [ "$RUNNER_OS" = macOS ]; then
+            cargo build --release -p investor-mcp --target aarch64-apple-darwin
+            cargo build --release -p investor-mcp --target x86_64-apple-darwin
+            lipo -create -output out/investor-mcp target/aarch64-apple-darwin/release/investor-mcp target/x86_64-apple-darwin/release/investor-mcp
+          elif [ "$RUNNER_OS" = Windows ]; then
+            cargo build --release -p investor-mcp
+            cp target/release/investor-mcp.exe out/
+          else
+            cargo build --release -p investor-mcp
+            cp target/release/investor-mcp out/
+          fi
+      - name: Sign and notarize on macOS
+        if: runner.os == 'macOS' && env.SIGN_MAC == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(openssl rand -hex 16)"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" out/investor-mcp
+          ditto -c -k out/investor-mcp "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd out
+          if [ "$RUNNER_OS" = Windows ]; then
+            7z a "../investor-mcp-${{ matrix.name }}.zip" investor-mcp.exe
+            asset="../investor-mcp-${{ matrix.name }}.zip"
+          else
+            tar -czf "../investor-mcp-${{ matrix.name }}.tar.gz" investor-mcp
+            asset="../investor-mcp-${{ matrix.name }}.tar.gz"
+          fi
+          gh release upload "${{ github.ref_name }}" "$asset" --clobber -R "${{ github.repository }}"

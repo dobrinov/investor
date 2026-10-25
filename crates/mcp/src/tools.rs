@@ -47,11 +47,16 @@ pub fn call(book: &mut Book, name: &str, args: &Value, writes: bool) -> Result<V
     Ok(assistant::call(&mut vault, name, args, &env)?)
 }
 
-fn packs_dir() -> PathBuf {
-    std::env::var_os("INVESTOR_JURISDICTIONS").map_or_else(|| PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../../jurisdictions")), PathBuf::from)
+mod built_in {
+    include!(concat!(env!("OUT_DIR"), "/packs.rs"));
 }
 
+/// The pack for a country and year: from `INVESTOR_JURISDICTIONS` when set
+/// (to try a pack you are writing), otherwise the ones built in.
 fn pack(country: &str, year: i32) -> Option<JurisdictionPack> {
-    let text = std::fs::read_to_string(packs_dir().join(country.to_lowercase()).join(format!("{year}.toml"))).ok()?;
+    let text = match std::env::var_os("INVESTOR_JURISDICTIONS") {
+        Some(dir) => std::fs::read_to_string(PathBuf::from(dir).join(country.to_lowercase()).join(format!("{year}.toml"))).ok()?,
+        None => built_in::PACKS.iter().find(|(c, y, _)| c.eq_ignore_ascii_case(country) && *y == year)?.2.to_owned(),
+    };
     JurisdictionPack::from_toml(&text).ok()
 }
