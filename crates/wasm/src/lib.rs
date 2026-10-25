@@ -3,6 +3,7 @@
 
 use std::fmt::Display;
 
+use investor_core::bank::{self, BalanceInput, BankBalance, NewAccount};
 use investor_core::import::{self, BrokerConfig};
 use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
@@ -40,6 +41,8 @@ struct Snapshot<'a> {
     valuations: Vec<Valuation>,
     /// Holdings without a market price, outside the projections.
     private: Vec<PrivateValuation>,
+    /// Bank accounts whose balance is typed in; their cash is also in `cash`.
+    banks: Vec<BankBalance>,
     /// Latest rate per currency: units of the base currency for one unit.
     fx: Vec<(&'a Currency, &'a FxQuote)>,
     cash: Vec<CashBalance>,
@@ -108,6 +111,7 @@ impl Session {
             holdings: reports::holdings(ledger),
             valuations: prices::valuations(ledger, &self.vault.prices),
             private: private::valuations(&self.vault),
+            banks: bank::balances(&self.vault),
             fx: self.vault.prices.fx.iter().filter_map(|(c, q)| Some((c, q.last()?))).collect(),
             cash: reports::cash(ledger),
             trial_balance: reports::trial_balance(ledger),
@@ -207,6 +211,28 @@ impl Session {
     #[wasm_bindgen(js_name = undoTrade)]
     pub fn undo_trade(&mut self, id: &str) -> Result<(), JsError> {
         trade::undo(&mut self.vault.ledger, id).map_err(js_error)
+    }
+
+    /// Adds a bank account with its balance. `input` is JSON; returns the
+    /// opening entry as JSON, or `null` for a zero balance.
+    #[wasm_bindgen(js_name = addBank)]
+    pub fn add_bank(&mut self, input: &str) -> Result<String, JsError> {
+        let input: NewAccount = serde_json::from_str(input).map_err(js_error)?;
+        json(&bank::add(&mut self.vault, &input).map_err(js_error)?)
+    }
+
+    /// Records a bank account's balance. `input` is JSON; returns the entry
+    /// for the difference as JSON, or `null` when nothing changed.
+    #[wasm_bindgen(js_name = setBankBalance)]
+    pub fn set_bank_balance(&mut self, id: &str, input: &str) -> Result<String, JsError> {
+        let input: BalanceInput = serde_json::from_str(input).map_err(js_error)?;
+        json(&bank::set_balance(&mut self.vault, id, &input).map_err(js_error)?)
+    }
+
+    /// Removes a bank account and its entries.
+    #[wasm_bindgen(js_name = removeBank)]
+    pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {
+        bank::remove(&mut self.vault, id).map_err(js_error)
     }
 
     /// Records a private holding and the payment into it. `input` is JSON;

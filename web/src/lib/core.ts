@@ -260,12 +260,34 @@ export interface PrivateInput {
   condition: string
 }
 
+/** A bank account whose balance is typed in by hand. */
+export interface BankAccount {
+  id: string
+  name: string
+  currency: string
+  /** In `currency`. */
+  balance: Decimal
+  /** In the base currency at the latest rate, when there is one. */
+  value?: Decimal
+  updated: string | null
+}
+
+export interface BalanceInput {
+  /** Chosen when the form opens, so saving twice books once. */
+  entry_id: string
+  date: string
+  balance: Decimal
+  fx_rate?: Decimal | null
+}
+
 export interface Snapshot {
   settings: Settings
   plan: Plan
   valuations: Valuation[]
   /** Outside the projections: they cannot be sold at will. */
   private: PrivateHolding[]
+  /** Their cash is also in `cash`. */
+  banks: BankAccount[]
   fx: [string, FxQuote][]
   holdings: Holding[]
   cash: CashBalance[]
@@ -426,6 +448,18 @@ export class Book {
 
   flows(): MonthFlow[] {
     return JSON.parse(this.session.flows())
+  }
+
+  addBank(input: BalanceInput & { name: string; currency: string }): Entry | null {
+    return JSON.parse(this.session.addBank(JSON.stringify(input)))
+  }
+
+  setBankBalance(id: string, input: BalanceInput): Entry | null {
+    return JSON.parse(this.session.setBankBalance(id, JSON.stringify(input)))
+  }
+
+  removeBank(id: string): void {
+    this.session.removeBank(id)
   }
 
   addPrivate(input: PrivateInput): Entry {
