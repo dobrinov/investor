@@ -23,6 +23,23 @@ fn js_error(e: impl Display) -> JsError {
     JsError::new(&e.to_string())
 }
 
+/// The English text, then after a NUL the code and values as JSON, so the
+/// web app can show the message in the reader's language.
+fn core_error(e: investor_core::Error) -> JsError {
+    let Some(problem) = e.problem() else { return js_error(e) };
+    let args: serde_json::Map<String, serde_json::Value> = problem.args.iter().map(|(k, v)| ((*k).to_owned(), v.clone().into())).collect();
+    JsError::new(&format!("{}\u{0}{}", problem.english(), serde_json::json!({ "code": problem.code, "args": args })))
+}
+
+/// A typed-in value that does not parse, such as an empty amount.
+fn bad_input(e: impl Display) -> JsError {
+    core_error(investor_core::Error::user("input.invalid").arg("detail", e))
+}
+
+fn problem(code: &'static str) -> JsError {
+    core_error(investor_core::Error::user(code))
+}
+
 fn json(value: &impl Serialize) -> Result<String, JsError> {
     serde_json::to_string(value).map_err(js_error)
 }
@@ -87,7 +104,7 @@ impl Session {
     /// Starts a new book. `settings` is JSON: `{"base_currency","language","tax_residency"}`.
     pub fn create(settings: &str, password: &str) -> Result<Session, JsError> {
         let settings: Settings = serde_json::from_str(settings).map_err(js_error)?;
-        let key = SealingKey::derive(password, KdfParams::default()).map_err(js_error)?;
+        let key = SealingKey::derive(password, KdfParams::default()).map_err(core_error)?;
         Ok(Session { vault: Vault::new(settings), key })
     }
 
@@ -95,21 +112,21 @@ impl Session {
     /// to be saved; its key is a throwaway.
     pub fn example(today: &str, language: &str) -> Result<Session, JsError> {
         let today = today.parse().map_err(js_error)?;
-        let vault = investor_core::example::vault(today, language).map_err(js_error)?;
-        let key = SealingKey::derive("example", KdfParams { memory_kib: 8 * 1024, iterations: 1, lanes: 1 }).map_err(js_error)?;
+        let vault = investor_core::example::vault(today, language).map_err(core_error)?;
+        let key = SealingKey::derive("example", KdfParams { memory_kib: 8 * 1024, iterations: 1, lanes: 1 }).map_err(core_error)?;
         Ok(Session { vault, key })
     }
 
     /// Opens the bytes of a `.invest` file.
     pub fn unlock(bytes: &[u8], password: &str) -> Result<Session, JsError> {
-        let (vault, key) = vault::unlock(bytes, password).map_err(js_error)?;
+        let (vault, key) = vault::unlock(bytes, password).map_err(core_error)?;
         Ok(Session { vault, key })
     }
 
     /// Reopens bytes sealed by this session's key, kept from an earlier unlock.
     pub fn resume(bytes: &[u8], key: &[u8]) -> Result<Session, JsError> {
-        let key = SealingKey::from_bytes(key).map_err(js_error)?;
-        let vault = vault::unlock_with_key(bytes, &key).map_err(js_error)?;
+        let key = SealingKey::from_bytes(key).map_err(core_error)?;
+        let vault = vault::unlock_with_key(bytes, &key).map_err(core_error)?;
         Ok(Session { vault, key })
     }
 
@@ -121,7 +138,7 @@ impl Session {
 
     /// The encrypted file contents, ready to save.
     pub fn seal(&self) -> Result<Vec<u8>, JsError> {
-        vault::seal_with(&self.vault, &self.key).map_err(js_error)
+        vault::seal_with(&self.vault, &self.key).map_err(core_error)
     }
 
     pub fn snapshot(&self) -> Result<String, JsError> {
@@ -146,11 +163,11 @@ impl Session {
 
     /// Imports a statement. Returns the import report as JSON.
     pub fn import(&mut self, broker_toml: &str, file_name: &str, text: &str) -> Result<String, JsError> {
-        let config = BrokerConfig::from_toml(broker_toml).map_err(js_error)?;
+        let config = BrokerConfig::from_toml(broker_toml).map_err(core_error)?;
         // Import into a copy so a failure halfway leaves the book untouched.
         let mut ledger = self.vault.ledger.clone();
         let mut prices = self.vault.prices.clone();
-        let report = import::import_statement(&mut ledger, &mut prices, &config, file_name, text).map_err(js_error)?;
+        let report = import::import_statement(&mut ledger, &mut prices, &config, file_name, text).map_err(core_error)?;
         self.vault.ledger = ledger;
         self.vault.prices = prices;
         json(&report)
@@ -158,7 +175,7 @@ impl Session {
 
     /// Realised gains for a year under a jurisdiction pack, as JSON.
     pub fn gains(&self, year: i32, pack_toml: &str) -> Result<String, JsError> {
-        let pack = JurisdictionPack::from_toml(pack_toml).map_err(js_error)?;
+        let pack = JurisdictionPack::from_toml(pack_toml).map_err(core_error)?;
         let rows: Vec<GainRow> = reports::realized_gains(&self.vault.ledger, year)
             .into_iter()
             .map(|r| GainRow { treatment: pack.classify(&r), realization: r })
@@ -191,7 +208,7 @@ impl Session {
     /// Replaces the profile and goals. `plan` is JSON.
     #[wasm_bindgen(js_name = setPlan)]
     pub fn set_plan(&mut self, plan: &str) -> Result<(), JsError> {
-        self.vault.plan = serde_json::from_str(plan).map_err(js_error)?;
+        self.vault.plan = serde_json::from_str(plan).map_err(bad_input)?;
         Ok(())
     }
 
@@ -212,7 +229,7 @@ impl Session {
     /// `{"today","years","market","spend_goals","retirement"?}`.
     #[wasm_bindgen(js_name = whatIf)]
     pub fn what_if(&self, input: &str) -> Result<String, JsError> {
-        let mut input: WhatIfInput = serde_json::from_str(input).map_err(js_error)?;
+        let mut input: WhatIfInput = serde_json::from_str(input).map_err(bad_input)?;
         (input.cash, input.invested) = self.holdings_value();
         json(&whatif::what_if(&input, &self.vault.plan))
     }
@@ -222,81 +239,81 @@ impl Session {
     /// `what_if` the projection settings as for `whatIf`.
     #[wasm_bindgen(js_name = previewTrade)]
     pub fn preview_trade(&self, input: &str, pack_toml: Option<String>, what_if: &str) -> Result<String, JsError> {
-        let input: TradeInput = serde_json::from_str(input).map_err(js_error)?;
-        let pack = pack_toml.map(|toml| JurisdictionPack::from_toml(&toml)).transpose().map_err(js_error)?;
-        let settings: WhatIfInput = serde_json::from_str(what_if).map_err(js_error)?;
+        let input: TradeInput = serde_json::from_str(input).map_err(bad_input)?;
+        let pack = pack_toml.map(|toml| JurisdictionPack::from_toml(&toml)).transpose().map_err(core_error)?;
+        let settings: WhatIfInput = serde_json::from_str(what_if).map_err(bad_input)?;
         let v = &self.vault;
-        json(&trade::outlook(&v.ledger, &v.prices, &v.plan, &input, pack.as_ref(), &settings).map_err(js_error)?)
+        json(&trade::outlook(&v.ledger, &v.prices, &v.plan, &input, pack.as_ref(), &settings).map_err(core_error)?)
     }
 
     /// Books a trade. Returns the new entry as JSON.
     #[wasm_bindgen(js_name = recordTrade)]
     pub fn record_trade(&mut self, input: &str) -> Result<String, JsError> {
-        let input: TradeInput = serde_json::from_str(input).map_err(js_error)?;
-        json(&trade::record(&mut self.vault.ledger, &mut self.vault.prices, &input).map_err(js_error)?)
+        let input: TradeInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&trade::record(&mut self.vault.ledger, &mut self.vault.prices, &input).map_err(core_error)?)
     }
 
     /// Removes the latest trade entered by hand.
     #[wasm_bindgen(js_name = undoTrade)]
     pub fn undo_trade(&mut self, id: &str) -> Result<(), JsError> {
-        trade::undo(&mut self.vault.ledger, id).map_err(js_error)
+        trade::undo(&mut self.vault.ledger, id).map_err(core_error)
     }
 
     /// Adds a bank account with its balance. `input` is JSON; returns the
     /// opening entry as JSON, or `null` for a zero balance.
     #[wasm_bindgen(js_name = addBank)]
     pub fn add_bank(&mut self, input: &str) -> Result<String, JsError> {
-        let input: NewAccount = serde_json::from_str(input).map_err(js_error)?;
-        json(&bank::add(&mut self.vault, &input).map_err(js_error)?)
+        let input: NewAccount = serde_json::from_str(input).map_err(bad_input)?;
+        json(&bank::add(&mut self.vault, &input).map_err(core_error)?)
     }
 
     /// Records a bank account's balance. `input` is JSON; returns the entry
     /// for the difference as JSON, or `null` when nothing changed.
     #[wasm_bindgen(js_name = setBankBalance)]
     pub fn set_bank_balance(&mut self, id: &str, input: &str) -> Result<String, JsError> {
-        let input: BalanceInput = serde_json::from_str(input).map_err(js_error)?;
-        json(&bank::set_balance(&mut self.vault, id, &input).map_err(js_error)?)
+        let input: BalanceInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&bank::set_balance(&mut self.vault, id, &input).map_err(core_error)?)
     }
 
     /// Removes a bank account and its entries.
     #[wasm_bindgen(js_name = removeBank)]
     pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {
-        bank::remove(&mut self.vault, id).map_err(js_error)
+        bank::remove(&mut self.vault, id).map_err(core_error)
     }
 
     /// Records a purchase of coins or bars. `input` is JSON; returns the entry.
     #[wasm_bindgen(js_name = buyMetal)]
     pub fn buy_metal(&mut self, input: &str) -> Result<String, JsError> {
-        let input: MetalInput = serde_json::from_str(input).map_err(js_error)?;
-        json(&metal::buy(&mut self.vault, &input).map_err(js_error)?)
+        let input: MetalInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&metal::buy(&mut self.vault, &input).map_err(core_error)?)
     }
 
     /// Records a sale of coins or bars. `input` is JSON; returns the entry.
     #[wasm_bindgen(js_name = sellMetal)]
     pub fn sell_metal(&mut self, input: &str) -> Result<String, JsError> {
-        let input: MetalInput = serde_json::from_str(input).map_err(js_error)?;
-        json(&metal::sell(&mut self.vault, &input).map_err(js_error)?)
+        let input: MetalInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&metal::sell(&mut self.vault, &input).map_err(core_error)?)
     }
 
     /// Sets a metal's price per gram. `input` is JSON.
     #[wasm_bindgen(js_name = setMetalPrice)]
     pub fn set_metal_price(&mut self, input: &str) -> Result<(), JsError> {
-        let input: MetalPrice = serde_json::from_str(input).map_err(js_error)?;
-        metal::set_price(&mut self.vault, &input).map_err(js_error)
+        let input: MetalPrice = serde_json::from_str(input).map_err(bad_input)?;
+        metal::set_price(&mut self.vault, &input).map_err(core_error)
     }
 
     /// Removes a purchase or sale of coins or bars.
     #[wasm_bindgen(js_name = removeMetalEntry)]
     pub fn remove_metal_entry(&mut self, entry_id: &str) -> Result<(), JsError> {
-        metal::remove(&mut self.vault, entry_id).map_err(js_error)
+        metal::remove(&mut self.vault, entry_id).map_err(core_error)
     }
 
     /// Records a private holding and the payment into it. `input` is JSON;
     /// returns the new entry as JSON.
     #[wasm_bindgen(js_name = addPrivate)]
     pub fn add_private(&mut self, input: &str) -> Result<String, JsError> {
-        let input: PrivateInput = serde_json::from_str(input).map_err(js_error)?;
-        json(&private::add(&mut self.vault, &input).map_err(js_error)?)
+        let input: PrivateInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&private::add(&mut self.vault, &input).map_err(core_error)?)
     }
 
     /// Sets a private holding's value in its own currency, or clears it when
@@ -306,23 +323,23 @@ impl Session {
         let estimate = if amount.trim().is_empty() {
             None
         } else {
-            Some(Estimate { date: date.parse().map_err(js_error)?, amount: amount.trim().parse().map_err(js_error)? })
+            Some(Estimate { date: date.parse().map_err(bad_input)?, amount: amount.trim().parse().map_err(bad_input)? })
         };
-        private::set_estimate(&mut self.vault, id, estimate).map_err(js_error)
+        private::set_estimate(&mut self.vault, id, estimate).map_err(core_error)
     }
 
     /// Removes a private holding and its entries.
     #[wasm_bindgen(js_name = removePrivate)]
     pub fn remove_private(&mut self, id: &str) -> Result<(), JsError> {
-        private::remove(&mut self.vault, id).map_err(js_error)
+        private::remove(&mut self.vault, id).map_err(core_error)
     }
 
     /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.
     #[wasm_bindgen(js_name = setPrice)]
     pub fn set_price(&mut self, symbol: &str, date: &str, amount: &str, currency: &str) -> Result<(), JsError> {
-        let date = date.parse().map_err(js_error)?;
-        let amount = amount.trim().replace(',', ".").parse().map_err(js_error)?;
-        let price = Money::new(amount, Currency::new(currency).map_err(js_error)?);
+        let date = date.parse().map_err(bad_input)?;
+        let amount = amount.trim().replace(',', ".").parse().map_err(bad_input)?;
+        let price = Money::new(amount, Currency::new(currency).map_err(core_error)?);
         self.vault.prices.add_quote(symbol, Quote { date, price, source: QuoteSource::Manual });
         Ok(())
     }
@@ -330,9 +347,9 @@ impl Session {
     /// Records an exchange rate typed in by the user: base units for one `currency`.
     #[wasm_bindgen(js_name = setFxRate)]
     pub fn set_fx_rate(&mut self, currency: &str, date: &str, rate: &str) -> Result<(), JsError> {
-        let date = date.parse().map_err(js_error)?;
-        let rate = rate.trim().replace(',', ".").parse().map_err(js_error)?;
-        self.vault.prices.add_fx(Currency::new(currency).map_err(js_error)?, FxQuote { date, rate, source: QuoteSource::Manual });
+        let date = date.parse().map_err(bad_input)?;
+        let rate = rate.trim().replace(',', ".").parse().map_err(bad_input)?;
+        self.vault.prices.add_fx(Currency::new(currency).map_err(core_error)?, FxQuote { date, rate, source: QuoteSource::Manual });
         Ok(())
     }
 
@@ -340,10 +357,10 @@ impl Session {
     /// afterwards need the new password; older copies keep the old one.
     #[wasm_bindgen(js_name = changePassword)]
     pub fn change_password(&mut self, current: &str, new: &str) -> Result<(), JsError> {
-        if !self.key.matches(current).map_err(js_error)? {
-            return Err(JsError::new("wrong password"));
+        if !self.key.matches(current).map_err(core_error)? {
+            return Err(problem("file.wrongPassword"));
         }
-        self.key = SealingKey::derive(new, KdfParams::default()).map_err(js_error)?;
+        self.key = SealingKey::derive(new, KdfParams::default()).map_err(core_error)?;
         Ok(())
     }
 
@@ -352,7 +369,7 @@ impl Session {
     pub fn set_tax_residency(&mut self, country: &str) -> Result<(), JsError> {
         let country = country.trim().to_ascii_uppercase();
         if country.len() != 2 || !country.chars().all(|c| c.is_ascii_alphabetic()) {
-            return Err(JsError::new("a country is two letters, e.g. DE"));
+            return Err(problem("country.invalid"));
         }
         self.vault.settings.tax_residency = country;
         Ok(())
@@ -367,14 +384,14 @@ impl Session {
 /// Simulated growth of a portfolio. `input` and the result are JSON.
 #[wasm_bindgen]
 pub fn project(input: &str) -> Result<String, JsError> {
-    let input: ProjectionInput = serde_json::from_str(input).map_err(js_error)?;
+    let input: ProjectionInput = serde_json::from_str(input).map_err(bad_input)?;
     json(&plan::project(&input))
 }
 
 /// How well a broker config fits a statement, from 0 to 1.
 #[wasm_bindgen(js_name = brokerFit)]
 pub fn broker_fit(broker_toml: &str, text: &str) -> Result<f64, JsError> {
-    let config = BrokerConfig::from_toml(broker_toml).map_err(js_error)?;
+    let config = BrokerConfig::from_toml(broker_toml).map_err(core_error)?;
     Ok(import::fit(&config, text))
 }
 

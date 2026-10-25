@@ -1,6 +1,7 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
 import init, { Session, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
+import { i18n, t, translates } from './i18n.svelte'
 
 let ready: Promise<unknown> | undefined
 
@@ -426,30 +427,68 @@ export interface TradeOutlook {
   after: Band[]
 }
 
+// The core's errors read "English text\0{"code","args"}". Thrown again in
+// the reader's language, with numbers written their way.
+function readable(e: unknown): unknown {
+  if (!(e instanceof Error) || !e.message.includes('\u0000')) return e
+  const [english, detail] = e.message.split('\u0000')
+  try {
+    const { code, args } = JSON.parse(detail) as { code: string; args: Record<string, string> }
+    const key = `error.${code}`
+    if (!translates(key)) return new Error(english)
+    const values = Object.fromEntries(Object.entries(args).map(([k, v]) => [k, /^-?\d+(\.\d+)?$/.test(v) && k !== 'line' && k !== 'version' ? new Intl.NumberFormat(i18n.lang, { maximumFractionDigits: 8 }).format(Number(v)) : v]))
+    return new Error(t(key, values))
+  } catch {
+    return new Error(english)
+  }
+}
+
+function guarded<T>(run: () => T): T {
+  try {
+    return run()
+  } catch (e) {
+    throw readable(e)
+  }
+}
+
+/** Every method of the session, rethrowing the core's errors readably. */
+function guard(session: Session): Session {
+  return new Proxy(session, {
+    get(target, name, receiver) {
+      const value = Reflect.get(target, name, receiver)
+      return typeof value === 'function' ? (...args: unknown[]) => guarded(() => value.apply(target, args)) : value
+    },
+  })
+}
+
 /** An unlocked book. Its key exists only inside this object. */
 export class Book {
-  private constructor(private readonly session: Session) {}
+  private readonly session: Session
+
+  private constructor(session: Session) {
+    this.session = guard(session)
+  }
 
   static async create(settings: Settings, password: string): Promise<Book> {
     await loadCore()
-    return new Book(Session.create(JSON.stringify(settings), password))
+    return new Book(guarded(() => Session.create(JSON.stringify(settings), password)))
   }
 
   /** The made-up example portfolio, dated so its prices are today's. */
   static async example(today: string, language: string): Promise<Book> {
     await loadCore()
-    return new Book(Session.example(today, language))
+    return new Book(guarded(() => Session.example(today, language)))
   }
 
   static async unlock(bytes: Uint8Array, password: string): Promise<Book> {
     await loadCore()
-    return new Book(Session.unlock(bytes, password))
+    return new Book(guarded(() => Session.unlock(bytes, password)))
   }
 
   /** Reopens a draft with a key kept from `exportKey`; throws if it does not fit. */
   static async resume(bytes: Uint8Array, key: Uint8Array): Promise<Book> {
     await loadCore()
-    return new Book(Session.resume(bytes, key))
+    return new Book(guarded(() => Session.resume(bytes, key)))
   }
 
   /** Opens the file without the password: handle like the password itself. */

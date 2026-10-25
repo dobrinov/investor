@@ -105,19 +105,19 @@ pub struct TradePreview {
 
 impl TradeInput {
     fn check(&self) -> Result<()> {
-        let bad = |m: &str| Err(Error::Trade(m.into()));
+        let bad = |code: &'static str| Err(Error::user(code));
         let valid = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c));
         if !valid(&self.broker) {
-            return bad("the broker name may use only letters, digits, - _ and .");
+            return bad("trade.brokerChars");
         }
         if !valid(&self.symbol) {
-            return bad("the symbol may use only letters, digits, - _ and .");
+            return bad("trade.symbolChars");
         }
         if self.units <= Decimal::ZERO {
-            return bad("the number of units must be more than zero");
+            return bad("trade.unitsNotPositive");
         }
         if self.price < Decimal::ZERO || self.fees.iter().any(|f| f.amount < Decimal::ZERO) {
-            return bad("prices and fees cannot be negative");
+            return bad("trade.negative");
         }
         Ok(())
     }
@@ -134,7 +134,7 @@ impl TradeInput {
         } else {
             self.fx_rate
                 .or_else(|| prices.fx.get(&self.currency).and_then(|q| q.last()).map(|q| q.rate))
-                .ok_or_else(|| Error::Trade(format!("enter the exchange rate: how many {base} for one {}", self.currency)))?
+                .ok_or_else(|| Error::user("fx.missing").arg("base", base).arg("currency", &self.currency))?
         };
         let instrument = Instrument {
             symbol: self.symbol.clone(),
@@ -180,12 +180,18 @@ pub fn record(ledger: &mut Ledger, prices: &mut PriceBook, input: &TradeInput) -
     let (event, _) = input.event(&ledger.base_currency, prices)?;
     let fingerprint = event.source.fingerprint.clone();
     if ledger.contains_fingerprint(&fingerprint) {
-        return Err(Error::Trade("this trade is already recorded".into()));
+        return Err(Error::user("trade.recorded"));
+    }
+    if input.side == Side::Sell {
+        let held = ledger.units_at(&ledger::securities_account(&input.broker, &input.symbol), input.date);
+        if input.units > held {
+            return Err(Error::user("trade.notEnough").arg("held", held.normalize()).arg("symbol", &input.symbol).arg("broker", &input.broker));
+        }
     }
     // Work on copies so a refused trade leaves the books untouched.
     let (mut l, mut p) = (ledger.clone(), prices.clone());
     post_events(&mut l, &mut p, &input.config()?, vec![event]).map_err(|e| match e {
-        Error::Import { message, .. } => Error::Trade(message),
+        Error::Import { message, .. } => Error::user("trade.refused").arg("reason", message),
         e => e,
     })?;
     let entry = l.entries.iter().find(|e| e.source.as_ref().is_some_and(|s| s.fingerprint == fingerprint)).cloned().expect("just posted");
@@ -317,7 +323,7 @@ pub fn undo(ledger: &mut Ledger, id: &str) -> Result<()> {
     let latest = ledger.entries.iter().map(|e| e.id.as_str()).max();
     let manual = ledger.entries.iter().any(|e| e.id == id && e.source.as_ref().is_some_and(|s| s.broker == MANUAL));
     if latest != Some(id) || !manual {
-        return Err(Error::Trade("only the latest trade entered by hand can be undone".into()));
+        return Err(Error::user("trade.undoLatest"));
     }
     ledger.entries.retain(|e| e.id != id);
     Ok(())

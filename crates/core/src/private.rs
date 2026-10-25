@@ -95,16 +95,16 @@ fn fingerprint(entry_id: &str) -> String {
 
 /// Records a new holding and the payment into it. Returns the entry.
 pub fn add(vault: &mut Vault, input: &PrivateInput) -> Result<JournalEntry> {
-    let bad = |m: &str| Err(Error::Trade(m.into()));
+    let bad = |code: &'static str| Err(Error::user(code));
     let mut id = ledger::slug(&input.name);
     if id.is_empty() {
-        return bad("give the holding a name with at least one letter or digit");
+        return bad("name.empty");
     }
     if input.amount <= Decimal::ZERO {
-        return bad("the amount paid must be more than zero");
+        return bad("private.amountNotPositive");
     }
     if vault.ledger.contains_fingerprint(&fingerprint(&input.entry_id)) {
-        return bad("this holding is already recorded");
+        return bad("private.recorded");
     }
     let taken = |id: &str| vault.private.iter().any(|h| h.id == id);
     if taken(&id) {
@@ -119,10 +119,10 @@ pub fn add(vault: &mut Vault, input: &PrivateInput) -> Result<JournalEntry> {
         input
             .fx_rate
             .or_else(|| vault.prices.latest_fx(&input.currency).map(|q| q.rate))
-            .ok_or_else(|| Error::Trade(format!("enter the exchange rate: how many {base} for one {}", input.currency)))?
+            .ok_or_else(|| Error::user("fx.missing").arg("base", &base).arg("currency", &input.currency))?
     };
     if rate <= Decimal::ZERO {
-        return bad("the exchange rate must be more than zero");
+        return bad("fx.notPositive");
     }
     let value = (input.amount * rate).round_dp(2);
     let paid = Money::new(input.amount, input.currency.clone());
@@ -159,9 +159,9 @@ pub fn add(vault: &mut Vault, input: &PrivateInput) -> Result<JournalEntry> {
 /// Sets or clears the value set by hand.
 pub fn set_estimate(vault: &mut Vault, id: &str, estimate: Option<Estimate>) -> Result<()> {
     if estimate.as_ref().is_some_and(|e| e.amount < Decimal::ZERO) {
-        return Err(Error::Trade("the value cannot be negative".into()));
+        return Err(Error::user("private.valueNegative"));
     }
-    let holding = vault.private.iter_mut().find(|h| h.id == id).ok_or_else(|| Error::Trade(format!("no private holding {id}")))?;
+    let holding = vault.private.iter_mut().find(|h| h.id == id).ok_or_else(|| Error::user("private.unknown").arg("id", id))?;
     holding.estimate = estimate;
     Ok(())
 }
@@ -169,7 +169,7 @@ pub fn set_estimate(vault: &mut Vault, id: &str, estimate: Option<Estimate>) -> 
 /// Removes a holding with every entry that touches its account.
 pub fn remove(vault: &mut Vault, id: &str) -> Result<()> {
     if !vault.private.iter().any(|h| h.id == id) {
-        return Err(Error::Trade(format!("no private holding {id}")));
+        return Err(Error::user("private.unknown").arg("id", id));
     }
     let account = private_account(id);
     vault.ledger.entries.retain(|e| !e.postings.iter().any(|p| p.account == account));

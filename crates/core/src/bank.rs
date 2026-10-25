@@ -62,21 +62,21 @@ fn fingerprint(entry_id: &str) -> String {
 }
 
 fn account(vault: &Vault, id: &str) -> Result<BankAccount> {
-    vault.banks.iter().find(|a| a.id == id).cloned().ok_or_else(|| Error::Trade(format!("no bank account {id}")))
+    vault.banks.iter().find(|a| a.id == id).cloned().ok_or_else(|| Error::user("bank.unknown").arg("id", id))
 }
 
 /// Adds an account with its balance today. Returns the opening entry, if the balance is not zero.
 pub fn add(vault: &mut Vault, input: &NewAccount) -> Result<Option<JournalEntry>> {
     let id = ledger::slug(&input.name);
     if id.is_empty() {
-        return Err(Error::Trade("give the account a name with at least one letter or digit".into()));
+        return Err(Error::user("name.empty"));
     }
     if vault.banks.iter().any(|a| a.id == id) {
-        return Err(Error::Trade(format!("there is already a bank account called {id}")));
+        return Err(Error::user("bank.exists").arg("id", id));
     }
     let prefix = format!("Assets:Cash:{id}:");
     if vault.ledger.entries.iter().flat_map(|e| &e.postings).any(|p| p.account.starts_with(&prefix)) {
-        return Err(Error::Trade(format!("{id} is already the name of a broker in your books; choose another name")));
+        return Err(Error::user("bank.brokerClash").arg("id", id));
     }
     // Book on a copy so a refused balance leaves no account behind.
     let mut copy = vault.clone();
@@ -91,10 +91,10 @@ pub fn add(vault: &mut Vault, input: &NewAccount) -> Result<Option<JournalEntry>
 pub fn set_balance(vault: &mut Vault, id: &str, input: &BalanceInput) -> Result<Option<JournalEntry>> {
     let account = account(vault, id)?;
     if input.balance < Decimal::ZERO {
-        return Err(Error::Trade("the balance cannot be negative".into()));
+        return Err(Error::user("bank.negative"));
     }
     if vault.ledger.contains_fingerprint(&fingerprint(&input.entry_id)) {
-        return Err(Error::Trade("this balance is already recorded".into()));
+        return Err(Error::user("bank.recorded"));
     }
     let cash = ledger::cash_account(id, &account.currency);
     let held: Decimal = vault.ledger.entries.iter().flat_map(|e| &e.postings).filter(|p| p.account == cash).map(|p| p.amount.amount).sum();
@@ -111,10 +111,10 @@ pub fn set_balance(vault: &mut Vault, id: &str, input: &BalanceInput) -> Result<
         input
             .fx_rate
             .or_else(|| vault.prices.latest_fx(&account.currency).map(|q| q.rate))
-            .ok_or_else(|| Error::Trade(format!("enter the exchange rate: how many {base} for one {}", account.currency)))?
+            .ok_or_else(|| Error::user("fx.missing").arg("base", &base).arg("currency", &account.currency))?
     };
     if rate <= Decimal::ZERO {
-        return Err(Error::Trade("the exchange rate must be more than zero".into()));
+        return Err(Error::user("fx.notPositive"));
     }
     let value = (diff * rate).round_dp(2);
     let balance = Money::new(input.balance, account.currency.clone());

@@ -86,7 +86,8 @@ fn a_foreign_purchase_uses_the_latest_rate() {
 fn selling_more_than_held_is_refused() {
     let (ledger, prices) = books();
     let err = trade::preview(&ledger, &prices, &trade(Side::Sell, "VUAA", "10", "130", "EUR")).unwrap_err();
-    assert!(err.to_string().contains("only 4 held"), "{err}");
+    assert_eq!(err.to_string(), "only 4 VUAA are held at IBKR on that date");
+    assert_eq!(err.problem().unwrap().code, "trade.notEnough");
 }
 
 #[test]

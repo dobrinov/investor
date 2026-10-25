@@ -25,6 +25,11 @@ export function useLanguage(lang: string): void {
   remember('language', lang)
 }
 
+/** Whether `key` has text, for keys built at run time. */
+export function translates(key: string): key is Key {
+  return key in en
+}
+
 export function t(key: Key, params?: Record<string, string | number>): string {
   let text = dictionaries[i18n.lang]?.[key] ?? en[key]
   for (const [name, value] of Object.entries(params ?? {})) {

@@ -120,8 +120,8 @@ fn fingerprint(entry_id: &str) -> String {
     format!("{MANUAL}:metal:{entry_id}")
 }
 
-fn bad<T>(message: &str) -> Result<T> {
-    Err(Error::Trade(message.into()))
+fn bad<T>(code: &'static str) -> Result<T> {
+    Err(Error::user(code))
 }
 
 fn rate(vault: &Vault, currency: &Currency, given: Option<Decimal>) -> Result<Decimal> {
@@ -131,9 +131,9 @@ fn rate(vault: &Vault, currency: &Currency, given: Option<Decimal>) -> Result<De
     }
     let rate = given
         .or_else(|| vault.prices.latest_fx(currency).map(|q| q.rate))
-        .ok_or_else(|| Error::Trade(format!("enter the exchange rate: how many {base} for one {currency}")))?;
+        .ok_or_else(|| Error::user("fx.missing").arg("base", base).arg("currency", currency))?;
     if rate <= Decimal::ZERO {
-        return bad("the exchange rate must be more than zero");
+        return bad("fx.notPositive");
     }
     Ok(rate)
 }
@@ -141,13 +141,13 @@ fn rate(vault: &Vault, currency: &Currency, given: Option<Decimal>) -> Result<De
 impl MetalInput {
     fn check(&self, vault: &Vault) -> Result<Decimal> {
         if self.grams <= Decimal::ZERO {
-            return bad("the weight must be more than zero");
+            return bad("metal.weightNotPositive");
         }
         if self.amount <= Decimal::ZERO {
-            return bad("the amount must be more than zero");
+            return bad("metal.amountNotPositive");
         }
         if vault.ledger.contains_fingerprint(&fingerprint(&self.entry_id)) {
-            return bad("this is already recorded");
+            return bad("metal.recorded");
         }
         rate(vault, &self.currency, self.fx_rate)
     }
@@ -220,7 +220,7 @@ pub fn sell(vault: &mut Vault, input: &MetalInput) -> Result<JournalEntry> {
     }
     let held = lots.held(&account);
     if input.grams > held {
-        return Err(Error::Trade(format!("only {} g are held on that date", held.normalize())));
+        return Err(Error::user("metal.heldOnly").arg("grams", held.normalize()));
     }
     let disposal = lots.dispose(&account, input.grams)?;
     let base = vault.ledger.base_currency.clone();
@@ -243,7 +243,7 @@ pub fn sell(vault: &mut Vault, input: &MetalInput) -> Result<JournalEntry> {
 /// Sets the price per gram on a date.
 pub fn set_price(vault: &mut Vault, input: &MetalPrice) -> Result<()> {
     if input.per_gram <= Decimal::ZERO {
-        return bad("the price must be more than zero");
+        return bad("metal.priceNotPositive");
     }
     let rate = rate(vault, &input.currency, input.fx_rate)?;
     let price = Money::new(input.per_gram, input.currency.clone());
@@ -259,12 +259,12 @@ pub fn set_price(vault: &mut Vault, input: &MetalPrice) -> Result<()> {
 pub fn remove(vault: &mut Vault, entry_id: &str) -> Result<()> {
     let ours = |e: &JournalEntry| e.id == entry_id && e.postings.iter().any(|p| is_physical(&p.account));
     if !vault.ledger.entries.iter().any(ours) {
-        return bad("there is no such purchase or sale");
+        return bad("metal.noEntry");
     }
     let mut ledger = vault.ledger.clone();
     ledger.entries.retain(|e| !ours(e));
     if !holds_what_it_sells(&ledger) {
-        return bad("a later sale needs this purchase; remove the sale first");
+        return bad("metal.neededBySale");
     }
     vault.ledger = ledger;
     Ok(())
