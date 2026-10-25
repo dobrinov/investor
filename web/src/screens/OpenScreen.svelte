@@ -332,4 +332,38 @@
     border-top: 1px solid var(--line-soft);
     padding-top: 14px;
   }
+  /* On a phone the actions come right after the headline; the promises follow. */
+  @media (max-width: 720px) {
+    .page {
+      align-items: flex-start;
+      padding: 24px 16px 32px;
+    }
+    .wrap {
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 20px;
+    }
+    .pitch {
+      display: contents;
+    }
+    .brand {
+      order: 0;
+    }
+    h1 {
+      order: 1;
+    }
+    .panel {
+      order: 2;
+      flex: none;
+      align-self: stretch;
+      padding: 20px;
+    }
+    .facts {
+      order: 3;
+    }
+    .pitch p {
+      order: 4;
+      color: var(--side-text);
+    }
+  }
 </style>

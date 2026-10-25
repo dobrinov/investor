@@ -18,7 +18,9 @@
   const OTHER = '__other__'
 
   // Brokers you already use first, then the ones Investor can import.
-  const knownBrokers = $derived([...new Set([...s.valuations.map((v) => v.broker), ...s.cash.map((c) => c.broker), ...brokers.map((b) => b.account)])])
+  const knownBrokers = $derived(
+    [...new Set([...s.valuations.map((v) => v.broker), ...s.cash.map((c) => c.broker), ...brokers.map((b) => b.account)])].filter((b) => !s.banks.some((a) => a.id === b)),
+  )
 
   const feeKinds: FeeKind[] = ['commission', 'fx_conversion', 'other']
 
@@ -89,6 +91,8 @@
       fx_rate: currency !== base && decimal(form.fx_rate) ? decimal(form.fx_rate) : null,
     }
   })
+
+  let previewEl = $state<HTMLDivElement>()
 
   const year = $derived(Number((form.date || today).slice(0, 4)))
   const pack = $derived(packs.find((p) => p.country === s.settings.tax_residency && p.year === year))
@@ -266,13 +270,13 @@
     </fieldset>
 
     <div class="actions">
-      <button class="btn" disabled={!o || busy}>{busy ? t('trade.recording') : t('trade.record')}</button>
+      <button class="btn record" disabled={!o || busy}>{busy ? t('trade.recording') : t('trade.record')}</button>
       <button type="button" class="btn ghost" onclick={() => (form = blank(form.broker))}>{t('trade.reset')}</button>
     </div>
     {#if recordError}<p class="error" role="alert">{recordError}</p>{/if}
   </form>
 
-  <div class="preview" aria-live="polite">
+  <div class="preview" aria-live="polite" bind:this={previewEl}>
     {#if !outlook}
       <p class="card muted">{t('trade.fill')}</p>
     {:else if 'error' in outlook}
@@ -387,6 +391,20 @@
     {/if}
   </div>
 </div>
+
+<!-- On a phone the result rides along at the bottom while you fill the form. -->
+{#if o && input}
+  <div class="dock">
+    <div class="dock-line">
+      <strong>{t(`trade.summary.${input.side}`, { units: formatUnits(input.units), symbol: input.symbol, value: money(o.value, base) })}</strong>
+    </div>
+    <span class="muted dock-note">{t('trade.plusFees', { fees: money(o.fees, base) })}{#if deposit > 0}{' · '}{t('trade.dockDeposit', { deposit: money(o.deposit, base) })}{/if}</span>
+    <div class="dock-actions">
+      <button type="button" class="btn ghost" onclick={() => previewEl?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{t('trade.seeChanges')}</button>
+      <button type="button" class="btn" disabled={busy} onclick={record}>{busy ? t('trade.recording') : t('trade.record')}</button>
+    </div>
+  </div>
+{/if}
 
 <style>
   header {
@@ -611,5 +629,43 @@
   }
   .acct {
     font-size: 12px;
+  }
+  .dock {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    .record {
+      display: none;
+    }
+    .dock {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(64px + env(safe-area-inset-bottom));
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -8px 24px rgb(17 24 33 / 0.08);
+    }
+    .dock-line {
+      font-size: 16px;
+    }
+    .dock-note {
+      font-size: 13px;
+    }
+    .dock-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .preview {
+      scroll-margin-top: 64px;
+      padding-bottom: 150px;
+    }
   }
 </style>

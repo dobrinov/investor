@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BankAccounts from '../components/BankAccounts.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
   import type { Valuation } from '../lib/core'
   import { date, money, units } from '../lib/format'
@@ -98,6 +99,7 @@
     <p class="muted">{t('overview.emptyText')}</p>
     <button class="btn" onclick={() => (app.view = 'import')}>{t('overview.importFirst')}</button>
   </section>
+  <BankAccounts />
   <PrivateHoldings />
 {:else}
   <section class="kpis" aria-label={t('overview.keyFigures')}>
@@ -158,16 +160,7 @@
             </tr>
             {#if editing === key}
               <tr class="editor">
-                <td colspan="8">
-                  <form onsubmit={(e) => (e.preventDefault(), savePrice(v.symbol))}>
-                    <label class="field">{t('overview.pricePer', { symbol: v.symbol })}<input inputmode="decimal" bind:value={price} required /></label>
-                    <label class="field">{t('overview.currency')}<input bind:value={priceCurrency} maxlength="3" required /></label>
-                    <label class="field">{t('common.date')}<input type="date" bind:value={priceDate} max={today} required /></label>
-                    <button class="btn">{t('common.save')}</button>
-                    <button type="button" class="btn ghost" onclick={() => (editing = null)}>{t('common.cancel')}</button>
-                  </form>
-                  {#if error}<p class="error" role="alert">{error}</p>{/if}
-                </td>
+                <td colspan="8">{@render priceForm(v)}</td>
               </tr>
             {/if}
           {:else}
@@ -176,8 +169,41 @@
         </tbody>
       </table>
     </div>
+
+    <!-- On a phone the table becomes rows: what you hold, its value and gain. -->
+    <ul class="holding-list">
+      {#each s.valuations as v (v.broker + v.symbol)}
+        <li>
+          <button class="holding" aria-expanded={editing === `${v.broker}:${v.symbol}`} onclick={() => (editing === `${v.broker}:${v.symbol}` ? (editing = null) : editPrice(v))}>
+            <span class="what">
+              <strong class="num">{v.symbol}</strong>
+              <span class="muted">{units(v.units)} · {v.broker} · {#if v.quote}{money(v.quote.price.amount, v.quote.price.currency)} {date(v.quote.date)}{:else}{t('overview.noPrice')}{/if}</span>
+            </span>
+            <span class="worth num">
+              <span>{v.value !== undefined ? money(v.value, base) : v.missing_fx ? t('overview.needsRate') : money(v.cost, base)}</span>
+              {#if v.gain !== undefined}<span class="gain" class:loss={Number(v.gain) < 0}>{Number(v.gain) >= 0 ? '+' : ''}{money(v.gain, base)}</span>{/if}
+            </span>
+          </button>
+          {#if editing === `${v.broker}:${v.symbol}`}<div class="editor-block">{@render priceForm(v)}</div>{/if}
+        </li>
+      {:else}
+        <li class="muted">{t('overview.noHoldings')}</li>
+      {/each}
+    </ul>
   </section>
 
+  {#snippet priceForm(v: Valuation)}
+    <form class="price-form" onsubmit={(e) => (e.preventDefault(), savePrice(v.symbol))}>
+      <label class="field">{t('overview.pricePer', { symbol: v.symbol })}<input inputmode="decimal" bind:value={price} required /></label>
+      <label class="field">{t('overview.currency')}<input bind:value={priceCurrency} maxlength="3" required /></label>
+      <label class="field">{t('common.date')}<input type="date" bind:value={priceDate} max={today} required /></label>
+      <button class="btn">{t('common.save')}</button>
+      <button type="button" class="btn ghost" onclick={() => (editing = null)}>{t('common.cancel')}</button>
+    </form>
+    {#if error}<p class="error" role="alert">{error}</p>{/if}
+  {/snippet}
+
+  <BankAccounts />
   <PrivateHoldings />
 
   <div class="row">
@@ -185,7 +211,7 @@
       <h2 id="cash-title">{t('overview.cash')}</h2>
       <table>
         <tbody>
-          {#each s.cash as c (c.broker + c.currency)}
+          {#each s.cash.filter((c) => !s.banks.some((a) => a.id === c.broker)) as c (c.broker + c.currency)}
             <tr><td>{c.broker}</td><td class="right num">{money(c.amount, c.currency)}</td></tr>
           {:else}
             <tr><td class="muted">{t('overview.noCash')}</td></tr>
@@ -195,7 +221,7 @@
 
       {#if fxNeeded.length}
         <h3 class="sub">{t('overview.rates', { currency: base })}</h3>
-        <table>
+        <table class="rates">
           <tbody>
             {#each fxNeeded as c (c)}
               {@const fx = fxRates.get(c)}
@@ -302,12 +328,14 @@
   .editor td {
     background: var(--surface-2);
   }
-  .editor form {
+  .editor form,
+  .price-form {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-end;
   }
+  .price-form .field,
   .editor .field {
     width: 160px;
   }
@@ -350,5 +378,116 @@
   .recent li span:first-child {
     flex: none;
     width: 110px;
+  }
+  .holding-list {
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .holding {
+    width: 100%;
+    min-height: 64px;
+    padding: 10px 0;
+    border: 0;
+    border-top: 1px solid var(--line-soft);
+    background: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  .what {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .what .muted {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .worth {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 15px;
+  }
+  .gain {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .editor-block {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .editor-block .field {
+    width: 100%;
+  }
+
+  @media (max-width: 720px) {
+    .kpis {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi {
+      padding: 12px;
+      gap: 2px;
+    }
+    .kpi:first-child {
+      grid-column: 1 / -1;
+      padding: 16px;
+    }
+    .kpi:not(:first-child) .hint {
+      display: none;
+    }
+    .kpi:not(:first-child) .label {
+      font-size: 12px;
+    }
+    .kpi:not(:first-child) .value {
+      font-size: 15px;
+      overflow-wrap: anywhere;
+    }
+    .table-wrap {
+      display: none;
+    }
+    .holding-list {
+      display: block;
+    }
+    .small {
+      margin-bottom: 4px;
+    }
+    .rates tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0 8px;
+    }
+    .rates tr {
+      border-bottom: 1px solid var(--line-soft);
+      padding: 6px 0;
+    }
+    .rates td {
+      padding-left: 0;
+      padding-right: 0;
+      border: 0;
+    }
+    .rates td.right {
+      margin-left: auto;
+    }
+    .editor td {
+      display: block;
+      width: 100%;
+    }
   }
 </style>

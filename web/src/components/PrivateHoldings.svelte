@@ -166,7 +166,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  @media (max-width: 720px) {
+    .head .btn {
+      min-height: 40px;
+      padding: 0 12px;
+      font-size: 14px;
+    }
+    .nowrap {
+      white-space: normal;
+    }
   }
   .small {
     font-size: 13px;
