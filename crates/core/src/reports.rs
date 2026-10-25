@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::ledger::{self, AccountKind, Ledger, Venue};
 use crate::lots::{Lot, Lots};
 use crate::metal;
+use crate::private::PRIVATE;
 use crate::Currency;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -72,12 +73,19 @@ pub struct Realization {
     /// When the oldest of the units sold was bought.
     #[serde(default)]
     pub held_from: Option<NaiveDate>,
+    /// The payout of a private holding, such as a stake in a company.
+    #[serde(default)]
+    pub private: bool,
 }
 
 pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
     let mut out = Vec::new();
     let mut lots = Lots::default();
+    let mut first_paid: BTreeMap<&str, NaiveDate> = BTreeMap::new();
     for entry in ledger.entries_by_date() {
+        for p in entry.postings.iter().filter(|p| p.account.starts_with(PRIVATE)) {
+            first_paid.entry(p.account.as_str()).or_insert(entry.date);
+        }
         let mut disposals = Vec::new();
         for p in &entry.postings {
             match p.units {
@@ -90,6 +98,23 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             continue;
         }
         let Some(gain) = entry.postings.iter().find(|p| p.account == ledger::CAPITAL_GAINS) else { continue };
+        if let Some(stake) = entry.postings.iter().find(|p| p.account.starts_with(PRIVATE) && p.base.is_sign_negative()) {
+            let (cost, gain) = (-stake.base, -gain.base);
+            out.push(Realization {
+                date: entry.date,
+                entry_id: entry.id.clone(),
+                symbol: stake.account.rsplit(':').next().unwrap_or_default().to_owned(),
+                units: Decimal::ONE,
+                proceeds: cost + gain,
+                cost,
+                gain,
+                venue: None,
+                physical: false,
+                held_from: first_paid.get(stake.account.as_str()).copied(),
+                private: true,
+            });
+            continue;
+        }
         let Some(sold) = entry.postings.iter().find(|p| p.units.is_some_and(|u| u.is_sign_negative())) else { continue };
         let disposal = disposals.into_iter().next().flatten();
         let gain = -gain.base;
@@ -105,6 +130,7 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             venue: entry.venue.clone(),
             physical: metal::is_physical(&sold.account),
             held_from: disposal.as_ref().and_then(|d| d.lots.first()).map(|l| l.opened),
+            private: false,
         };
         match disposal {
             Some(d) if d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
@@ -126,6 +152,31 @@ fn by_lot(sale: &Realization, lots: &[Lot]) -> Vec<Realization> {
             let cost = if last { cost_left } else { lot.cost.round_dp(2) };
             (proceeds_left, cost_left) = (proceeds_left - proceeds, cost_left - cost);
             Realization { units: lot.units, proceeds, cost, gain: proceeds - cost, held_from: Some(lot.opened), ..sale.clone() }
+        })
+        .collect()
+}
+
+/// Pay from work booked in the year that is not salary, such as a
+/// co-investment paid out through payroll, in the base currency.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct IncomeRow {
+    pub date: NaiveDate,
+    pub entry_id: String,
+    pub description: String,
+    pub income: Decimal,
+    /// Tax kept back before payment.
+    pub withheld: Decimal,
+}
+
+pub fn employment_income(ledger: &Ledger, year: i32) -> Vec<IncomeRow> {
+    ledger
+        .entries_by_date()
+        .into_iter()
+        .filter(|e| e.date.year() == year)
+        .filter_map(|e| {
+            let income = e.postings.iter().find(|p| p.account == ledger::EMPLOYMENT_INCOME)?;
+            let withheld = e.postings.iter().filter(|p| p.account == ledger::INCOME_TAX).map(|p| p.base).sum();
+            Some(IncomeRow { date: e.date, entry_id: e.id.clone(), description: e.description.clone(), income: -income.base, withheld })
         })
         .collect()
 }

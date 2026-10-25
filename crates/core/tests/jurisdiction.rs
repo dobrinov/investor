@@ -31,6 +31,7 @@ fn sale(gain: &str) -> Realization {
         venue: None,
         physical: false,
         held_from: None,
+        private: false,
     }
 }
 
@@ -101,4 +102,12 @@ fn us_short_term_gains_are_left_out_and_canada_taxes_half() {
     let ca = pack("ca");
     assert_eq!(ca.summarize(&[sale("1000")]).tax_due, dec("150.00"));
     assert_eq!(ca.sale_estimate(dec("1000")), dec("150.00"));
+}
+
+#[test]
+fn a_private_stake_paid_out_as_a_gain_is_taxable_without_a_venue() {
+    use investor_core::jurisdiction::Treatment;
+    let stake = Realization { private: true, ..sale("1000") };
+    assert_eq!(pack("bg").classify(&stake), Treatment::Taxable);
+    assert_eq!(pack("bg").classify(&sale("1000")), Treatment::VenueUnknown);
 }

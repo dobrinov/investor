@@ -19,6 +19,10 @@ pub struct JurisdictionPack {
     /// Coins and bars. Without this section their sales are not estimated.
     #[serde(default)]
     pub physical_metals: Option<PhysicalMetals>,
+    /// Pay from work that is not salary, such as a co-investment paid out
+    /// through payroll. Without this section it is not estimated.
+    #[serde(default)]
+    pub employment_income: Option<EmploymentIncome>,
     #[serde(default)]
     pub deadlines: BTreeMap<String, String>,
 }
@@ -83,6 +87,17 @@ pub struct Dividends {
     pub form: String,
     #[serde(default)]
     pub foreign_tax_credit: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct EmploymentIncome {
+    /// A flat rate; none when it depends on the person's income.
+    #[serde(default)]
+    pub rate: Option<Decimal>,
+    pub form: String,
+    #[serde(default)]
+    pub note: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -166,7 +181,9 @@ impl JurisdictionPack {
             None => true,
         };
         if !sale.physical {
-            return match (self.treatment(sale.venue.as_ref()), self.capital_gains.short_term_months) {
+            // A private stake is not sold on a market, so no venue exemption applies.
+            let by_venue = if sale.private { Treatment::Taxable } else { self.treatment(sale.venue.as_ref()) };
+            return match (by_venue, self.capital_gains.short_term_months) {
                 (Treatment::Taxable, Some(months)) if !held_for(months) => Treatment::NotEstimated,
                 (treatment, _) => treatment,
             };

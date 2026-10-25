@@ -51,6 +51,7 @@
 
   function editValue(h: PrivateHolding): void {
     editing = h.id
+    paying = null
     value = h.estimate?.amount ?? ''
     valueDate = today
     error = ''
@@ -63,6 +64,43 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
     }
+  }
+
+  // Payout: the money comes back, all at once.
+  let paying = $state<string | null>(null)
+  let payout = $state({ entry_id: '', date: today, amount: '', currency: '', fx_rate: '', withheld: '', taxed_as: 'employment_income' as Payout, paid_into: '' })
+  const payCurrency = $derived(payout.currency.trim().toUpperCase())
+  const payRate = $derived(s.fx.find(([c]) => c === payCurrency)?.[1].rate)
+  $effect(() => {
+    if (paying && payCurrency !== base && !payout.fx_rate && payRate) payout.fx_rate = String(Number(payRate))
+  })
+
+  function startPayout(h: PrivateHolding): void {
+    paying = h.id
+    editing = null
+    error = ''
+    payout = { entry_id: crypto.randomUUID(), date: today, amount: '', currency: h.currency, fx_rate: '', withheld: '', taxed_as: h.payout === 'unknown' ? 'employment_income' : h.payout, paid_into: h.paid_from }
+  }
+
+  async function savePayout(id: string): Promise<void> {
+    error = ''
+    try {
+      await app.payOutPrivate(id, {
+        ...payout,
+        currency: payCurrency,
+        amount: decimal(payout.amount),
+        withheld: decimal(payout.withheld) || '0',
+        fx_rate: payCurrency !== base && decimal(payout.fx_rate) ? decimal(payout.fx_rate) : null,
+      })
+      paying = null
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  async function undoPayout(h: PrivateHolding): Promise<void> {
+    if (!confirm(t('private.undoPayoutConfirm', { name: h.name }))) return
+    await app.undoPrivatePayout(h.id)
   }
 
   async function remove(h: PrivateHolding): Promise<void> {
@@ -98,7 +136,7 @@
         <button class="btn">{t('private.save')}</button>
         <button type="button" class="btn ghost" onclick={() => (adding = false)}>{t('common.cancel')}</button>
       </div>
-      {#if error && !editing}<p class="error wide" role="alert">{error}</p>{/if}
+      {#if error && !editing && !paying}<p class="error wide" role="alert">{error}</p>{/if}
     </form>
   {/if}
 
@@ -113,7 +151,7 @@
         </thead>
         <tbody>
           {#each s.private as h (h.id)}
-            <tr>
+            <tr class:closed={!h.open}>
               <td>
                 <strong>{h.name}</strong>
                 {#if h.condition}<span class="muted block">{h.condition}</span>{/if}
@@ -121,7 +159,9 @@
               <td class="num">{h.since ? date(h.since) : '—'}{#if h.paid_from}<span class="muted block">{t('private.from', { from: h.paid_from })}</span>{/if}</td>
               <td class="right num">{money(h.paid, h.currency)}{#if h.currency !== base}<span class="muted block">{money(h.cost, base)}</span>{/if}</td>
               <td class="right num">
-                {#if h.value !== undefined && h.estimate}
+                {#if h.paid_out}
+                  {money(h.paid_out.amount, h.paid_out.currency)}<span class="muted block">{t('private.paidOutOn', { date: date(h.paid_out.date) })} · {Number(h.paid_out.gain) >= 0 ? '+' : ''}{money(h.paid_out.gain, base)}</span>
+                {:else if h.value !== undefined && h.estimate}
                   {money(h.value, base)}<span class="muted block">{t('private.setOn', { amount: money(h.estimate.amount, h.currency), date: date(h.estimate.date) })}</span>
                 {:else if h.estimate}
                   {t('overview.needsRate')}
@@ -129,12 +169,46 @@
                   {money(h.cost, base)}<span class="muted block">{t('private.atCost')}</span>
                 {/if}
               </td>
-              <td><span class="pill" class:warn={h.payout === 'unknown'}>{t(`private.payout.${h.payout}`)}</span></td>
+              <td><span class="pill" class:warn={!h.paid_out && h.payout === 'unknown'}>{t(`private.payout.${h.paid_out?.taxed_as ?? h.payout}`)}</span></td>
               <td class="right nowrap">
-                <button class="btn ghost small-btn" onclick={() => editValue(h)}>{t('private.setValue')}</button>
+                {#if h.paid_out}
+                  <button class="btn ghost small-btn" onclick={() => undoPayout(h)}>{t('private.undoPayout')}</button>
+                {:else}
+                  <button class="btn ghost small-btn" onclick={() => startPayout(h)}>{t('private.recordPayout')}</button>
+                  <button class="btn ghost small-btn" onclick={() => editValue(h)}>{t('private.setValue')}</button>
+                {/if}
                 <button class="btn ghost small-btn" onclick={() => remove(h)}>{t('common.remove')}</button>
               </td>
             </tr>
+            {#if paying === h.id}
+              <tr class="editor">
+                <td colspan="6">
+                  <form class="payout fields" onsubmit={(e) => (e.preventDefault(), savePayout(h.id))}>
+                    <h3>{t('private.payoutTitle', { name: h.name })}</h3>
+                    <label class="field">{t('private.payoutOn')}<input type="date" bind:value={payout.date} max={today} required /></label>
+                    <label class="field">{t('private.payoutAmount')}<input inputmode="decimal" bind:value={payout.amount} required /><span class="hint">{t('private.payoutAmountHint')}</span></label>
+                    <label class="field">{t('overview.currency')}<input bind:value={payout.currency} maxlength="3" required /></label>
+                    {#if payCurrency !== base && payCurrency.length === 3}
+                      <label class="field">{t('private.rate', { currency: payCurrency, base })}<input inputmode="decimal" bind:value={payout.fx_rate} required /><span class="hint">{t('private.rateHint')}</span></label>
+                    {/if}
+                    <label class="field">{t('private.withheld')}<input inputmode="decimal" bind:value={payout.withheld} placeholder="0" /><span class="hint">{t('private.withheldHint')}</span></label>
+                    <label class="field">{t('private.taxedAs')}
+                      <select bind:value={payout.taxed_as}>
+                        <option value="employment_income">{t('private.payout.employment_income')}</option>
+                        <option value="capital_gains">{t('private.payout.capital_gains')}</option>
+                      </select>
+                    </label>
+                    <label class="field">{t('private.paidInto')}<input bind:value={payout.paid_into} placeholder={t('private.paidFromPlaceholder')} /><span class="hint">{t('private.paidIntoHint')}</span></label>
+                    <p class="muted small">{t('private.payoutHint', { paid: money(h.cost, base) })}</p>
+                    <div class="actions">
+                      <button class="btn">{t('private.savePayout')}</button>
+                      <button type="button" class="btn ghost" onclick={() => (paying = null)}>{t('common.cancel')}</button>
+                    </div>
+                    {#if error}<p class="error" role="alert">{error}</p>{/if}
+                  </form>
+                </td>
+              </tr>
+            {/if}
             {#if editing === h.id}
               <tr class="editor">
                 <td colspan="6">
@@ -218,13 +292,25 @@
   .editor td {
     background: var(--surface-2);
   }
-  .editor form {
+  .editor form:not(.payout) {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: flex-end;
   }
-  .editor .field {
+  .editor form:not(.payout) .field {
     width: 180px;
+  }
+  .payout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px 16px;
+  }
+  .payout h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+  .closed td {
+    color: var(--muted);
   }
 </style>

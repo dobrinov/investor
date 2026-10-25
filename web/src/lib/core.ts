@@ -246,6 +246,33 @@ export interface PrivateHolding {
   /** The estimate in the base currency, when there is one. */
   value?: Decimal
   since: string | null
+  /** Still waiting for the money; false once paid out. */
+  open: boolean
+  paid_out?: {
+    date: string
+    entry_id: string
+    taxed_as: Payout
+    /** Before tax, in `currency`. */
+    amount: Decimal
+    currency: string
+    withheld: Decimal
+    /** Gross payout less what was paid in, in the base currency. */
+    gain: Decimal
+  }
+}
+
+/** The money coming back from a private holding, all at once. */
+export interface PayoutInput {
+  entry_id: string
+  date: string
+  /** Before any tax. */
+  amount: Decimal
+  currency: string
+  fx_rate?: Decimal | null
+  /** Tax kept back before payment, in `currency`. */
+  withheld: Decimal
+  taxed_as: Payout
+  paid_into: string
 }
 
 export interface PrivateInput {
@@ -357,6 +384,8 @@ export interface Realization {
   physical: boolean
   /** When the oldest of the units sold was bought. */
   held_from?: string | null
+  /** The payout of a private holding. */
+  private: boolean
 }
 
 export interface GainRow extends Realization {
@@ -379,6 +408,9 @@ export interface Gains {
   /** How the pack taxes coins and bars, when it says. */
   metals: { treatment: 'exempt' | 'capital_gains' | 'other'; exempt_after_months?: number; note?: string } | null
   rows: GainRow[]
+  /** Pay from work that is not salary, such as a co-investment paid out through payroll. */
+  employment: { date: string; entry_id: string; description: string; income: Decimal; withheld: Decimal }[]
+  employment_rule: { rate?: Decimal; form: string; note?: string } | null
   summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal; not_estimated: Decimal; allowance_used: Decimal }
 }
 
@@ -583,6 +615,14 @@ export class Book {
   /** An empty amount clears the value. */
   setPrivateValue(id: string, date: string, amount: string): void {
     this.session.setPrivateValue(id, date, amount)
+  }
+
+  payOutPrivate(id: string, input: PayoutInput): Entry {
+    return JSON.parse(this.session.payOutPrivate(id, JSON.stringify(input)))
+  }
+
+  undoPrivatePayout(id: string): void {
+    this.session.undoPrivatePayout(id)
   }
 
   removePrivate(id: string): void {

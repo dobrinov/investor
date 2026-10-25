@@ -25,7 +25,8 @@
   const unrealised = $derived(s.valuations.reduce((sum, v) => sum + Number(v.gain ?? 0), 0))
   const cash = $derived(total('Assets:Cash'))
   // Private holdings at the value set by hand, else at cost.
-  const privately = $derived(s.private.reduce((sum, p) => sum + Number(p.value ?? p.cost), 0))
+  const open = $derived(s.private.filter((p) => p.open))
+  const privately = $derived(open.reduce((sum, p) => sum + Number(p.value ?? p.cost), 0))
   const contributed = $derived(-total('Equity:Contributions'))
   const opening = $derived(-total('Equity:OpeningBalances'))
   const realised = $derived(-total('Income:CapitalGains'))
@@ -110,7 +111,7 @@
     <div class="card kpi">
       <span class="label">{t('overview.netWorth')}</span>
       <span class="value num">{money(value + cash + privately, base)}</span>
-      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if s.private.length}{' · '}{t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
+      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if open.length}{' · '}{t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
     </div>
     <div class="card kpi">
       <span class="label">{t('overview.unrealised')}</span>

@@ -38,7 +38,8 @@
     not_estimated: () => t('tax.notEstimated'),
   }
   const metalNames: Record<string, Metal> = { XAU: 'gold', XAG: 'silver', XPT: 'platinum', XPD: 'palladium' }
-  const what = (r: Realization) => (r.physical && metalNames[r.symbol] ? t(`metal.${metalNames[r.symbol]}` as const) : r.symbol)
+  const privateNames = $derived(new Map(s.private.map((p) => [p.id, p.name])))
+  const what = (r: Realization) => (r.physical && metalNames[r.symbol] ? t(`metal.${metalNames[r.symbol]}` as const) : r.private ? (privateNames.get(r.symbol) ?? r.symbol) : r.symbol)
 </script>
 
 <header>
@@ -77,7 +78,7 @@
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.physical ? t('tax.physical') : r.venue?.code ?? '—'}</td>
+                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.venue?.code ?? '—'}</td>
               </tr>
             {:else}
               <tr><td colspan="6" class="muted">{t('tax.noSales')}</td></tr>
@@ -135,6 +136,32 @@
       {/if}
     </section>
 
+    {#if result.employment.length}
+      {@const rule = result.employment_rule}
+      {@const income = result.employment.reduce((sum, r) => sum + Number(r.income), 0)}
+      {@const withheld = result.employment.reduce((sum, r) => sum + Number(r.withheld), 0)}
+      <section class="card">
+        <h2>{t('tax.employmentTitle')}</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>{t('common.date')}</th><th></th><th class="right">{t('tax.employmentIncome')}</th><th class="right">{t('tax.employmentWithheld')}</th></tr>
+            </thead>
+            <tbody>
+              {#each result.employment as r (r.entry_id)}
+                <tr><td>{date(r.date)}</td><td>{r.description}</td><td class="right num">{money(r.income)}</td><td class="right num">{money(r.withheld)}</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <p class="small">
+          {#if rule?.rate}{t('tax.employmentEstimate', { estimate: money(Math.max(0, income) * Number(rule.rate), base), rate: +(Number(rule.rate) * 100).toFixed(3), form: rule.form, withheld: money(withheld, base) })}
+          {:else}{t('tax.employmentNoRule')}{/if}
+        </p>
+        {#if rule?.note}<p class="muted small">{rule.note}</p>{/if}
+      </section>
+    {/if}
+
     <section class="card">
       <h2>{t('tax.sales', { year: selectedYear })}</h2>
       <div class="table-wrap">
@@ -153,7 +180,7 @@
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.physical ? t('tax.physical') : r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
+                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
                 <td><span class="pill" class:warn={r.treatment !== 'exempt'} class:plain={r.treatment === 'taxable'}>{labels[r.treatment]()}</span></td>
               </tr>
             {:else}

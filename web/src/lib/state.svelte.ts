@@ -1,4 +1,4 @@
-import type { BalanceInput, Entry, MetalInput, MetalPrice, Plan, PrivateInput, Snapshot, TradeInput } from './core'
+import type { BalanceInput, Entry, MetalInput, MetalPrice, PayoutInput, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
@@ -176,6 +176,16 @@ class AppState {
 
   async setPrivateValue(id: string, date: string, amount: string): Promise<void> {
     this.book?.setPrivateValue(id, date, amount)
+    await this.changed()
+  }
+
+  async payOutPrivate(id: string, input: PayoutInput): Promise<void> {
+    this.book?.payOutPrivate(id, input)
+    await this.changed()
+  }
+
+  async undoPrivatePayout(id: string): Promise<void> {
+    this.book?.undoPrivatePayout(id)
     await this.changed()
   }
 

@@ -19,6 +19,10 @@ pub const CAPITAL_GAINS: &str = "Income:CapitalGains";
 pub const INTEREST_INCOME: &str = "Income:Interest";
 pub const INTEREST_EXPENSE: &str = "Expenses:Interest";
 pub const WITHHOLDING_TAX: &str = "Expenses:Taxes:Withholding";
+/// Pay from work that is not salary, such as a co-investment paid out through payroll.
+pub const EMPLOYMENT_INCOME: &str = "Income:Employment";
+/// Income tax kept back before money is paid, e.g. through payroll.
+pub const INCOME_TAX: &str = "Expenses:Taxes:Income";
 
 /// An account segment made from a name typed by the user: Latin letters and
 /// digits in upper case, with Bulgarian (and Russian) Cyrillic transliterated

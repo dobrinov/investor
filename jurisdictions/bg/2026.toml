@@ -40,5 +40,12 @@ foreign_tax_credit = true
 treatment = "exempt"
 note = "Draft: income from selling movable property is generally not taxed (ZDDFL art. 13(1)(2)); check that investment gold and silver are not among the exceptions."
 
+[employment_income]
+# Pay from work that is not salary, e.g. an employer co-investment paid out
+# through payroll. UNVERIFIED.
+rate = "0.10"
+form = "Приложение 1 (Appendix 1)"
+note = "Employment income is taxed at 10% flat. A Bulgarian employer withholds it through payroll; pay from an employer abroad you declare yourself, and social security contributions may apply. Only the gain over what you paid in is counted here: check whether all of the payout counts as income."
+
 [deadlines]
 annual_return = "2027-04-30"

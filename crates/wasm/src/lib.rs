@@ -11,7 +11,7 @@ use investor_core::metal::{self, MetalHolding, MetalInput, MetalPrice};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
 use investor_core::plan::{self, Market, Plan, ProjectionInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
-use investor_core::private::{self, Estimate, PrivateInput, PrivateValuation};
+use investor_core::private::{self, Estimate, PayoutInput, PrivateInput, PrivateValuation};
 use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
 use investor_core::trade::{self, TradeInput};
@@ -89,6 +89,9 @@ struct Gains {
     /// How the pack taxes coins and bars, when it says.
     metals: Option<investor_core::jurisdiction::PhysicalMetals>,
     rows: Vec<GainRow>,
+    /// Pay from work that is not salary, with the pack's rule when it has one.
+    employment: Vec<reports::IncomeRow>,
+    employment_rule: Option<investor_core::jurisdiction::EmploymentIncome>,
     summary: investor_core::jurisdiction::GainsSummary,
 }
 
@@ -189,6 +192,8 @@ impl Session {
             allowance: pack.capital_gains.annual_exempt_amount.map(|a| a.to_string()),
             form: pack.capital_gains.form.clone(),
             metals: pack.physical_metals.clone(),
+            employment: reports::employment_income(&self.vault.ledger, year),
+            employment_rule: pack.employment_income.clone(),
             pack: pack.pack,
             rows,
             summary,
@@ -326,6 +331,19 @@ impl Session {
             Some(Estimate { date: date.parse().map_err(bad_input)?, amount: amount.trim().parse().map_err(bad_input)? })
         };
         private::set_estimate(&mut self.vault, id, estimate).map_err(core_error)
+    }
+
+    /// Books a private holding's payout. `input` is JSON; returns the entry.
+    #[wasm_bindgen(js_name = payOutPrivate)]
+    pub fn pay_out_private(&mut self, id: &str, input: &str) -> Result<String, JsError> {
+        let input: PayoutInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&private::pay_out(&mut self.vault, id, &input).map_err(core_error)?)
+    }
+
+    /// Takes a private holding's payout back out of the books.
+    #[wasm_bindgen(js_name = undoPrivatePayout)]
+    pub fn undo_private_payout(&mut self, id: &str) -> Result<(), JsError> {
+        private::undo_payout(&mut self.vault, id).map_err(core_error)
     }
 
     /// Removes a private holding and its entries.
