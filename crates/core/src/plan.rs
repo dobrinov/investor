@@ -16,6 +16,9 @@ pub struct Plan {
     pub profile: Option<Profile>,
     #[serde(default)]
     pub goals: Vec<Goal>,
+    /// Moves being tried out on the Projections screen.
+    #[serde(default)]
+    pub what_if: Vec<crate::whatif::Move>,
 }
 
 /// Everything is optional: each missing value only switches off what needs it.
@@ -109,10 +112,10 @@ pub enum GoalKind {
 }
 
 /// SplitMix64 with Box–Muller normals: small, fast and reproducible.
-struct Rng(u64);
+pub(crate) struct Rng(pub(crate) u64);
 
 impl Rng {
-    fn next_f64(&mut self) -> f64 {
+    pub(crate) fn next_f64(&mut self) -> f64 {
         self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -122,7 +125,7 @@ impl Rng {
         ((z >> 11) as f64 + 0.5) / (1u64 << 53) as f64
     }
 
-    fn normal(&mut self) -> f64 {
+    pub(crate) fn normal(&mut self) -> f64 {
         let (u1, u2) = (self.next_f64(), self.next_f64());
         (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
     }
@@ -137,9 +140,7 @@ struct Returns {
 
 impl Returns {
     fn new(mean: f64, volatility: f64) -> Self {
-        // Log-normal: E[1 + r] = 1 + mean.
-        let sigma = (1.0 + (volatility / (1.0 + mean)).powi(2)).ln().sqrt();
-        let mu = (1.0 + mean).ln() - sigma * sigma / 2.0;
+        let (mu, sigma) = log_params(mean, volatility);
         Self { rng: Rng(0x1DC0_FFEE), mu, sigma }
     }
 
@@ -148,12 +149,18 @@ impl Returns {
     }
 }
 
+/// Log-normal parameters of a yearly growth factor whose average is `1 + mean`.
+pub(crate) fn log_params(mean: f64, volatility: f64) -> (f64, f64) {
+    let sigma = (1.0 + (volatility / (1.0 + mean)).powi(2)).ln().sqrt();
+    (((1.0 + mean).ln() - sigma * sigma / 2.0), sigma)
+}
+
 /// One year of saving: growth on the balance, and on contributions spread over the year.
 fn grow(balance: f64, yearly_contribution: f64, r: f64) -> f64 {
     balance * (1.0 + r) + yearly_contribution * (1.0 + r / 2.0)
 }
 
-fn percentile(sorted: &[f64], p: f64) -> f64 {
+pub(crate) fn percentile(sorted: &[f64], p: f64) -> f64 {
     let i = ((sorted.len() - 1) as f64 * p).round() as usize;
     sorted[i]
 }
@@ -527,6 +534,7 @@ mod tests {
                 monthly_pension: Some(Decimal::from(650)),
                 retirement_spending: Some(Decimal::from(1_600)),
             }),
+            what_if: Vec::new(),
             goals: vec![
                 Goal { id: "house".into(), name: "House".into(), kind: GoalKind::Savings, target: Decimal::from(40_000), year: Some(2030), monthly: Decimal::from(400) },
                 Goal { id: "buffer".into(), name: "Buffer".into(), kind: GoalKind::EmergencyFund, target: Decimal::from(3), year: None, monthly: Decimal::ZERO },

@@ -21,3 +21,13 @@ export function date(iso: string): string {
 export function dateTime(iso: string): string {
   return new Intl.DateTimeFormat(i18n.lang, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
 }
+
+/** Rounded to whole units, for estimates where cents mean nothing. */
+export function whole(value: number, currency: string): string {
+  return new Intl.NumberFormat(i18n.lang, { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+}
+
+/** `YYYY-MM` as a short month and year. */
+export function month(ym: string): string {
+  return new Intl.DateTimeFormat(i18n.lang, { month: 'short', year: 'numeric' }).format(new Date(`${ym}-01T00:00:00`))
+}

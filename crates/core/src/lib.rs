@@ -14,6 +14,7 @@ pub mod plan;
 pub mod prices;
 pub mod reports;
 pub mod vault;
+pub mod whatif;
 
 pub use error::{Error, Result};
 pub use money::{Currency, Money};

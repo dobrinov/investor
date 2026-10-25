@@ -95,9 +95,54 @@ export interface Goal {
   monthly: Decimal
 }
 
+export type MoveKind = 'lump' | 'spread' | 'monthly' | 'withdraw'
+
+/** A move tried out on the Projections screen. */
+export interface Move {
+  id: string
+  name: string
+  enabled: boolean
+  kind: MoveKind
+  amount: Decimal
+  /** YYYY-MM; null means now. */
+  start: string | null
+  /** Months to spread over (spread only). */
+  months: number
+  /** Use cash already held instead of new money (lump and spread). */
+  from_cash: boolean
+  /** Something other than the portfolio, in percent a year (lump and spread). */
+  asset: { real_return: Decimal; volatility: Decimal } | null
+}
+
 export interface Plan {
   profile?: Profile | null
   goals: Goal[]
+  what_if?: Move[]
+}
+
+export interface Band {
+  year: number
+  steady: number
+  p10: number
+  p50: number
+  p90: number
+  /** New money added since today. */
+  put_in: number
+}
+
+export interface Outcome {
+  bands: Band[]
+  /** Share of futures where every withdrawal is paid; null without withdrawals. */
+  chance_covered: number | null
+}
+
+export interface WhatIf {
+  monthly: number
+  spending: { goal: string; name: string; year: number; amount: number }[]
+  plan: Outcome
+  /** Null when no move is switched on. */
+  with_moves: Outcome | null
+  cash_short: { id: string; wanted: number; available: number }[]
 }
 
 export interface GoalStatus {
@@ -257,6 +302,11 @@ export class Book {
   /** `pace` scales planned monthly amounts: 1 = as planned. */
   goals(thisYear: number, market: Market, pace = 1): GoalStatus[] {
     return JSON.parse(this.session.goals(thisYear, market, pace))
+  }
+
+  /** `today` is YYYY-MM. */
+  whatIf(input: { today: string; years: number; market: Market; spend_goals: boolean }): WhatIf {
+    return JSON.parse(this.session.whatIf(JSON.stringify(input)))
   }
 
   flows(): MonthFlow[] {

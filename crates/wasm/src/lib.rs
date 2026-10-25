@@ -11,6 +11,7 @@ use investor_core::plan::{self, Market, Plan, ProjectionInput, RetirementInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
 use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
+use investor_core::whatif::{self, WhatIfInput};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
@@ -143,10 +144,8 @@ impl Session {
         Ok(())
     }
 
-    /// Progress on every goal, with today's money assigned in priority order.
-    /// `pace` scales the planned monthly amounts (1 = as planned).
-    pub fn goals(&self, this_year: i32, market: &str, pace: f64) -> Result<String, JsError> {
-        let market: Market = serde_json::from_value(serde_json::Value::String(market.to_owned())).map_err(js_error)?;
+    /// Cash and investments held today, in the base currency.
+    fn holdings_value(&self) -> (f64, f64) {
         let ledger = &self.vault.ledger;
         let cash: f64 = ledger
             .balances()
@@ -159,7 +158,24 @@ impl Session {
             .iter()
             .map(|v| plan::to_f64(v.value.unwrap_or(v.cost)))
             .sum();
+        (cash, invested)
+    }
+
+    /// Progress on every goal, with today's money assigned in priority order.
+    /// `pace` scales the planned monthly amounts (1 = as planned).
+    pub fn goals(&self, this_year: i32, market: &str, pace: f64) -> Result<String, JsError> {
+        let market: Market = serde_json::from_value(serde_json::Value::String(market.to_owned())).map_err(js_error)?;
+        let (cash, invested) = self.holdings_value();
         json(&plan::evaluate_goals(&self.vault.plan, cash, invested, this_year, market, pace))
+    }
+
+    /// Today's holdings under the plan, with and without the moves being
+    /// tried. `input` is JSON: `{"today","years","market","spend_goals"}`.
+    #[wasm_bindgen(js_name = whatIf)]
+    pub fn what_if(&self, input: &str) -> Result<String, JsError> {
+        let mut input: WhatIfInput = serde_json::from_str(input).map_err(js_error)?;
+        (input.cash, input.invested) = self.holdings_value();
+        json(&whatif::what_if(&input, &self.vault.plan))
     }
 
     /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.
