@@ -244,12 +244,20 @@
 <style>
   .shell {
     display: flex;
-    flex-wrap: wrap;
     min-height: 100vh;
   }
+  /* The sidebar stays in the window while the page scrolls, so its bottom
+     (language, Lock) is always in view; it scrolls on its own only when the
+     window is too short for it. */
   aside {
-    flex: 1 1 230px;
-    max-width: 100%;
+    flex: 0 0 232px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--side);
     color: var(--side-text);
     padding: 24px 16px;
@@ -496,6 +504,20 @@
     color: var(--muted);
   }
 
+  @media (min-width: 721px) and (max-height: 880px) {
+    aside {
+      padding: 18px 14px;
+      gap: 12px;
+    }
+    .nav {
+      min-height: 38px;
+      padding: 7px 12px;
+    }
+    .bottom {
+      padding-top: 8px;
+      gap: 8px;
+    }
+  }
   @media (max-width: 720px) {
     aside {
       display: none;
