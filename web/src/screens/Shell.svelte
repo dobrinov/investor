@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { savesInPlace } from '../lib/files'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import Logo from '../components/Logo.svelte'
   import { t } from '../lib/i18n.svelte'
@@ -28,11 +29,11 @@
   let saving = $state(false)
   let saveError = $state('')
 
-  async function save(): Promise<void> {
+  async function save(as = false): Promise<void> {
     saving = true
     saveError = ''
     try {
-      await app.save()
+      await (as ? app.saveAs() : app.save())
     } catch (e) {
       saveError = e instanceof Error ? e.message : String(e)
     } finally {
@@ -82,7 +83,11 @@
         <span>{t('shell.allSaved')}</span>
       {/if}
     </div>
-    <button class="save" onclick={save} disabled={saving}>{saving ? t('shell.saving') : t('shell.save')}</button>
+    <button class="save" onclick={() => save()} disabled={saving} title={app.hasFile ? t('shell.saveHint', { name: app.fileName }) : undefined}>
+      {saving ? t('shell.saving') : t('shell.save')}
+    </button>
+    <button class="save-as" onclick={() => save(true)} disabled={saving}>{t('shell.saveAs')}</button>
+    {#if !savesInPlace}<p class="save-note">{t('open.downloads')}</p>{/if}
     {#if saveError}<p class="save-error" role="alert">{saveError}</p>{/if}
 
     <nav aria-label={t('nav.label')}>
@@ -182,6 +187,25 @@
     color: #111821;
     font: 600 14px var(--sans);
     cursor: pointer;
+  }
+  .save-as {
+    min-height: 36px;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 8px;
+    background: none;
+    color: #e7ecf2;
+    font: 500 13px var(--sans);
+    cursor: pointer;
+    margin-top: -4px;
+  }
+  .save-as:hover {
+    background: rgb(255 255 255 / 0.06);
+  }
+  .save-note {
+    margin: 0;
+    color: #aab4c0;
+    font-size: 12px;
+    line-height: 1.4;
   }
   .save-error {
     margin: 0;

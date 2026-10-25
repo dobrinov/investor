@@ -1,6 +1,6 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
-import init, { Session, brokerFit as fit, project as runProjection, retirement as runRetirement } from './core-wasm/core.js'
+import init, { Session, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
 
 let ready: Promise<unknown> | undefined
 
@@ -143,6 +143,16 @@ export interface WhatIf {
   /** Null when no move is switched on. */
   with_moves: Outcome | null
   cash_short: { id: string; wanted: number; available: number }[]
+  retirement: { plan: Retirement; with_moves: Retirement | null } | null
+}
+
+export interface RetireInput {
+  age_now: number
+  retire_at: number
+  plan_until: number
+  monthly_spending: number
+  pension_from: number
+  monthly_pension: number
 }
 
 export interface GoalStatus {
@@ -305,7 +315,7 @@ export class Book {
   }
 
   /** `today` is YYYY-MM. */
-  whatIf(input: { today: string; years: number; market: Market; spend_goals: boolean }): WhatIf {
+  whatIf(input: { today: string; years: number; market: Market; spend_goals: boolean; retirement?: RetireInput }): WhatIf {
     return JSON.parse(this.session.whatIf(JSON.stringify(input)))
   }
 
@@ -341,19 +351,4 @@ export function brokerFit(brokerToml: string, text: string): number {
 
 export function project(input: { start: number; monthly: number; years: number; market: Market; risk: Risk; target?: number }): Projection {
   return JSON.parse(runProjection(JSON.stringify(input)))
-}
-
-export function retirement(input: {
-  start: number
-  age_now: number
-  retire_at: number
-  plan_until: number
-  monthly_investing: number
-  monthly_spending: number
-  pension_from: number
-  monthly_pension: number
-  market: Market
-  risk: Risk
-}): Retirement {
-  return JSON.parse(runRetirement(JSON.stringify(input)))
 }

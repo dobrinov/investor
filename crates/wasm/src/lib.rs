@@ -7,7 +7,7 @@ use investor_core::import::{self, BrokerConfig};
 use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
-use investor_core::plan::{self, Market, Plan, ProjectionInput, RetirementInput};
+use investor_core::plan::{self, Market, Plan, ProjectionInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
 use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
@@ -170,7 +170,8 @@ impl Session {
     }
 
     /// Today's holdings under the plan, with and without the moves being
-    /// tried. `input` is JSON: `{"today","years","market","spend_goals"}`.
+    /// tried. `input` is JSON:
+    /// `{"today","years","market","spend_goals","retirement"?}`.
     #[wasm_bindgen(js_name = whatIf)]
     pub fn what_if(&self, input: &str) -> Result<String, JsError> {
         let mut input: WhatIfInput = serde_json::from_str(input).map_err(js_error)?;
@@ -219,13 +220,6 @@ impl Session {
 pub fn project(input: &str) -> Result<String, JsError> {
     let input: ProjectionInput = serde_json::from_str(input).map_err(js_error)?;
     json(&plan::project(&input))
-}
-
-/// Saving until retirement and drawing down after it. JSON in and out.
-#[wasm_bindgen]
-pub fn retirement(input: &str) -> Result<String, JsError> {
-    let input: RetirementInput = serde_json::from_str(input).map_err(js_error)?;
-    json(&plan::retirement(&input))
 }
 
 /// How well a broker config fits a statement, from 0 to 1.

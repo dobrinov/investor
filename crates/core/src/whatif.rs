@@ -13,7 +13,7 @@ use std::fmt;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::plan::{GoalKind, Market, Plan, Risk, Rng, log_params, percentile, to_f64};
+use crate::plan::{GoalKind, Market, Plan, RetirementYear, Risk, Rng, log_params, percentile, to_f64};
 
 /// Cash earns nothing and loses about this much a year to inflation.
 pub const CASH_REAL_RETURN: f64 = -0.02;
@@ -128,8 +128,30 @@ pub struct WhatIfInput {
     /// Take the money for savings goals out in their year.
     #[serde(default = "yes")]
     pub spend_goals: bool,
+    /// Plan retirement too, when the profile allows.
+    #[serde(default)]
+    pub retirement: Option<RetireInput>,
     #[serde(default = "default_paths")]
     pub paths: u32,
+}
+
+/// Money in today's terms; ages in years.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RetireInput {
+    pub age_now: u32,
+    pub retire_at: u32,
+    pub plan_until: u32,
+    pub monthly_spending: f64,
+    pub pension_from: u32,
+    pub monthly_pension: f64,
+}
+
+impl RetireInput {
+    /// What the portfolio must pay each month at `age`.
+    fn need(&self, age: u32, spending: f64) -> f64 {
+        let pension = if age >= self.pension_from { self.monthly_pension } else { 0.0 };
+        (spending - pension).max(0.0)
+    }
 }
 
 fn default_paths() -> u32 {
@@ -181,9 +203,33 @@ pub struct WhatIf {
     /// None when no move is switched on.
     pub with_moves: Option<Outcome>,
     pub cash_short: Vec<CashShort>,
+    pub retirement: Option<Retirements>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Retirements {
+    pub plan: Retirement,
+    /// None when no move is switched on.
+    pub with_moves: Option<Retirement>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Retirement {
+    /// Portfolio on the day you retire, with average returns.
+    pub at_retirement: f64,
+    /// Age the money runs out with average returns; none if it lasts.
+    pub runs_out_at: Option<u32>,
+    /// Share of simulated futures where the money lasts to the end of the plan.
+    pub chance_lasts: f64,
+    /// Highest monthly spending that lasts in 85% of simulated futures.
+    pub safe_monthly_spending: f64,
+    /// Balance at each age, with average returns.
+    pub path: Vec<(u32, f64)>,
+    pub years: Vec<RetirementYear>,
 }
 
 /// Money moving into one pot in one month.
+#[derive(Clone)]
 struct Buy {
     pot: usize,
     amount: f64,
@@ -192,6 +238,7 @@ struct Buy {
 }
 
 /// What happens in each month, the same in every simulated future.
+#[derive(Clone)]
 struct Schedule {
     new_money: Vec<f64>,
     buys: Vec<Vec<Buy>>,
@@ -211,6 +258,17 @@ impl Schedule {
 
     fn has_out(&self) -> bool {
         self.out.iter().any(|&o| o > 0.0)
+    }
+
+    /// New money added in each year.
+    fn added(&self) -> Vec<f64> {
+        (0..self.out.len() / 12)
+            .map(|y| {
+                let months = y * 12..(y + 1) * 12;
+                self.new_money[months.clone()].iter().sum::<f64>()
+                    + self.buys[months].iter().flatten().filter(|b| !b.from_cash).map(|b| b.amount).sum::<f64>()
+            })
+            .collect()
     }
 }
 
@@ -240,14 +298,24 @@ fn seed(id: &str) -> u64 {
     id.bytes().fold(0xCBF2_9CE4_8422_2325, |h, b| (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01B3))
 }
 
-/// Year-end totals of one future, and whether every withdrawal was paid.
-fn run(s: &Schedule, cash: f64, invested: f64, growth: &[Vec<f64>], short: Option<&mut [(f64, f64)]>) -> (Vec<f64>, bool) {
+/// One simulated future.
+struct Run {
+    /// Total at the start and at the end of every year.
+    totals: Vec<f64>,
+    /// Withdrawals actually paid in each year.
+    paid: Vec<f64>,
+    /// First month a withdrawal could not be paid in full.
+    first_short: Option<usize>,
+}
+
+fn run(s: &Schedule, cash: f64, invested: f64, growth: &[Vec<f64>], short: Option<&mut [(f64, f64)]>) -> Run {
     let cash_factor = (1.0 + CASH_REAL_RETURN).powf(1.0 / 12.0);
     let mut pots = vec![0.0; growth.len()];
     pots[0] = invested;
     let mut cash = cash;
     let mut totals = vec![cash + invested];
-    let mut covered = true;
+    let mut paid = vec![0.0; s.out.len() / 12];
+    let mut first_short = None;
     let mut short = short;
     for t in 0..s.out.len() {
         pots[0] += s.new_money[t];
@@ -272,8 +340,11 @@ fn run(s: &Schedule, cash: f64, invested: f64, growth: &[Vec<f64>], short: Optio
         let take = need.min(cash.max(0.0));
         cash -= take;
         need -= take;
-        if need > 0.005 {
-            covered = false;
+        if let Some(p) = paid.get_mut(t / 12) {
+            *p += s.out[t] - need;
+        }
+        if need > 0.005 && first_short.is_none() {
+            first_short = Some(t);
         }
         for (pot, g) in pots.iter_mut().zip(growth) {
             *pot *= g[t];
@@ -283,135 +354,223 @@ fn run(s: &Schedule, cash: f64, invested: f64, growth: &[Vec<f64>], short: Optio
             totals.push(cash + pots.iter().sum::<f64>());
         }
     }
-    (totals, covered)
+    Run { totals, paid, first_short }
+}
+
+/// The plan, and the plan with every move switched on, over `months`.
+struct Scenario {
+    base: Schedule,
+    /// None when no move is switched on.
+    with: Option<Schedule>,
+    /// Expected return and swings of each pot after the portfolio.
+    assets: Vec<(u64, f64, f64)>,
+    moves: Vec<(String, bool)>,
+    spending: Vec<Spending>,
+    monthly: f64,
+    risk: Risk,
+}
+
+impl Scenario {
+    fn new(input: &WhatIfInput, plan: &Plan, months: usize) -> Self {
+        let profile = plan.profile.as_ref();
+        let monthly = profile.and_then(|p| p.monthly_investing).map_or(0.0, to_f64);
+        let risk = profile.map_or(Risk::Balanced, |p| p.risk);
+        let at = |start: Option<Month>| start.map_or(0, |m| m.offset_from(input.today));
+
+        let mut spending = Vec::new();
+        if input.spend_goals {
+            for goal in plan.goals.iter().filter(|g| g.kind == GoalKind::Savings) {
+                let Some(year) = goal.year.filter(|&y| y >= input.today.year) else { continue };
+                if (Month { year, month: 1 }.offset_from(input.today) as usize) < months {
+                    spending.push(Spending { goal: goal.id.clone(), name: goal.name.clone(), year, amount: to_f64(goal.target) });
+                }
+            }
+        }
+        let mut base = Schedule::new(months, monthly);
+        for s in &spending {
+            base.take_out(Month { year: s.year, month: 1 }.offset_from(input.today), s.amount);
+        }
+
+        // Pot 0 is the portfolio; each move into another investment gets a pot of its own.
+        let moves: Vec<&Move> = plan.what_if.iter().filter(|m| m.enabled && m.amount > Decimal::ZERO).collect();
+        let mut with = base.clone();
+        let mut assets = Vec::new();
+        // A later monthly change replaces an earlier one.
+        let mut monthly_changes: Vec<(u32, f64)> = moves.iter().filter(|m| m.kind == MoveKind::Monthly).map(|m| (at(m.start), to_f64(m.amount))).collect();
+        monthly_changes.sort_by_key(|&(from, _)| from);
+        for (from, amount) in monthly_changes {
+            for slot in with.new_money.iter_mut().skip(from as usize) {
+                *slot = amount;
+            }
+        }
+        for (id, m) in moves.iter().enumerate() {
+            let amount = to_f64(m.amount);
+            let pot = match &m.asset {
+                Some(a) if matches!(m.kind, MoveKind::Lump | MoveKind::Spread) => {
+                    assets.push((seed(&m.id), to_f64(a.real_return) / 100.0, to_f64(a.volatility) / 100.0));
+                    assets.len()
+                }
+                _ => 0,
+            };
+            let start = at(m.start) as usize;
+            let parts = match m.kind {
+                MoveKind::Lump => 1,
+                MoveKind::Spread => m.months.max(1) as usize,
+                MoveKind::Withdraw => {
+                    with.take_out(start as u32, amount);
+                    continue;
+                }
+                MoveKind::Monthly => continue,
+            };
+            for t in (start..start + parts).filter(|&t| t < months) {
+                with.buys[t].push(Buy { pot, amount: amount / parts as f64, from_cash: m.from_cash, id });
+            }
+        }
+        Self {
+            with: (!moves.is_empty()).then_some(with),
+            base,
+            assets,
+            moves: moves.iter().map(|m| (m.id.clone(), m.from_cash)).collect(),
+            spending,
+            monthly,
+            risk,
+        }
+    }
+
+    fn draws(&self, market: Market) -> (Draws, Vec<Draws>) {
+        let market = Draws::new(0x1DC0_FFEE, market.real_return(), self.risk.volatility());
+        (market, self.assets.iter().map(|&(seed, mean, vol)| Draws::new(seed, mean, vol)).collect())
+    }
+
+    /// Monthly growth factors for every pot in `paths` futures: `[path][pot][month]`.
+    fn futures(&self, market: Market, paths: usize, months: usize) -> Vec<Vec<Vec<f64>>> {
+        let (mut market, mut others) = self.draws(market);
+        (0..paths)
+            .map(|_| {
+                let mut growth = vec![vec![0.0; months]; 1 + others.len()];
+                market.fill(&mut growth[0]);
+                for (draws, g) in others.iter_mut().zip(growth.iter_mut().skip(1)) {
+                    draws.fill(g);
+                }
+                growth
+            })
+            .collect()
+    }
+
+    /// Growth with the average return every month.
+    fn steady(&self, market: Market, months: usize) -> Vec<Vec<f64>> {
+        let (market, others) = self.draws(market);
+        std::iter::once(&market).chain(others.iter()).map(|d| vec![d.steady; months]).collect()
+    }
 }
 
 pub fn what_if(input: &WhatIfInput, plan: &Plan) -> WhatIf {
     let months = input.years as usize * 12;
-    let profile = plan.profile.as_ref();
-    let monthly = profile.and_then(|p| p.monthly_investing).map_or(0.0, to_f64);
-    let risk = profile.map_or(Risk::Balanced, |p| p.risk);
-    let at = |start: Option<Month>| start.map_or(0, |m| m.offset_from(input.today));
-
-    let mut spending = Vec::new();
-    if input.spend_goals {
-        for goal in plan.goals.iter().filter(|g| g.kind == GoalKind::Savings) {
-            let Some(year) = goal.year.filter(|&y| y >= input.today.year) else { continue };
-            let offset = Month { year, month: 1 }.offset_from(input.today);
-            if (offset as usize) < months {
-                spending.push(Spending { goal: goal.id.clone(), name: goal.name.clone(), year, amount: to_f64(goal.target) });
-            }
-        }
-    }
-
-    let mut base = Schedule::new(months, monthly);
-    for s in &spending {
-        base.take_out(Month { year: s.year, month: 1 }.offset_from(input.today), s.amount);
-    }
-
-    // The plan plus every move that is switched on. Pot 0 is the portfolio;
-    // each move into another investment gets a pot of its own.
-    let moves: Vec<&Move> = plan.what_if.iter().filter(|m| m.enabled && m.amount > Decimal::ZERO).collect();
-    let mut with = Schedule::new(months, monthly);
-    with.out.clone_from(&base.out);
-    let mut assets: Vec<(u64, f64, f64)> = Vec::new();
-    // A later monthly change replaces an earlier one.
-    let mut monthly_changes: Vec<(u32, f64)> = moves.iter().filter(|m| m.kind == MoveKind::Monthly).map(|m| (at(m.start), to_f64(m.amount))).collect();
-    monthly_changes.sort_by_key(|&(from, _)| from);
-    for (from, amount) in monthly_changes {
-        for slot in with.new_money.iter_mut().skip(from as usize) {
-            *slot = amount;
-        }
-    }
-    for (id, m) in moves.iter().enumerate() {
-        let amount = to_f64(m.amount);
-        let pot = match &m.asset {
-            Some(a) if matches!(m.kind, MoveKind::Lump | MoveKind::Spread) => {
-                assets.push((seed(&m.id), to_f64(a.real_return) / 100.0, to_f64(a.volatility) / 100.0));
-                assets.len()
-            }
-            _ => 0,
-        };
-        let start = at(m.start) as usize;
-        let parts = match m.kind {
-            MoveKind::Lump => 1,
-            MoveKind::Spread => m.months.max(1) as usize,
-            MoveKind::Withdraw => {
-                with.take_out(start as u32, amount);
-                continue;
-            }
-            MoveKind::Monthly => continue,
-        };
-        for t in (start..start + parts).filter(|&t| t < months) {
-            with.buys[t].push(Buy { pot, amount: amount / parts as f64, from_cash: m.from_cash, id });
-        }
-    }
-
-    let mut market = Draws::new(0x1DC0_FFEE, input.market.real_return(), risk.volatility());
-    let mut others: Vec<Draws> = assets.iter().map(|&(seed, mean, vol)| Draws::new(seed, mean, vol)).collect();
-    let mut growth: Vec<Vec<f64>> = vec![vec![0.0; months]; 1 + others.len()];
-
     let paths = input.paths.max(1) as usize;
-    let years = input.years as usize;
-    let mut plan_years = vec![Vec::with_capacity(paths); years + 1];
-    let mut with_years = vec![Vec::with_capacity(paths); years + 1];
-    let (mut plan_covered, mut with_covered) = (0usize, 0usize);
-    for _ in 0..paths {
-        market.fill(&mut growth[0]);
-        for (draws, g) in others.iter_mut().zip(growth.iter_mut().skip(1)) {
-            draws.fill(g);
-        }
-        let (totals, covered) = run(&base, input.cash, input.invested, &growth[..1], None);
-        plan_covered += usize::from(covered);
-        for (slot, v) in plan_years.iter_mut().zip(totals) {
-            slot.push(v);
-        }
-        if !moves.is_empty() {
-            let (totals, covered) = run(&with, input.cash, input.invested, &growth, None);
-            with_covered += usize::from(covered);
-            for (slot, v) in with_years.iter_mut().zip(totals) {
-                slot.push(v);
-            }
-        }
-    }
+    let scenario = Scenario::new(input, plan, months);
+    let futures = scenario.futures(input.market, paths, months);
+    let steady = scenario.steady(input.market, months);
 
-    let steady_growth = |draws: &[&Draws]| draws.iter().map(|d| vec![d.steady; months]).collect::<Vec<_>>();
-    let outcome = |s: &Schedule, by_year: Vec<Vec<f64>>, steady: Vec<f64>, covered: usize| {
+    let outcome = |s: &Schedule, pots: usize| {
+        let runs: Vec<Run> = futures.iter().map(|g| run(s, input.cash, input.invested, &g[..pots], None)).collect();
+        let steady = run(s, input.cash, input.invested, &steady[..pots], None);
         let mut put_in = 0.0;
-        let bands = by_year
-            .into_iter()
-            .zip(steady)
-            .enumerate()
-            .map(|(year, (mut values, steady))| {
+        let added = s.added();
+        let bands = (0..=input.years as usize)
+            .map(|year| {
                 if year > 0 {
-                    let months = (year - 1) * 12..year * 12;
-                    put_in += s.new_money[months.clone()].iter().sum::<f64>();
-                    put_in += s.buys[months].iter().flatten().filter(|b| !b.from_cash).map(|b| b.amount).sum::<f64>();
+                    put_in += added[year - 1];
                 }
+                let mut values: Vec<f64> = runs.iter().map(|r| r.totals[year]).collect();
                 values.sort_by(f64::total_cmp);
-                Band { year: year as u32, steady, p10: percentile(&values, 0.1), p50: percentile(&values, 0.5), p90: percentile(&values, 0.9), put_in }
+                Band { year: year as u32, steady: steady.totals[year], p10: percentile(&values, 0.1), p50: percentile(&values, 0.5), p90: percentile(&values, 0.9), put_in }
             })
             .collect();
+        let covered = runs.iter().filter(|r| r.first_short.is_none()).count();
         Outcome { bands, chance_covered: s.has_out().then(|| covered as f64 / paths as f64) }
     };
 
-    let (plan_steady, _) = run(&base, input.cash, input.invested, &steady_growth(&[&market]), None);
-    let plan_outcome = outcome(&base, plan_years, plan_steady, plan_covered);
-
     let mut cash_short = Vec::new();
-    let with_moves = (!moves.is_empty()).then(|| {
-        let all: Vec<&Draws> = std::iter::once(&market).chain(others.iter()).collect();
-        let mut short = vec![(0.0, 0.0); moves.len()];
-        let (steady, _) = run(&with, input.cash, input.invested, &steady_growth(&all), Some(&mut short));
-        for (m, (wanted, got)) in moves.iter().zip(short) {
-            if m.from_cash && got + 1.0 < wanted {
-                cash_short.push(CashShort { id: m.id.clone(), wanted, available: got });
+    let with_moves = scenario.with.as_ref().map(|with| {
+        let mut short = vec![(0.0, 0.0); scenario.moves.len()];
+        run(with, input.cash, input.invested, &steady, Some(&mut short));
+        for ((id, from_cash), (wanted, got)) in scenario.moves.iter().zip(short) {
+            if *from_cash && got + 1.0 < wanted {
+                cash_short.push(CashShort { id: id.clone(), wanted, available: got });
             }
         }
-        outcome(&with, with_years, steady, with_covered)
+        outcome(with, steady.len())
     });
 
-    WhatIf { monthly, spending, plan: plan_outcome, with_moves, cash_short }
+    let retirement = input.retirement.as_ref().map(|r| {
+        let months = r.plan_until.saturating_sub(r.age_now) as usize * 12;
+        let scenario = Scenario::new(input, plan, months);
+        let futures = scenario.futures(input.market, paths.min(500), months);
+        let steady = scenario.steady(input.market, months);
+        let outcome = |s: &Schedule, pots: usize| retire(s, r, input, &futures, &steady, pots);
+        Retirements { plan: outcome(&scenario.base, 1), with_moves: scenario.with.as_ref().map(|w| outcome(w, steady.len())) }
+    });
+
+    WhatIf { monthly: scenario.monthly, spending: scenario.spending.clone(), plan: outcome(&scenario.base, 1), with_moves, cash_short, retirement }
+}
+
+/// Saving stops at retirement; from then on spending, less the pension, is taken out.
+fn retirement_schedule(s: &Schedule, r: &RetireInput, spending: f64) -> Schedule {
+    let mut s = s.clone();
+    let from = r.retire_at.saturating_sub(r.age_now) as usize * 12;
+    for t in from..s.out.len() {
+        let age = r.age_now + (t / 12) as u32;
+        s.new_money[t] = 0.0;
+        s.out[t] += r.need(age, spending);
+    }
+    s
+}
+
+fn retire(s: &Schedule, r: &RetireInput, input: &WhatIfInput, futures: &[Vec<Vec<f64>>], steady: &[Vec<f64>], pots: usize) -> Retirement {
+    let (cash, invested) = (input.cash, input.invested);
+    let chance = |spending: f64, futures: &[Vec<Vec<f64>>]| {
+        let s = retirement_schedule(s, r, spending);
+        let lasted = futures.iter().filter(|g| run(&s, cash, invested, &g[..pots], None).first_short.is_none()).count();
+        lasted as f64 / futures.len().max(1) as f64
+    };
+
+    let schedule = retirement_schedule(s, r, r.monthly_spending);
+    let added = schedule.added();
+    let Run { totals, paid, first_short } = run(&schedule, cash, invested, &steady[..pots], None);
+    let retire_year = r.retire_at.saturating_sub(r.age_now) as usize;
+    let years = (retire_year..paid.len())
+        .map(|k| {
+            let age = r.age_now + k as u32;
+            let (start, end, withdrawn) = (totals[k], totals[k + 1], paid[k]);
+            RetirementYear {
+                age,
+                start,
+                growth: end - start + withdrawn - added[k],
+                withdrawn,
+                end,
+                from_portfolio_monthly: withdrawn.min(r.need(age, r.monthly_spending) * 12.0) / 12.0,
+                pension_monthly: if age >= r.pension_from { r.monthly_pension } else { 0.0 },
+                covered: first_short.is_none_or(|m| m >= (k + 1) * 12),
+            }
+        })
+        .collect();
+
+    // Bisect for the spending that lasts in 85% of futures.
+    let sample = &futures[..futures.len().min(300)];
+    let (mut low, mut high) = (0.0, (r.monthly_spending * 3.0).max(r.monthly_pension + 10_000.0));
+    for _ in 0..18 {
+        let mid = (low + high) / 2.0;
+        if chance(mid, sample) >= 0.85 { low = mid } else { high = mid }
+    }
+
+    Retirement {
+        at_retirement: totals[retire_year.min(totals.len() - 1)],
+        runs_out_at: first_short.map(|m| r.age_now + (m / 12) as u32),
+        chance_lasts: chance(r.monthly_spending, futures),
+        safe_monthly_spending: low,
+        path: totals.iter().enumerate().map(|(k, &v)| (r.age_now + k as u32, v)).collect(),
+        years,
+    }
 }
 
 #[cfg(test)]
@@ -451,6 +610,7 @@ mod tests {
             years: 20,
             market: Market::Base,
             spend_goals,
+            retirement: None,
             paths: 400,
         }
     }
@@ -539,5 +699,52 @@ mod tests {
         let r = what_if(&input(false), &plan(vec![more]));
         // Six months at 500, then six at 1,000.
         assert_eq!(r.with_moves.unwrap().bands[1].put_in, 9_000.0);
+    }
+
+    fn retiring(spending: f64) -> WhatIfInput {
+        WhatIfInput {
+            retirement: Some(RetireInput { age_now: 40, retire_at: 60, plan_until: 95, monthly_spending: spending, pension_from: 65, monthly_pension: 500.0 }),
+            ..input(false)
+        }
+    }
+
+    #[test]
+    fn money_runs_out_when_spending_outpaces_it() {
+        let mut bare = plan(vec![]);
+        bare.profile.as_mut().unwrap().monthly_investing = Some(Decimal::ZERO);
+        let input = WhatIfInput {
+            cash: 0.0,
+            invested: 120_000.0,
+            market: Market::Bear,
+            retirement: Some(RetireInput { age_now: 60, retire_at: 60, plan_until: 95, monthly_spending: 1_000.0, pension_from: 100, monthly_pension: 0.0 }),
+            ..input(false)
+        };
+        // 120,000 at 12,000 a year lasts a little over ten years at 1%.
+        let r = what_if(&input, &bare).retirement.unwrap().plan;
+        assert!(matches!(r.runs_out_at, Some(70..=72)), "{:?}", r.runs_out_at);
+        assert!(r.years.iter().take(10).all(|y| y.covered));
+        assert!(r.chance_lasts < 0.5);
+        assert!(r.safe_monthly_spending < 1_000.0);
+    }
+
+    #[test]
+    fn saving_stops_at_retirement() {
+        let r = what_if(&retiring(1_500.0), &plan(vec![])).retirement.unwrap().plan;
+        assert_eq!(r.path.first().unwrap().0, 40);
+        assert_eq!(r.path.last().unwrap().0, 95);
+        assert_eq!(r.years.first().unwrap().age, 60);
+        // From 65 the pension covers 500 of the 1,500.
+        let y65 = r.years.iter().find(|y| y.age == 65).unwrap();
+        assert!((y65.from_portfolio_monthly - 1_000.0).abs() < 0.01 || !y65.covered);
+        assert_eq!(y65.pension_monthly, 500.0);
+    }
+
+    #[test]
+    fn a_lump_sum_lifts_retirement() {
+        let r = what_if(&retiring(1_800.0), &plan(vec![lump("a", MoveKind::Lump, false)])).retirement.unwrap();
+        let with = r.with_moves.unwrap();
+        assert!(with.at_retirement > r.plan.at_retirement + 15_000.0);
+        assert!(with.chance_lasts >= r.plan.chance_lasts);
+        assert!(with.safe_monthly_spending > r.plan.safe_monthly_spending);
     }
 }

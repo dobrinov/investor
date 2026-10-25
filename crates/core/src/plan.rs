@@ -239,22 +239,6 @@ pub fn project(input: &ProjectionInput) -> Projection {
     Projection { bands, chance_of_target: input.target.map(|_| hits as f64 / paths as f64) }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct RetirementInput {
-    pub start: f64,
-    pub age_now: u32,
-    pub retire_at: u32,
-    pub plan_until: u32,
-    pub monthly_investing: f64,
-    pub monthly_spending: f64,
-    pub pension_from: u32,
-    pub monthly_pension: f64,
-    pub market: Market,
-    pub risk: Risk,
-    #[serde(default = "default_paths")]
-    pub paths: u32,
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct RetirementYear {
     pub age: u32,
@@ -266,106 +250,6 @@ pub struct RetirementYear {
     pub pension_monthly: f64,
     /// False once the portfolio can no longer cover spending.
     pub covered: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct Retirement {
-    /// Portfolio on the day you retire, with average returns.
-    pub at_retirement: f64,
-    /// Age the money runs out with average returns; none if it lasts.
-    pub runs_out_at: Option<u32>,
-    /// Share of simulated futures where the money lasts to `plan_until`.
-    pub chance_lasts: f64,
-    /// Highest monthly spending that lasts in 85% of simulated futures.
-    pub safe_monthly_spending: f64,
-    /// Balance at each age, with average returns.
-    pub path: Vec<(u32, f64)>,
-    pub years: Vec<RetirementYear>,
-}
-
-impl RetirementInput {
-    fn need(&self, age: u32, spending: f64) -> f64 {
-        let pension = if age >= self.pension_from { self.monthly_pension } else { 0.0 };
-        ((spending - pension) * 12.0).max(0.0)
-    }
-
-    /// Simulates every path; returns the share where the money lasts.
-    fn chance(&self, spending: f64, paths: usize) -> f64 {
-        let mut returns = Returns::new(self.market.real_return(), self.risk.volatility());
-        let mut lasted = 0;
-        for _ in 0..paths {
-            let mut balance = self.start;
-            let mut ok = true;
-            for age in self.age_now..self.plan_until {
-                let r = returns.next();
-                if age < self.retire_at {
-                    balance = grow(balance, self.monthly_investing * 12.0, r);
-                } else {
-                    let need = self.need(age, spending);
-                    balance = balance * (1.0 + r) - need * (1.0 + r / 2.0);
-                    if balance < 0.0 {
-                        ok = false;
-                        break;
-                    }
-                }
-            }
-            lasted += usize::from(ok);
-        }
-        lasted as f64 / paths as f64
-    }
-}
-
-pub fn retirement(input: &RetirementInput) -> Retirement {
-    let mean = input.market.real_return();
-    let mut balance = input.start;
-    let mut path = vec![(input.age_now, balance)];
-    let mut years = Vec::new();
-    let mut runs_out_at = None;
-    let mut at_retirement = if input.retire_at <= input.age_now { balance } else { 0.0 };
-
-    for age in input.age_now..input.plan_until {
-        if age < input.retire_at {
-            balance = grow(balance, input.monthly_investing * 12.0, mean);
-            if age + 1 == input.retire_at {
-                at_retirement = balance;
-            }
-        } else {
-            let start = balance;
-            let growth = start * mean;
-            let need = input.need(age, input.monthly_spending);
-            let available = (start + growth * 0.5).max(0.0);
-            let withdrawn = need.min(available);
-            balance = (start * (1.0 + mean) - withdrawn * (1.0 + mean / 2.0)).max(0.0);
-            let covered = withdrawn + 0.005 >= need;
-            if !covered && runs_out_at.is_none() {
-                runs_out_at = Some(age);
-            }
-            let pension = if age >= input.pension_from { input.monthly_pension } else { 0.0 };
-            years.push(RetirementYear {
-                age,
-                start,
-                growth,
-                withdrawn,
-                end: balance,
-                from_portfolio_monthly: withdrawn / 12.0,
-                pension_monthly: pension,
-                covered,
-            });
-        }
-        path.push((age + 1, balance));
-    }
-
-    let paths = input.paths.max(1) as usize;
-    let chance_lasts = input.chance(input.monthly_spending, paths);
-
-    // Bisect for the spending that lasts in 85% of futures.
-    let (mut low, mut high) = (0.0, (input.monthly_spending * 3.0).max(input.monthly_pension + 10_000.0));
-    for _ in 0..24 {
-        let mid = (low + high) / 2.0;
-        if input.chance(mid, paths.min(1000)) >= 0.85 { low = mid } else { high = mid }
-    }
-
-    Retirement { at_retirement, runs_out_at, chance_lasts, safe_monthly_spending: low, path, years }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -485,29 +369,6 @@ mod tests {
         assert!((last.p50 / last.steady - 1.0).abs() < 0.15, "{} vs {}", last.p50, last.steady);
         let chance = a.chance_of_target.unwrap();
         assert!(chance > 0.0 && chance < 1.0);
-    }
-
-    #[test]
-    fn money_runs_out_when_spending_outpaces_it() {
-        let input = RetirementInput {
-            start: 120_000.0,
-            age_now: 60,
-            retire_at: 60,
-            plan_until: 95,
-            monthly_investing: 0.0,
-            monthly_spending: 1_000.0,
-            pension_from: 100,
-            monthly_pension: 0.0,
-            market: Market::Bear,
-            risk: Risk::Balanced,
-            paths: 200,
-        };
-        // 120,000 at 12,000 a year lasts a little over ten years at 1%.
-        let r = retirement(&input);
-        assert!(r.runs_out_at.is_some());
-        assert!(r.years.iter().take(10).all(|y| y.covered));
-        assert!(r.chance_lasts < 0.5);
-        assert!(r.safe_monthly_spending < 1_000.0);
     }
 
     #[test]

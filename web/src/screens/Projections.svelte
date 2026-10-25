@@ -2,7 +2,7 @@
   import Chart from '../components/Chart.svelte'
   import Help from '../components/Help.svelte'
   import WhatIfMoves from '../components/WhatIfMoves.svelte'
-  import { retirement, type Market, type Move } from '../lib/core'
+  import type { Market, Move } from '../lib/core'
   import { whole } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
@@ -20,18 +20,38 @@
   )
   // Market value where a price is known, otherwise what was paid.
   const invested = $derived(s.valuations.reduce((sum, v) => sum + Number(v.value ?? v.cost), 0))
-  const start = $derived(cash + invested)
 
   let market = $state<Market>('base')
   let years = $state(20)
   let spendGoals = $state(true)
-  const monthly = $derived(Number(profile?.monthly_investing ?? 0))
-  const risk = $derived(profile?.risk ?? 'balanced')
+
+  // Retirement: the same plan and moves, until the money runs out or the plan ends.
+  let retireOverride = $state<number | undefined>()
+  let spendingOverride = $state<number | undefined>()
+  let pensionOverride = $state<number | undefined>()
+  let planUntil = $state(95)
+  const retireAt = $derived(retireOverride ?? profile?.retirement_age ?? null)
+  // Without a retirement budget, today's spending is the starting point.
+  const spending = $derived(spendingOverride ?? Number(profile?.retirement_spending ?? profile?.monthly_spending ?? 0))
+  const pension = $derived(pensionOverride ?? Number(profile?.monthly_pension ?? 0))
+  const pensionAge = $derived(profile?.pension_age ?? 65)
+  const retireInput = $derived(
+    age !== null && retireAt !== null
+      ? {
+          age_now: age,
+          retire_at: Math.max(age, retireAt),
+          plan_until: Math.max(age + 1, Math.min(110, planUntil || 95)),
+          monthly_spending: spending || 0,
+          pension_from: pensionAge,
+          monthly_pension: pension || 0,
+        }
+      : undefined,
+  )
 
   // Recomputed whenever the book changes (moves are saved in the plan).
   const result = $derived.by(() => {
     void app.snapshot
-    return app.book!.whatIf({ today, years: Math.max(1, Math.min(60, years || 1)), market, spend_goals: spendGoals })
+    return app.book!.whatIf({ today, years: Math.max(1, Math.min(60, years || 1)), market, spend_goals: spendGoals, retirement: retireInput })
   })
   const shown = $derived(result.with_moves ?? result.plan)
   const end = $derived(shown.bands[shown.bands.length - 1])
@@ -49,38 +69,14 @@
     await app.setPlan({ ...s.plan, what_if: moves })
   }
 
-  // Retirement
-  let retireOverride = $state<number | undefined>()
-  let spendingOverride = $state<number | undefined>()
-  let pensionOverride = $state<number | undefined>()
-  let planUntil = $state(95)
-  const retireAt = $derived(retireOverride ?? profile?.retirement_age ?? null)
-  // Without a retirement budget, today's spending is the starting point.
-  const spending = $derived(spendingOverride ?? Number(profile?.retirement_spending ?? profile?.monthly_spending ?? 0))
-  const pension = $derived(pensionOverride ?? Number(profile?.monthly_pension ?? 0))
-  const pensionAge = $derived(profile?.pension_age ?? 65)
-
-  const plan = $derived(
-    age !== null && retireAt !== null
-      ? retirement({
-          start,
-          age_now: age,
-          retire_at: Math.max(age, retireAt),
-          plan_until: planUntil,
-          monthly_investing: monthly,
-          monthly_spending: spending,
-          pension_from: pensionAge,
-          monthly_pension: pension,
-          market,
-          risk,
-        })
-      : undefined,
-  )
+  const planRet = $derived(result.retirement?.plan)
+  const plan = $derived(result.retirement?.with_moves ?? planRet)
   const rows = $derived(
     plan?.years.filter((y, i) => i === 0 || (y.age - (retireAt ?? 0)) % 5 === 0 || y.age === pensionAge || y.age === plan.runs_out_at) ?? [],
   )
 
   const money = (v: number) => whole(v, base)
+  const lasts = (r: { runs_out_at: number | null }) => (r.runs_out_at === null ? t('ret.past', { age: planUntil }) : t('ret.age', { age: r.runs_out_at }))
   const signed = (v: number) => (v >= 0 ? '+' : '−') + whole(Math.abs(v), base)
   const compact = (v: number) => new Intl.NumberFormat(i18n.lang, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
   const percent = (v: number) => `${Math.round(v * 100)}%`
@@ -170,7 +166,7 @@
         <span class="label">{t('proj.covered')}</span>
         <span class="value num" class:bad={(shown.chance_covered ?? 1) < 0.8}>{percent(shown.chance_covered ?? 1)}</span>
         <span class="hint">
-          {t('proj.coveredHint')}{#if result.with_moves && result.plan.chance_covered !== null} · {t('proj.vsPlan', { amount: percent(result.plan.chance_covered) })}{/if}
+          {t('proj.coveredHint')}{#if result.with_moves && result.plan.chance_covered !== null}{' · '}{t('proj.vsPlan', { amount: percent(result.plan.chance_covered) })}{/if}
         </span>
       </div>
     {/if}
@@ -235,16 +231,32 @@
       <label class="field">{t('ret.planUntil')}<input type="number" min="70" max="110" bind:value={planUntil} /></label>
     </div>
 
+    {#if result.retirement?.with_moves}<p class="muted small">{t('ret.withMovesNote')}</p>{/if}
     <div class="kpis">
-      <div class="kpi"><span class="label">{t('ret.atRetirement')}</span><span class="value num">{money(plan.at_retirement)}</span><span class="hint">{thisYear + retireAt - age}</span></div>
-      <div class="kpi"><span class="label">{t('ret.lasts')}</span><span class="value num">{plan.runs_out_at === null ? t('ret.past', { age: planUntil }) : t('ret.age', { age: plan.runs_out_at })}</span><span class="hint">{t('ret.lastsHint')}</span></div>
-      <div class="kpi"><span class="label">{t('ret.chance', { age: planUntil })}</span><span class="value num" class:bad={plan.chance_lasts < 0.7}>{percent(plan.chance_lasts)}</span><span class="hint">{t('ret.chanceHint')}</span></div>
-      <div class="kpi"><span class="label">{t('ret.safe')}</span><span class="value num">{money(plan.safe_monthly_spending)}</span><span class="hint">{t('ret.safeHint')}</span></div>
+      <div class="kpi">
+        <span class="label">{t('ret.atRetirement')}</span><span class="value num">{money(plan.at_retirement)}</span>
+        <span class="hint">{thisYear + retireAt - age}{#if planRet && plan !== planRet}{' · '}{t('proj.vsPlan', { amount: money(planRet.at_retirement) })}{/if}</span>
+      </div>
+      <div class="kpi">
+        <span class="label">{t('ret.lasts')}</span><span class="value num">{lasts(plan)}</span>
+        <span class="hint">{t('ret.lastsHint')}{#if planRet && plan !== planRet}{' · '}{t('proj.vsPlan', { amount: lasts(planRet) })}{/if}</span>
+      </div>
+      <div class="kpi">
+        <span class="label">{t('ret.chance', { age: planUntil })}</span><span class="value num" class:bad={plan.chance_lasts < 0.7}>{percent(plan.chance_lasts)}</span>
+        <span class="hint">{t('ret.chanceHint')}{#if planRet && plan !== planRet}{' · '}{t('proj.vsPlan', { amount: percent(planRet.chance_lasts) })}{/if}</span>
+      </div>
+      <div class="kpi">
+        <span class="label">{t('ret.safe')}</span><span class="value num">{money(plan.safe_monthly_spending)}</span>
+        <span class="hint">{t('ret.safeHint')}{#if planRet && plan !== planRet}{' · '}{t('proj.vsPlan', { amount: money(planRet.safe_monthly_spending) })}{/if}</span>
+      </div>
     </div>
 
     <Chart
       label={t('ret.chartLabel', { age: retireAt })}
-      lines={[{ points: plan.path, tone: 'warn' }]}
+      lines={[
+        { points: plan.path, tone: 'warn' },
+        ...(planRet && plan !== planRet ? [{ points: planRet.path, tone: 'muted' as const, dashed: true }] : []),
+      ]}
       markers={[{ x: retireAt, tone: 'accent' }, { x: pensionAge, tone: 'muted' }]}
       xLabel={(x) => String(x)}
       yLabel={compact}

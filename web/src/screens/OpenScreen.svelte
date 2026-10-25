@@ -3,7 +3,7 @@
   import Logo from '../components/Logo.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import { Book } from '../lib/core'
-  import { openInvestFile, savesInPlace, type OpenedFile } from '../lib/files'
+  import { droppedFile, openInvestFile, savesInPlace, type OpenedFile } from '../lib/files'
   import { dateTime } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
@@ -60,7 +60,7 @@
   const restore = () =>
     run(async () => {
       const book = await Book.unlock(draft!.bytes, password)
-      app.open(book, draft!.fileName, { changes: draft!.changes })
+      app.open(book, draft!.fileName, { changes: draft!.changes, handle: draft!.handle })
     })
 
   async function choose(): Promise<void> {
@@ -78,9 +78,10 @@
 
   async function dropped(e: DragEvent): Promise<void> {
     e.preventDefault()
-    const file = e.dataTransfer?.files[0]
+    const item = e.dataTransfer?.items[0]
+    const file = item ? await droppedFile(item) : null
     if (!file) return
-    picked = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }
+    picked = file
     go('open')
   }
 

@@ -1,6 +1,6 @@
 import type { Book, Plan, Snapshot } from './core'
 import type { SectionId } from './guide/types'
-import { saveFile } from './files'
+import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
 import { saveDraft } from './storage'
 
@@ -17,7 +17,7 @@ class AppState {
   guideSection = $state<SectionId | null>(null)
   /** False when the browser refuses to keep a draft (private mode, blocked storage). */
   draftKept = $state(true)
-  private handle: FileSystemFileHandle | undefined
+  private handle = $state.raw<FileSystemFileHandle | undefined>()
 
   open(book: Book, fileName: string, options: { handle?: FileSystemFileHandle; changes?: number } = {}): void {
     this.book = book
@@ -48,16 +48,31 @@ class AppState {
   async keepDraft(): Promise<void> {
     if (!this.book) return
     try {
-      await saveDraft({ fileName: this.fileName, bytes: this.book.seal(), changes: this.changes, updatedAt: new Date().toISOString() })
+      await saveDraft({ fileName: this.fileName, bytes: this.book.seal(), changes: this.changes, updatedAt: new Date().toISOString(), handle: this.handle })
       this.draftKept = true
     } catch {
       this.draftKept = false
     }
   }
 
+  /** True when saving goes straight back into the opened file. */
+  get hasFile(): boolean {
+    return this.handle !== undefined
+  }
+
+  /** Saves into the opened file, or asks where when there is none. */
   async save(): Promise<void> {
     if (!this.book) return
-    const result = await saveFile(this.book.seal(), this.fileName, this.handle)
+    await this.saved(await saveFile(this.book.seal(), this.fileName, this.handle))
+  }
+
+  /** Saves to a new file; later saves go there. */
+  async saveAs(): Promise<void> {
+    if (!this.book) return
+    await this.saved(await saveFileAs(this.book.seal(), this.fileName))
+  }
+
+  private async saved(result: SaveResult): Promise<void> {
     if (!result.saved) return
     this.handle = result.handle ?? this.handle
     this.fileName = result.name ?? this.fileName

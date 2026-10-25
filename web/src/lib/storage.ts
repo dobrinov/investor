@@ -7,6 +7,8 @@ export interface Draft {
   /** Changes not yet saved to the file. */
   changes: number
   updatedAt: string
+  /** The opened file, so saving after a refresh still goes back into it. */
+  handle?: FileSystemFileHandle
 }
 
 const DB_NAME = 'investor'

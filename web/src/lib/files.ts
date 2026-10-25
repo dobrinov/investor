@@ -54,24 +54,60 @@ export async function openInvestFile(): Promise<OpenedFile | null> {
   return file ? { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) } : null
 }
 
+interface PermissionHandle {
+  queryPermission?: (options: { mode: 'readwrite' }) => Promise<PermissionState>
+  requestPermission?: (options: { mode: 'readwrite' }) => Promise<PermissionState>
+}
+
+/** A handle restored from the browser copy needs the user's permission again. */
+async function canWrite(handle: FileSystemFileHandle): Promise<boolean> {
+  const h = handle as FileSystemFileHandle & PermissionHandle
+  if (!h.queryPermission || !h.requestPermission) return true
+  if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted') return true
+  return (await h.requestPermission({ mode: 'readwrite' })) === 'granted'
+}
+
+/** The file behind a dropped item, where the browser can save back to it. */
+export async function droppedFile(item: DataTransferItem): Promise<OpenedFile | null> {
+  const withHandle = item as DataTransferItem & { getAsFileSystemHandle?: () => Promise<FileSystemHandle | null> }
+  const handle = await withHandle.getAsFileSystemHandle?.().catch(() => null)
+  if (handle?.kind === 'file') {
+    const file = await (handle as FileSystemFileHandle).getFile()
+    return { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()), handle: handle as FileSystemFileHandle }
+  }
+  const file = item.getAsFile()
+  return file ? { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) } : null
+}
+
 export interface SaveResult {
   saved: boolean
   handle?: FileSystemFileHandle
   name?: string
 }
 
+async function write(bytes: Uint8Array, handle: FileSystemFileHandle): Promise<void> {
+  const writable = await handle.createWritable()
+  await writable.write(bytes as Uint8Array<ArrayBuffer>)
+  await writable.close()
+}
+
+/** Saves into the file that was opened; asks where only when there is none yet. */
 export async function saveFile(bytes: Uint8Array, name: string, handle?: FileSystemFileHandle): Promise<SaveResult> {
-  const data = bytes as Uint8Array<ArrayBuffer>
-  if (handle) {
-    const writable = await handle.createWritable()
-    await writable.write(data)
-    await writable.close()
+  if (handle && (await canWrite(handle))) {
+    await write(bytes, handle)
     return { saved: true, handle }
   }
+  return saveFileAs(bytes, name)
+}
+
+/** Always asks where to save; later saves go to the new file. */
+export async function saveFileAs(bytes: Uint8Array, name: string): Promise<SaveResult> {
+  const data = bytes as Uint8Array<ArrayBuffer>
   if (pickers.showSaveFilePicker) {
     try {
       const picked = await pickers.showSaveFilePicker({ suggestedName: name, types })
-      return saveFile(bytes, picked.name, picked).then((r) => ({ ...r, name: picked.name }))
+      await write(bytes, picked)
+      return { saved: true, handle: picked, name: picked.name }
     } catch (e) {
       if (isAbort(e)) return { saved: false }
       throw e
