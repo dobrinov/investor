@@ -122,6 +122,9 @@
   const endBefore = $derived(o?.before.at(-1))
   const endAfter = $derived(o?.after.at(-1))
   const thisYear = now.getFullYear()
+  // Coins and bars show by name; they are bought and sold on Overview, not here.
+  const METALS: Record<string, 'gold' | 'silver' | 'platinum' | 'palladium'> = { XAU: 'gold', XAG: 'silver', XPT: 'platinum', XPD: 'palladium' }
+  const label = (symbol: string) => (METALS[symbol] ? t(`metal.${METALS[symbol]}` as const) : symbol)
   const compact = (v: number) => new Intl.NumberFormat(i18n.lang, { notation: 'compact', maximumFractionDigits: 1 }).format(v)
 
   // The largest share of the investments, before and after the trade.
@@ -206,7 +209,7 @@
         <input list="known-symbols" value={form.symbol} onchange={(e) => chooseSymbol(e.currentTarget.value)} autocapitalize="characters" required />
         <span class="hint">{t('trade.symbolHint')}</span>
       </label>
-      <datalist id="known-symbols">{#each s.instruments as i (i.symbol)}<option value={i.symbol}>{i.name ?? ''}</option>{/each}</datalist>
+      <datalist id="known-symbols">{#each s.instruments.filter((i) => !METALS[i.symbol]) as i (i.symbol)}<option value={i.symbol}>{i.name ?? ''}</option>{/each}</datalist>
       {#if form.symbol && !s.instruments.some((i) => i.symbol === form.symbol)}
         <div class="row fields">
           <label class="field">{t('trade.name')}<input bind:value={form.name} /></label>
@@ -342,14 +345,14 @@
         <div class="bars">
           {#each o.holdings as h (h.symbol)}
             <div class="bar-row" class:this={h.symbol === input.symbol}>
-              <span class="sym">{h.symbol}</span>
+              <span class="sym">{label(h.symbol)}</span>
               <span class="track"><span class="b before" style:width="{(Number(h.before) / scale) * 100}%"></span><span class="b after" style:width="{(Number(h.after) / scale) * 100}%"></span></span>
               <span class="num small">{whole(Number(h.before), base)} → {whole(Number(h.after), base)}</span>
             </div>
           {/each}
         </div>
         <p class="legend muted small"><i class="sw before"></i>{t('trade.before')} <i class="sw after"></i>{t('trade.after')}</p>
-        {#if biggest && concentrates}<p class="notice">{t('trade.concentrated', { symbol: biggest.symbol, share: percent(biggest.share) })}</p>{/if}
+        {#if biggest && concentrates}<p class="notice">{t('trade.concentrated', { symbol: label(biggest.symbol), share: percent(biggest.share) })}</p>{/if}
       </section>
 
       {#if bufferTarget > 0}
