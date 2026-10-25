@@ -88,7 +88,7 @@ export interface ImportReport {
 
 export type Treatment = 'exempt' | 'taxable' | 'venue_unknown'
 
-export interface GainRow {
+export interface Realization {
   date: string
   entry_id: string
   symbol: string
@@ -97,6 +97,9 @@ export interface GainRow {
   cost: Decimal
   gain: Decimal
   venue?: Venue
+}
+
+export interface GainRow extends Realization {
   treatment: Treatment
 }
 
@@ -137,6 +140,10 @@ export class Book {
 
   gains(year: number, packToml: string): Gains {
     return JSON.parse(this.session.gains(year, packToml))
+  }
+
+  sales(year: number): Realization[] {
+    return JSON.parse(this.session.sales(year))
   }
 
   setLanguage(language: string): void {

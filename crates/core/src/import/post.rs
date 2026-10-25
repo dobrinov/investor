@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rust_decimal::Decimal;
 
 use super::config::BrokerConfig;
 use super::event::{Event, EventKind, FeeCharge, Fx};
-use crate::ledger::{self, Instrument, JournalEntry, Ledger, Posting};
+use crate::ledger::{self, Instrument, JournalEntry, Ledger, Posting, Provisional, Source};
 use crate::lots::Lots;
 use crate::{Currency, Error, Money, Result};
 
@@ -18,13 +18,49 @@ pub struct PostReport {
 /// Books events into the ledger in date order. Rows imported before are
 /// skipped; position snapshots go last and only add what the history misses.
 pub fn post_events(ledger: &mut Ledger, config: &BrokerConfig, mut events: Vec<Event>) -> Result<PostReport> {
+    let mut report = PostReport::default();
+
+    // Real trades for a position replace any provisional opening balance made
+    // from an earlier snapshot; that snapshot is reconciled again at the end.
+    let traded: BTreeSet<String> = events
+        .iter()
+        .filter_map(|e| match &e.kind {
+            EventKind::Buy { instrument, .. } | EventKind::Sell { instrument, .. } => {
+                Some(ledger::securities_account(&config.broker.account, &instrument.symbol))
+            }
+            _ => None,
+        })
+        .collect();
+    let mut replaced = Vec::new();
+    ledger.entries.retain(|e| match &e.provisional {
+        Some(p) if traded.contains(&p.account) => {
+            replaced.push(e.clone());
+            false
+        }
+        _ => true,
+    });
+
     events.sort_by_key(|e| (matches!(e.kind, EventKind::PositionSnapshot { .. }), e.date, e.source.line));
     let mut lots = Lots::from_ledger(ledger);
-    let mut report = PostReport::default();
 
     for event in events {
         if ledger.contains_fingerprint(&event.source.fingerprint) {
             report.duplicates += 1;
+            continue;
+        }
+        if let EventKind::PositionSnapshot { instrument, units, cost } = &event.kind {
+            let account = ledger::securities_account(&config.broker.account, &instrument.symbol);
+            let builder = EntryBuilder { base: &ledger.base_currency, config, event: &event, lots: &mut lots };
+            let cost = builder.to_base(cost).map_err(|message| Error::Import {
+                file: event.source.file.clone(),
+                line: event.source.line,
+                message,
+            })?;
+            let snapshot = Provisional { account, instrument: instrument.clone(), units: *units, cost, as_of: event.date };
+            ledger.register_instrument(instrument);
+            if reconcile(ledger, config, snapshot, event.source.clone(), &mut report)? {
+                report.added += 1;
+            }
             continue;
         }
         let mut builder = EntryBuilder { base: &ledger.base_currency, config, event: &event, lots: &mut lots };
@@ -51,7 +87,57 @@ pub fn post_events(ledger: &mut Ledger, config: &BrokerConfig, mut events: Vec<E
         }
         report.added += 1;
     }
+
+    for old in replaced {
+        let (Some(snapshot), Some(source)) = (old.provisional, old.source) else { continue };
+        let symbol = snapshot.instrument.symbol.clone();
+        report.warnings.push(format!("{}: the opening balance for {symbol} was replaced by the imported history", source.file));
+        reconcile(ledger, config, snapshot, source, &mut report)?;
+    }
     Ok(report)
+}
+
+/// Adds an opening balance for units a snapshot reports but the history up to
+/// that date does not explain. Returns whether an entry was added.
+fn reconcile(ledger: &mut Ledger, config: &BrokerConfig, snapshot: Provisional, source: Source, report: &mut PostReport) -> Result<bool> {
+    let held = ledger.units_at(&snapshot.account, snapshot.as_of);
+    let missing = snapshot.units - held;
+    let symbol = &snapshot.instrument.symbol;
+    if missing.abs() <= config.broker.dust {
+        return Ok(false);
+    }
+    if missing.is_sign_negative() {
+        report.warnings.push(format!(
+            "{}, line {}: the statement shows {} {symbol} on {} but the imported history adds up to {}; check for a missing sale or transfer",
+            source.file,
+            source.line,
+            snapshot.units.normalize(),
+            snapshot.as_of,
+            held.normalize()
+        ));
+        return Ok(false);
+    }
+    let cost = snapshot.cost * missing / snapshot.units;
+    let base = ledger.base_currency.clone();
+    let note = format!(
+        "{} {symbol} added as an opening balance because the purchase is not in the imported history; purchase date and fees are unknown",
+        missing.normalize()
+    );
+    report.warnings.push(format!("{}, line {}: {note}", source.file, source.line));
+    ledger.post(JournalEntry {
+        id: String::new(),
+        date: snapshot.as_of,
+        description: format!("Opening balance {} {symbol} (from position snapshot)", missing.normalize()),
+        postings: vec![
+            Posting::new(&snapshot.account, Money::new(cost, base.clone()), cost).with_units(missing),
+            Posting::new(ledger::OPENING_BALANCES, Money::new(-cost, base), -cost),
+        ],
+        venue: None,
+        source: Some(source),
+        notes: vec![note],
+        provisional: Some(snapshot),
+    })?;
+    Ok(true)
 }
 
 fn instrument_of(kind: &EventKind) -> Option<&Instrument> {
@@ -145,7 +231,7 @@ impl EntryBuilder<'_> {
                 }
                 self.entry(format!("Convert {sold} to {bought}"), postings)
             }
-            EventKind::PositionSnapshot { instrument, units, cost } => self.reconcile(instrument, *units, cost),
+            EventKind::PositionSnapshot { .. } => unreachable!("snapshots are reconciled in post_events"),
         }
     }
 
@@ -184,39 +270,6 @@ impl EntryBuilder<'_> {
         Ok(entry)
     }
 
-    /// Adds an opening balance for units the broker reports but the imported history does not explain.
-    fn reconcile(&mut self, instrument: &Instrument, units: Decimal, cost: &Money) -> Built {
-        let account = ledger::securities_account(&self.config.broker.account, &instrument.symbol);
-        let held = self.lots.held(&account);
-        let missing = units - held;
-        if missing.abs() <= self.config.broker.dust {
-            return Ok(None);
-        }
-        if missing.is_sign_negative() {
-            return Err(format!(
-                "the statement shows {} {} but the imported history adds up to {}; check for a missing sale or transfer",
-                units.normalize(),
-                instrument.symbol,
-                held.normalize()
-            ));
-        }
-        let missing_cost = self.to_base(cost)? * missing / units;
-        let postings = vec![
-            self.base_posting(&account, missing_cost).with_units(missing),
-            self.base_posting(ledger::OPENING_BALANCES, -missing_cost),
-        ];
-        let mut entry =
-            self.entry(format!("Opening balance {} {} (from position snapshot)", missing.normalize(), instrument.symbol), postings)?;
-        if let Some(entry) = entry.as_mut() {
-            entry.notes.push(format!(
-                "{} {} added as an opening balance because the purchase is not in the imported history; purchase date and fees are unknown",
-                missing.normalize(),
-                instrument.symbol
-            ));
-        }
-        Ok(entry)
-    }
-
     fn entry(&self, description: String, postings: Vec<Posting>) -> Built {
         let has_units = postings.iter().any(|p| p.units.is_some());
         Ok(Some(JournalEntry {
@@ -227,6 +280,7 @@ impl EntryBuilder<'_> {
             venue: if has_units { self.event.venue.clone() } else { None },
             source: Some(self.event.source.clone()),
             notes: Vec::new(),
+            provisional: None,
         }))
     }
 

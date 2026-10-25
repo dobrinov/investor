@@ -109,6 +109,22 @@ pub struct JournalEntry {
     pub source: Option<Source>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+    /// Set on opening balances made from a broker's position snapshot. They
+    /// are replaced when real history for the position is imported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provisional: Option<Provisional>,
+}
+
+/// The broker snapshot an opening balance was derived from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Provisional {
+    pub account: String,
+    pub instrument: Instrument,
+    /// Units the broker reported as of `as_of`.
+    pub units: Decimal,
+    /// Their cost in the base currency.
+    pub cost: Decimal,
+    pub as_of: NaiveDate,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,7 +162,8 @@ impl Ledger {
     /// Validates and appends an entry, assigning the next id when it has none.
     pub fn post(&mut self, mut entry: JournalEntry) -> Result<&JournalEntry> {
         if entry.id.is_empty() {
-            entry.id = format!("JE-{:05}", self.entries.len() + 1);
+            let last = self.entries.iter().filter_map(|e| e.id.strip_prefix("JE-")?.parse::<u32>().ok()).max();
+            entry.id = format!("JE-{:05}", last.unwrap_or(0) + 1);
         }
         Self::validate(&entry)?;
         self.entries.push(entry);
@@ -168,6 +185,17 @@ impl Ledger {
             return Err(Error::Unbalanced { id: entry.id.clone(), diff });
         }
         Ok(())
+    }
+
+    /// Units in an account from entries dated on or before `date`.
+    pub fn units_at(&self, account: &str, date: NaiveDate) -> Decimal {
+        self.entries
+            .iter()
+            .filter(|e| e.date <= date)
+            .flat_map(|e| &e.postings)
+            .filter(|p| p.account == account)
+            .filter_map(|p| p.units)
+            .sum()
     }
 
     pub fn contains_fingerprint(&self, fingerprint: &str) -> bool {

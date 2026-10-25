@@ -118,3 +118,33 @@ fn picks_the_right_config_for_each_statement() {
     assert_eq!(fit(&revolut, &ibkr_csv), 0.0);
     assert!(fit(&ibkr, &ibkr_csv) > 0.9, "{}", fit(&ibkr, &ibkr_csv));
 }
+
+#[test]
+fn history_replaces_a_provisional_opening_balance() {
+    let config = BrokerConfig::from_toml(&repo("brokers/ibkr-flex.toml")).unwrap();
+    let mut ledger = eur_ledger();
+    let snapshot = "HEADER,POST,Symbol,Quantity,CostBasisMoney,CurrencyPrimary,FXRateToBase,ReportDate,LevelOfDetail\n\
+                    DATA,POST,EUNL,3,300,EUR,1,2026-10-23,SUMMARY\n";
+    let history = "HEADER,TRNT,Buy/Sell,LevelOfDetail,AssetClass,TradeDate,Symbol,Exchange,Quantity,TradeMoney,CurrencyPrimary,FXRateToBase,IBCommission,IBCommissionCurrency,TradeID\n\
+                   DATA,TRNT,BUY,EXECUTION,STK,2026-03-01,EUNL,IBIS,2,190,EUR,1,-1,EUR,9001\n";
+
+    let first = import_statement(&mut ledger, &config, "snapshot.csv", snapshot).unwrap();
+    assert_eq!(first.added, 1);
+    assert_eq!(ledger.balances()["Equity:OpeningBalances"].base, dec("-300"));
+
+    // The purchase of 2 arrives later: only the third unit stays an opening balance.
+    let second = import_statement(&mut ledger, &config, "history.csv", history).unwrap();
+    assert_eq!(second.added, 1);
+    assert!(second.warnings.iter().any(|w| w.contains("replaced")), "{:?}", second.warnings);
+    let holdings = reports::holdings(&ledger);
+    assert_eq!((holdings[0].units, holdings[0].cost), (dec("3"), dec("290")));
+    assert_eq!(ledger.balances()["Equity:OpeningBalances"].base, dec("-100"));
+
+    let again = import_statement(&mut ledger, &config, "snapshot.csv", snapshot).unwrap();
+    assert_eq!((again.added, again.duplicates), (0, 1));
+
+    let mut ids: Vec<_> = ledger.entries.iter().map(|e| e.id.clone()).collect();
+    ids.sort();
+    ids.dedup();
+    assert_eq!(ids.len(), ledger.entries.len(), "entry ids stay unique");
+}

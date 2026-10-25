@@ -23,6 +23,7 @@ fn sample() -> Vault {
             venue: None,
             source: None,
             notes: vec![],
+            provisional: None,
         })
         .unwrap();
     vault
@@ -77,6 +78,7 @@ fn refuses_unbalanced_entries() {
             venue: None,
             source: None,
             notes: vec![],
+            provisional: None,
         })
         .unwrap_err();
     assert!(matches!(err, Error::Unbalanced { .. }), "{err}");

@@ -114,6 +114,11 @@ impl Session {
         })
     }
 
+    /// Realised gains for a year without tax classification, as JSON.
+    pub fn sales(&self, year: i32) -> Result<String, JsError> {
+        json(&reports::realized_gains(&self.vault.ledger, year))
+    }
+
     #[wasm_bindgen(js_name = setLanguage)]
     pub fn set_language(&mut self, language: &str) {
         self.vault.settings.language = language.to_owned();

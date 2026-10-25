@@ -124,6 +124,7 @@ export const en = {
 
   'tax.subtitle': 'Realised gains for your tax return, classified by your country’s rules.',
   'tax.noPack': 'There is no tax pack for {country} yet.',
+  'tax.noPackForYear': 'There are no {country} tax rules for {year} yet, so these sales are listed without a tax treatment.',
   'tax.year': 'Tax year',
   'tax.draftPack': '{id} {version} is a draft and has not been checked by a tax professional. Confirm the figures before you file.',
   'tax.summary': 'Summary',
