@@ -1,0 +1,23 @@
+[package]
+name = "investor-core"
+description = "Ledger, importers, tax packs and the encrypted .invest file format"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+toml = "0.8"
+csv = "1"
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand_core = { version = "0.6", features = ["getrandom"] }
+sha2 = "0.10"
+thiserror = "2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }

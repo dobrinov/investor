@@ -1,0 +1,125 @@
+# Interactive Brokers Activity Flex Query, CSV.
+# Setup: Performance & Reports → Flex Queries → Activity Flex Query, with
+# "Include section code and line descriptor" = Yes, date format yyyy-MM-dd.
+# See docs/importing.md for the full list of sections to tick.
+
+[broker]
+id = "ibkr-flex"
+name = "Interactive Brokers"
+account = "IBKR"
+
+[csv]
+layout = "sectioned"
+date_format = "%Y-%m-%d"
+# FXRateToBase converts the row's currency to the account's base currency.
+fx_rate = "multiply"
+
+# --- Trades (TRNT) -----------------------------------------------------------
+
+# Currency conversions appear as trades in a pair such as EUR.USD.
+[[record]]
+section = "TRNT"
+when = [
+  { column = "AssetClass", equals = "CASH" },
+  { column = "LevelOfDetail", equals = "EXECUTION" },
+]
+kind = "fx_pair_trade"
+fields = { date = "TradeDate", symbol = "Symbol", quantity = "Quantity", amount = "Proceeds", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TradeID" }
+fees = [{ column = "IBCommission", kind = "fx_conversion", currency_column = "IBCommissionCurrency" }]
+
+[[record]]
+section = "TRNT"
+when = [
+  { column = "Buy/Sell", equals = "BUY" },
+  { column = "LevelOfDetail", equals = "EXECUTION" },
+]
+kind = "buy"
+fields = { date = "TradeDate", symbol = "Symbol", name = "Description", isin = "ISIN", venue = "Exchange", quantity = "Quantity", amount = "TradeMoney", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TradeID" }
+fees = [
+  { column = "IBCommission", kind = "commission", currency_column = "IBCommissionCurrency" },
+  { column = "Taxes", kind = "transaction_tax" },
+]
+
+[[record]]
+section = "TRNT"
+when = [
+  { column = "Buy/Sell", equals = "SELL" },
+  { column = "LevelOfDetail", equals = "EXECUTION" },
+]
+kind = "sell"
+fields = { date = "TradeDate", symbol = "Symbol", name = "Description", isin = "ISIN", venue = "Exchange", quantity = "Quantity", amount = "TradeMoney", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TradeID" }
+fees = [
+  { column = "IBCommission", kind = "commission", currency_column = "IBCommissionCurrency" },
+  { column = "Taxes", kind = "transaction_tax" },
+]
+
+# Order and summary rows repeat the executions above.
+[[record]]
+section = "TRNT"
+kind = "ignore"
+
+# --- Cash transactions (CTRN) --------------------------------------------------
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", equals = "Deposits/Withdrawals" }]
+kind = "cash_transfer"
+fields = { date = "Date/Time", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", one_of = ["Dividends", "Payment In Lieu Of Dividends"] }]
+kind = "dividend"
+fields = { date = "Date/Time", symbol = "Symbol", name = "Description", isin = "ISIN", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", equals = "Withholding Tax" }]
+kind = "withholding_tax"
+fields = { date = "Date/Time", symbol = "Symbol", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", one_of = ["Broker Interest Received", "Broker Interest Paid", "Bond Interest Received"] }]
+kind = "interest"
+fields = { date = "Date/Time", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", equals = "Commission Adjustments" }]
+kind = "fee"
+fee_kind = "commission"
+fields = { date = "Date/Time", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+[[record]]
+section = "CTRN"
+when = [{ column = "Type", equals = "Other Fees" }]
+kind = "fee"
+fee_kind = "other"
+fields = { date = "Date/Time", amount = "Amount", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", external_id = "TransactionID" }
+
+# --- Open positions (POST) -----------------------------------------------------
+
+# Used to reconcile: units the history does not explain become an opening balance.
+[[record]]
+section = "POST"
+when = [{ column = "LevelOfDetail", equals = "SUMMARY" }]
+kind = "position_snapshot"
+fields = { date = "ReportDate", symbol = "Symbol", name = "Description", isin = "ISIN", quantity = "Quantity", amount = "CostBasisMoney", currency = "CurrencyPrimary", fx_rate = "FXRateToBase" }
+
+# --- Reference data --------------------------------------------------------------
+
+[[record]]
+section = "SECU"
+kind = "ignore"
+
+[[record]]
+section = "ACCT"
+kind = "ignore"
+
+[[record]]
+section = "RATE"
+kind = "ignore"
+
+# Not supported yet, so they show up as warnings: TRFR (position transfers),
+# CORP (corporate actions).

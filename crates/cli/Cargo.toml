@@ -1,0 +1,19 @@
+[package]
+name = "investor-cli"
+description = "Command-line access to .invest files, for development and scripting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "investor"
+path = "src/main.rs"
+
+[dependencies]
+investor-core.workspace = true
+rust_decimal.workspace = true
+chrono.workspace = true
+clap = { version = "4", features = ["derive"] }
+rpassword = "7"
+anyhow = "1"

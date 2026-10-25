@@ -1,0 +1,51 @@
+# Revolut trading account statement.
+# Export: Invest → ⋯ / Documents → Brokerage account → Account statement → Excel/CSV.
+
+[broker]
+id = "revolut-trading"
+name = "Revolut"
+account = "Revolut"
+# The statement does not say where trades were executed, so tax reports ask
+# you. Set a venue code here (e.g. "XETR") once you know it.
+# default_venue = "XETR"
+# Revolut trades fractions and can leave a few millionths of a share behind.
+dust = "0.000001"
+
+[csv]
+date_format = "rfc3339"
+amounts = "currency_prefixed"
+# "FX Rate" is units of the currency per 1 EUR (a USD top-up shows 1.0380),
+# so base amount = amount ÷ rate.
+fx_rate = "divide"
+
+[[record]]
+when = [{ column = "Type", equals = "CASH TOP-UP" }]
+kind = "deposit"
+fields = { date = "Date", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }
+
+[[record]]
+when = [{ column = "Type", equals = "CASH WITHDRAWAL" }]
+kind = "withdrawal"
+fields = { date = "Date", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }
+
+[[record]]
+when = [{ column = "Type", one_of = ["BUY - MARKET", "BUY - LIMIT", "BUY - STOP"] }]
+kind = "buy"
+fields = { date = "Date", symbol = "Ticker", quantity = "Quantity", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }
+
+[[record]]
+when = [{ column = "Type", one_of = ["SELL - MARKET", "SELL - LIMIT", "SELL - STOP"] }]
+kind = "sell"
+fields = { date = "Date", symbol = "Ticker", quantity = "Quantity", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }
+
+# Not yet seen in a real statement: check the amount is the net payment.
+[[record]]
+when = [{ column = "Type", equals = "DIVIDEND" }]
+kind = "dividend"
+fields = { date = "Date", symbol = "Ticker", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }
+
+[[record]]
+when = [{ column = "Type", equals = "CUSTODY FEE" }]
+kind = "fee"
+fee_kind = "custody"
+fields = { date = "Date", amount = "Total Amount", currency = "Currency", fx_rate = "FX Rate" }

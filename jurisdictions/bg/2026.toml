@@ -1,0 +1,39 @@
+# Bulgaria, tax year 2026 (annual return filed by 30 April 2027).
+# DRAFT: not reviewed by a tax professional. Every value below needs checking
+# against the official forms on nra.bg before it is relied on.
+
+[pack]
+id = "bg-nra"
+version = "2026.1"
+country = "BG"
+authority = "Национална агенция за приходите (NRA)"
+website = "https://nra.bg"
+tax_year = 2026
+currency = "EUR"
+verified = false
+notes = "Draft rules. Capital gains: 10% flat on net taxable result; sales on EU regulated markets treated as exempt."
+
+[capital_gains]
+rate = "0.10"
+form = "Приложение 5 (Appendix 5)"
+exempt_on_eu_regulated_market = true
+# Venue codes as brokers write them: IBKR exchange codes and ISO 10383 MICs.
+# UNVERIFIED list: confirm each venue is an EU regulated market (not an MTF).
+eu_regulated_venues = [
+  # Germany (Xetra)
+  "IBIS", "IBIS2", "XETR",
+  # Italy (Borsa Italiana, incl. ETFplus)
+  "BVME", "BVME.ETF", "XMIL", "ETFP",
+  # Euronext Amsterdam, Paris, Brussels, Lisbon, Dublin
+  "AEB", "XAMS", "SBF", "XPAR", "ENEXT.BE", "XBRU", "BVL", "XLIS", "ISED", "XMSM",
+  # Spain, Austria, Nordics, Poland, Bulgaria
+  "BM", "XMAD", "VSE", "XWBO", "SFB", "XSTO", "CPH", "XCSE", "HEX", "XHEL", "WSE", "XWAR", "XBUL",
+]
+
+[dividends]
+rate = "0.05"
+form = "Приложение 8 (Appendix 8)"
+foreign_tax_credit = true
+
+[deadlines]
+annual_return = "2027-04-30"
