@@ -6,6 +6,7 @@ use super::config::BrokerConfig;
 use super::event::{Event, EventKind, FeeCharge, Fx};
 use crate::ledger::{self, Instrument, JournalEntry, Ledger, Posting, Provisional, Source};
 use crate::lots::Lots;
+use crate::prices::{FxQuote, PriceBook, Quote, QuoteSource};
 use crate::{Currency, Error, Money, Result};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
@@ -17,7 +18,7 @@ pub struct PostReport {
 
 /// Books events into the ledger in date order. Rows imported before are
 /// skipped; position snapshots go last and only add what the history misses.
-pub fn post_events(ledger: &mut Ledger, config: &BrokerConfig, mut events: Vec<Event>) -> Result<PostReport> {
+pub fn post_events(ledger: &mut Ledger, prices: &mut PriceBook, config: &BrokerConfig, mut events: Vec<Event>) -> Result<PostReport> {
     let mut report = PostReport::default();
 
     // Real trades for a position replace any provisional opening balance made
@@ -48,7 +49,8 @@ pub fn post_events(ledger: &mut Ledger, config: &BrokerConfig, mut events: Vec<E
             report.duplicates += 1;
             continue;
         }
-        if let EventKind::PositionSnapshot { instrument, units, cost } = &event.kind {
+        record_prices(prices, &ledger.base_currency, &event);
+        if let EventKind::PositionSnapshot { instrument, units, cost, .. } = &event.kind {
             let account = ledger::securities_account(&config.broker.account, &instrument.symbol);
             let builder = EntryBuilder { base: &ledger.base_currency, config, event: &event, lots: &mut lots };
             let cost = builder.to_base(cost).map_err(|message| Error::Import {
@@ -138,6 +140,25 @@ fn reconcile(ledger: &mut Ledger, config: &BrokerConfig, snapshot: Provisional, 
         provisional: Some(snapshot),
     })?;
     Ok(true)
+}
+
+/// Keeps the prices and exchange rates a statement row reveals.
+fn record_prices(prices: &mut PriceBook, base: &Currency, event: &Event) {
+    if let Some(fx) = event.fx.as_ref().filter(|fx| &fx.currency != base)
+        && let Some(rate) = fx.to_base(Decimal::ONE)
+    {
+        prices.add_fx(fx.currency.clone(), FxQuote { date: event.date, rate, source: QuoteSource::Statement });
+    }
+    let (symbol, price, source) = match &event.kind {
+        EventKind::Buy { instrument, units, amount, .. } | EventKind::Sell { instrument, units, amount, .. } if !units.is_zero() => {
+            (&instrument.symbol, Money::new((amount.amount / units).round_dp(6), amount.currency.clone()), QuoteSource::Trade)
+        }
+        EventKind::PositionSnapshot { instrument, cost, price: Some(price), .. } => {
+            (&instrument.symbol, Money::new(*price, cost.currency.clone()), QuoteSource::Statement)
+        }
+        _ => return,
+    };
+    prices.add_quote(symbol, Quote { date: event.date, price, source });
 }
 
 fn instrument_of(kind: &EventKind) -> Option<&Instrument> {

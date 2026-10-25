@@ -72,7 +72,8 @@ pub enum EventKind {
     /// Signed: positive when received.
     Interest { amount: Money },
     FxConversion { sold: Money, bought: Money, fees: Vec<FeeCharge> },
-    PositionSnapshot { instrument: Instrument, units: Decimal, cost: Money },
+    /// `price` is the market price per unit in `cost`'s currency, when the statement gives one.
+    PositionSnapshot { instrument: Instrument, units: Decimal, cost: Money, price: Option<Decimal> },
 }
 
 /// One broker-neutral thing that happened, read from a statement row.

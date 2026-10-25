@@ -133,9 +133,37 @@ export interface Retirement {
   years: RetirementYear[]
 }
 
+export type QuoteSource = 'trade' | 'statement' | 'manual'
+
+export interface Quote {
+  date: string
+  price: Money
+  source: QuoteSource
+}
+
+export interface FxQuote {
+  date: string
+  /** Base currency units for one unit of the currency. */
+  rate: Decimal
+  source: QuoteSource
+}
+
+export interface Valuation {
+  broker: string
+  symbol: string
+  units: Decimal
+  cost: Decimal
+  quote?: Quote
+  value?: Decimal
+  gain?: Decimal
+  missing_fx: boolean
+}
+
 export interface Snapshot {
   settings: Settings
   plan: Plan
+  valuations: Valuation[]
+  fx: [string, FxQuote][]
   holdings: Holding[]
   cash: CashBalance[]
   trial_balance: TrialBalanceRow[]
@@ -216,6 +244,14 @@ export class Book {
 
   goals(thisYear: number, market: Market): GoalStatus[] {
     return JSON.parse(this.session.goals(thisYear, market))
+  }
+
+  setPrice(symbol: string, date: string, amount: string, currency: string): void {
+    this.session.setPrice(symbol, date, amount, currency)
+  }
+
+  setFxRate(currency: string, date: string, rate: string): void {
+    this.session.setFxRate(currency, date, rate)
   }
 
   setLanguage(language: string): void {

@@ -86,17 +86,18 @@
   </div>
   {#if editingProfile}
     <form class="grid" onsubmit={(e) => (e.preventDefault(), saveProfile())}>
-      <label class="field">{t('goals.birthYear')}<input type="number" min="1920" max={thisYear} bind:value={profile.birth_year} required /></label>
-      <label class="field">{t('goals.spending', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_spending} required /></label>
-      <label class="field">{t('goals.investing', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_investing} required /></label>
+      <label class="field">{t('goals.birthYear')}<input type="number" min="1920" max={thisYear} bind:value={profile.birth_year} required aria-describedby="why-birth" /><span class="why" id="why-birth">{t('goals.whyBirth')}</span></label>
+      <label class="field">{t('goals.spending', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_spending} required aria-describedby="why-spending" /><span class="why" id="why-spending">{t('goals.whySpending')}</span></label>
+      <label class="field">{t('goals.investing', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_investing} required aria-describedby="why-investing" /><span class="why" id="why-investing">{t('goals.whyInvesting')}</span></label>
       <label class="field">{t('goals.risk')}
-        <select bind:value={profile.risk}>
+        <select bind:value={profile.risk} aria-describedby="why-risk">
           <option value="cautious">{t('risk.cautious')}</option>
           <option value="balanced">{t('risk.balanced')}</option>
           <option value="growth">{t('risk.growth')}</option>
         </select>
+        <span class="why" id="why-risk">{t('goals.whyRisk')}</span>
       </label>
-      <label class="field">{t('goals.retirementAge')}<input type="number" min="40" max="80" bind:value={profile.retirement_age} required /></label>
+      <label class="field">{t('goals.retirementAge')}<input type="number" min="40" max="80" bind:value={profile.retirement_age} required aria-describedby="why-retire" /><span class="why" id="why-retire">{t('goals.whyRetirement')}</span></label>
       <label class="field">{t('goals.retirementSpending', { currency: base })}<input inputmode="decimal" bind:value={profile.retirement_spending} required /></label>
       <label class="field">{t('goals.pensionAge')}<input type="number" min="50" max="80" bind:value={profile.pension_age} required /></label>
       <label class="field">{t('goals.pension', { currency: base })}<input inputmode="decimal" bind:value={profile.monthly_pension} required /></label>
@@ -204,6 +205,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
+  }
+  .why {
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
   }
   .actions {
     grid-column: 1 / -1;

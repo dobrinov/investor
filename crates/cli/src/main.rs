@@ -9,7 +9,7 @@ use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use investor_core::import::{import_statement, BrokerConfig};
 use investor_core::jurisdiction::{JurisdictionPack, Treatment};
-use investor_core::reports;
+use investor_core::{prices, reports};
 use investor_core::vault::{self, KdfParams, Settings, Vault};
 use investor_core::Currency;
 use rust_decimal::Decimal;
@@ -74,7 +74,7 @@ fn main() -> Result<()> {
             let config = BrokerConfig::from_toml(&read(&broker)?)?;
             for statement in &statements {
                 let name = statement.file_name().map_or_else(|| statement.display().to_string(), |n| n.to_string_lossy().into_owned());
-                let report = import_statement(&mut vault.ledger, &config, &name, &read(statement)?)?;
+                let report = import_statement(&mut vault.ledger, &mut vault.prices, &config, &name, &read(statement)?)?;
                 println!("{name}: {} entries added, {} already imported", report.added, report.duplicates);
                 for warning in &report.warnings {
                     println!("  ! {warning}");
@@ -85,9 +85,11 @@ fn main() -> Result<()> {
         Command::Holdings { file } => {
             let vault = load(&file, &password()?)?;
             let base = &vault.settings.base_currency;
-            println!("{:<12} {:<10} {:>16} {:>14}", "Broker", "Symbol", "Units", format!("Cost ({base})"));
-            for h in reports::holdings(&vault.ledger) {
-                println!("{:<12} {:<10} {:>16} {:>14}", h.broker, h.symbol, h.units.normalize(), money(h.cost));
+            println!("{:<12} {:<10} {:>16} {:>14} {:>14} {:>12}", "Broker", "Symbol", "Units", format!("Cost ({base})"), "Value", "Price date");
+            for v in prices::valuations(&vault.ledger, &vault.prices) {
+                let value = v.value.map_or("?".to_owned(), money);
+                let date = v.quote.as_ref().map_or("—".to_owned(), |q| q.date.to_string());
+                println!("{:<12} {:<10} {:>16} {:>14} {:>14} {:>12}", v.broker, v.symbol, v.units.normalize(), money(v.cost), value, date);
             }
             println!("\n{:<12} {:<10} {:>16}", "Broker", "Cash", "Amount");
             for c in reports::cash(&vault.ledger) {

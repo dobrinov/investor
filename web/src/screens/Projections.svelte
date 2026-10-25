@@ -14,7 +14,8 @@
   const cash = $derived(
     s.trial_balance.filter((r) => r.account.startsWith('Assets:Cash:')).reduce((sum, r) => sum + Number(r.debit) - Number(r.credit), 0),
   )
-  const invested = $derived(s.holdings.reduce((sum, h) => sum + Number(h.cost), 0))
+  // Market value where a price is known, otherwise what was paid.
+  const invested = $derived(s.valuations.reduce((sum, v) => sum + Number(v.value ?? v.cost), 0))
   const start = $derived(cash + invested)
 
   let market = $state<Market>('base')

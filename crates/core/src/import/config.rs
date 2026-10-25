@@ -177,6 +177,9 @@ pub struct Fields {
     pub fx_rate: Option<String>,
     #[serde(default)]
     pub external_id: Option<String>,
+    /// Market price per unit, for position snapshots.
+    #[serde(default)]
+    pub price: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -105,7 +105,7 @@ fields = { date = "Date/Time", amount = "Amount", currency = "CurrencyPrimary", 
 section = "POST"
 when = [{ column = "LevelOfDetail", equals = "SUMMARY" }]
 kind = "position_snapshot"
-fields = { date = "ReportDate", symbol = "Symbol", name = "Description", isin = "ISIN", quantity = "Quantity", amount = "CostBasisMoney", currency = "CurrencyPrimary", fx_rate = "FXRateToBase" }
+fields = { date = "ReportDate", symbol = "Symbol", name = "Description", isin = "ISIN", quantity = "Quantity", amount = "CostBasisMoney", currency = "CurrencyPrimary", fx_rate = "FXRateToBase", price = "MarkPrice" }
 
 # --- Reference data --------------------------------------------------------------
 

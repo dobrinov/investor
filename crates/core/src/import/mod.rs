@@ -16,12 +16,14 @@ pub use parse::{fit, parse, ParsedFile};
 pub use post::{post_events, PostReport};
 
 use crate::ledger::Ledger;
+use crate::prices::PriceBook;
 use crate::Result;
 
-/// Parses a statement and books it, returning what happened.
-pub fn import_statement(ledger: &mut Ledger, config: &BrokerConfig, file_name: &str, text: &str) -> Result<PostReport> {
+/// Parses a statement and books it, returning what happened. Prices and
+/// exchange rates found along the way go into `prices`.
+pub fn import_statement(ledger: &mut Ledger, prices: &mut PriceBook, config: &BrokerConfig, file_name: &str, text: &str) -> Result<PostReport> {
     let parsed = parse(config, file_name, text)?;
-    let mut report = post_events(ledger, config, parsed.events)?;
+    let mut report = post_events(ledger, prices, config, parsed.events)?;
     report.warnings.splice(0..0, parsed.warnings);
     Ok(report)
 }

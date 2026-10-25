@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ledger::Ledger;
 use crate::plan::Plan;
+use crate::prices::PriceBook;
 use crate::{Currency, Error, Result};
 
 const MAGIC: &[u8; 7] = b"INVEST\0";
@@ -39,6 +40,8 @@ pub struct Vault {
     pub ledger: Ledger,
     #[serde(default)]
     pub plan: Plan,
+    #[serde(default)]
+    pub prices: PriceBook,
 }
 
 /// Preferences that travel with the file.
@@ -54,7 +57,7 @@ pub struct Settings {
 impl Vault {
     pub fn new(settings: Settings) -> Self {
         let ledger = Ledger::new(settings.base_currency.clone());
-        Self { settings, ledger, plan: Plan::default() }
+        Self { settings, ledger, plan: Plan::default(), prices: PriceBook::default() }
     }
 }
 

@@ -62,6 +62,16 @@ class AppState {
     await this.changed()
   }
 
+  async setPrice(symbol: string, date: string, amount: string, currency: string): Promise<void> {
+    this.book?.setPrice(symbol, date, amount, currency)
+    await this.changed()
+  }
+
+  async setFxRate(currency: string, date: string, rate: string): Promise<void> {
+    this.book?.setFxRate(currency, date, rate)
+    await this.changed()
+  }
+
   setLanguage(lang: string): void {
     useLanguage(lang)
     if (this.book && this.snapshot?.settings.language !== lang) {

@@ -104,7 +104,7 @@ pub fn fit(config: &BrokerConfig, text: &str) -> f64 {
     for rule in &config.records {
         let Some(columns) = headers.get(rule.section.as_deref().unwrap_or("")) else { continue };
         let f = &rule.fields;
-        let named = [&f.date, &f.symbol, &f.name, &f.isin, &f.venue, &f.quantity, &f.amount, &f.currency, &f.fx_rate, &f.external_id]
+        let named = [&f.date, &f.symbol, &f.name, &f.isin, &f.venue, &f.quantity, &f.amount, &f.currency, &f.fx_rate, &f.external_id, &f.price]
             .into_iter()
             .flatten()
             .chain(rule.when.iter().map(|c| &c.column))
@@ -243,7 +243,12 @@ fn build_event(config: &BrokerConfig, rule: &RecordRule, row: &Row, file: &str) 
                 EventKind::FxConversion { sold: first_leg, bought: amount.abs(), fees }
             }
         }
-        RecordKind::PositionSnapshot => EventKind::PositionSnapshot { instrument: require_instrument()?, units: units()?, cost: amount },
+        RecordKind::PositionSnapshot => EventKind::PositionSnapshot {
+            instrument: require_instrument()?,
+            units: units()?,
+            cost: amount,
+            price: row.get(f.price.as_deref()).map(parse_decimal).transpose()?,
+        },
         RecordKind::Ignore => unreachable!("ignored rows are skipped before building events"),
     };
 

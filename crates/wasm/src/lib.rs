@@ -8,6 +8,8 @@ use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
 use investor_core::plan::{self, Market, Plan, ProjectionInput, RetirementInput};
+use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
+use investor_core::{Currency, Money};
 use investor_core::vault::{self, KdfParams, SealingKey, Settings, Vault};
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -32,6 +34,9 @@ struct Snapshot<'a> {
     settings: &'a Settings,
     plan: &'a Plan,
     holdings: Vec<Holding>,
+    valuations: Vec<Valuation>,
+    /// Latest rate per currency: units of the base currency for one unit.
+    fx: Vec<(&'a Currency, &'a FxQuote)>,
     cash: Vec<CashBalance>,
     trial_balance: Vec<TrialBalanceRow>,
     instruments: Vec<&'a Instrument>,
@@ -83,6 +88,8 @@ impl Session {
             settings: &self.vault.settings,
             plan: &self.vault.plan,
             holdings: reports::holdings(ledger),
+            valuations: prices::valuations(ledger, &self.vault.prices),
+            fx: self.vault.prices.fx.iter().filter_map(|(c, q)| Some((c, q.last()?))).collect(),
             cash: reports::cash(ledger),
             trial_balance: reports::trial_balance(ledger),
             instruments: ledger.instruments.values().collect(),
@@ -95,8 +102,10 @@ impl Session {
         let config = BrokerConfig::from_toml(broker_toml).map_err(js_error)?;
         // Import into a copy so a failure halfway leaves the book untouched.
         let mut ledger = self.vault.ledger.clone();
-        let report = import::import_statement(&mut ledger, &config, file_name, text).map_err(js_error)?;
+        let mut prices = self.vault.prices.clone();
+        let report = import::import_statement(&mut ledger, &mut prices, &config, file_name, text).map_err(js_error)?;
         self.vault.ledger = ledger;
+        self.vault.prices = prices;
         json(&report)
     }
 
@@ -139,8 +148,31 @@ impl Session {
             .filter(|(account, _)| account.starts_with("Assets:Cash:"))
             .map(|(_, b)| plan::to_f64(b.base))
             .sum();
-        let invested: f64 = reports::holdings(ledger).iter().map(|h| plan::to_f64(h.cost)).sum();
+        // Market value where a price is known, otherwise what was paid.
+        let invested: f64 = prices::valuations(ledger, &self.vault.prices)
+            .iter()
+            .map(|v| plan::to_f64(v.value.unwrap_or(v.cost)))
+            .sum();
         json(&plan::evaluate_goals(&self.vault.plan, cash, invested, this_year, market))
+    }
+
+    /// Records a price typed in by the user. `date` is `YYYY-MM-DD`.
+    #[wasm_bindgen(js_name = setPrice)]
+    pub fn set_price(&mut self, symbol: &str, date: &str, amount: &str, currency: &str) -> Result<(), JsError> {
+        let date = date.parse().map_err(js_error)?;
+        let amount = amount.trim().replace(',', ".").parse().map_err(js_error)?;
+        let price = Money::new(amount, Currency::new(currency).map_err(js_error)?);
+        self.vault.prices.add_quote(symbol, Quote { date, price, source: QuoteSource::Manual });
+        Ok(())
+    }
+
+    /// Records an exchange rate typed in by the user: base units for one `currency`.
+    #[wasm_bindgen(js_name = setFxRate)]
+    pub fn set_fx_rate(&mut self, currency: &str, date: &str, rate: &str) -> Result<(), JsError> {
+        let date = date.parse().map_err(js_error)?;
+        let rate = rate.trim().replace(',', ".").parse().map_err(js_error)?;
+        self.vault.prices.add_fx(Currency::new(currency).map_err(js_error)?, FxQuote { date, rate, source: QuoteSource::Manual });
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setLanguage)]

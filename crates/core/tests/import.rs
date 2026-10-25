@@ -5,6 +5,7 @@ use std::str::FromStr;
 use investor_core::import::{fit, import_statement, BrokerConfig};
 use investor_core::jurisdiction::{JurisdictionPack, Treatment};
 use investor_core::ledger::{Ledger, Venue};
+use investor_core::prices::{self, PriceBook};
 use investor_core::{reports, Currency};
 use rust_decimal::Decimal;
 
@@ -41,7 +42,7 @@ fn every_broker_config_and_pack_loads() {
 fn revolut_statement() {
     let config = BrokerConfig::from_toml(&repo("brokers/revolut-trading.toml")).unwrap();
     let mut ledger = eur_ledger();
-    let report = import_statement(&mut ledger, &config, "revolut.csv", &repo("fixtures/revolut-trading.csv")).unwrap();
+    let report = import_statement(&mut ledger, &mut PriceBook::default(), &config, "revolut.csv", &repo("fixtures/revolut-trading.csv")).unwrap();
 
     assert_eq!(report.added, 6);
     assert!(report.warnings.iter().any(|w| w.contains("not recognised") && w.contains("lines 8")), "{:?}", report.warnings);
@@ -61,7 +62,7 @@ fn revolut_statement() {
     assert_eq!(gains[0].venue, None, "Revolut does not report venues");
 
     // Importing the same file again adds nothing.
-    let again = import_statement(&mut ledger, &config, "revolut.csv", &repo("fixtures/revolut-trading.csv")).unwrap();
+    let again = import_statement(&mut ledger, &mut PriceBook::default(), &config, "revolut.csv", &repo("fixtures/revolut-trading.csv")).unwrap();
     assert_eq!((again.added, again.duplicates), (0, 6));
 }
 
@@ -69,7 +70,16 @@ fn revolut_statement() {
 fn ibkr_flex_statement() {
     let config = BrokerConfig::from_toml(&repo("brokers/ibkr-flex.toml")).unwrap();
     let mut ledger = eur_ledger();
-    let report = import_statement(&mut ledger, &config, "ibkr.csv", &repo("fixtures/ibkr-flex.csv")).unwrap();
+    let mut book = PriceBook::default();
+    let report = import_statement(&mut ledger, &mut book, &config, "ibkr.csv", &repo("fixtures/ibkr-flex.csv")).unwrap();
+
+    // The snapshot's market price beats the earlier trade price; EUNL has none.
+    let values = prices::valuations(&ledger, &book);
+    let vuaa = values.iter().find(|v| v.symbol == "VUAA").unwrap();
+    assert_eq!((vuaa.value, vuaa.gain), (Some(dec("529.10")), Some(dec("89.10"))));
+    assert_eq!(values.iter().find(|v| v.symbol == "EUNL").unwrap().value, None);
+    // AAPL traded in USD, so the statement's USD rate is kept.
+    assert_eq!(book.latest_fx(&Currency::new("USD").unwrap()).unwrap().rate, dec("0.93"));
 
     // deposit, VUAA buy, EUR→USD, AAPL buy, dividend, withholding, AAPL sell, EUNL opening balance
     assert_eq!(report.added, 8, "{:#?}", ledger.entries);
@@ -102,7 +112,7 @@ fn ibkr_flex_statement() {
     let total: Decimal = reports::trial_balance(&ledger).iter().map(|r| r.debit - r.credit).sum();
     assert!(total.is_zero());
 
-    let again = import_statement(&mut ledger, &config, "ibkr.csv", &repo("fixtures/ibkr-flex.csv")).unwrap();
+    let again = import_statement(&mut ledger, &mut PriceBook::default(), &config, "ibkr.csv", &repo("fixtures/ibkr-flex.csv")).unwrap();
     assert_eq!(again.added, 0);
 }
 
@@ -128,19 +138,19 @@ fn history_replaces_a_provisional_opening_balance() {
     let history = "HEADER,TRNT,Buy/Sell,LevelOfDetail,AssetClass,TradeDate,Symbol,Exchange,Quantity,TradeMoney,CurrencyPrimary,FXRateToBase,IBCommission,IBCommissionCurrency,TradeID\n\
                    DATA,TRNT,BUY,EXECUTION,STK,2026-03-01,EUNL,IBIS,2,190,EUR,1,-1,EUR,9001\n";
 
-    let first = import_statement(&mut ledger, &config, "snapshot.csv", snapshot).unwrap();
+    let first = import_statement(&mut ledger, &mut PriceBook::default(), &config, "snapshot.csv", snapshot).unwrap();
     assert_eq!(first.added, 1);
     assert_eq!(ledger.balances()["Equity:OpeningBalances"].base, dec("-300"));
 
     // The purchase of 2 arrives later: only the third unit stays an opening balance.
-    let second = import_statement(&mut ledger, &config, "history.csv", history).unwrap();
+    let second = import_statement(&mut ledger, &mut PriceBook::default(), &config, "history.csv", history).unwrap();
     assert_eq!(second.added, 1);
     assert!(second.warnings.iter().any(|w| w.contains("replaced")), "{:?}", second.warnings);
     let holdings = reports::holdings(&ledger);
     assert_eq!((holdings[0].units, holdings[0].cost), (dec("3"), dec("290")));
     assert_eq!(ledger.balances()["Equity:OpeningBalances"].base, dec("-100"));
 
-    let again = import_statement(&mut ledger, &config, "snapshot.csv", snapshot).unwrap();
+    let again = import_statement(&mut ledger, &mut PriceBook::default(), &config, "snapshot.csv", snapshot).unwrap();
     assert_eq!((again.added, again.duplicates), (0, 1));
 
     let mut ids: Vec<_> = ledger.entries.iter().map(|e| e.id.clone()).collect();
