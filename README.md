@@ -13,6 +13,7 @@ server database, no tracking. Everything lives in one password-encrypted
 | `crates/cli` | `investor` command for development and scripting. |
 | `crates/mcp` | `investor-mcp`: read-only MCP server so Claude Code can analyse your file. |
 | `crates/wasm` and `web/` | The browser edition. |
+| `desktop/` | The desktop app (Tauri) for Windows, macOS and Linux, wrapping the web app. |
 | `brokers/` | One TOML file per broker or exchange statement format. |
 | `jurisdictions/` | One tax pack per country and tax year. |
 | `fixtures/` | Anonymised sample statements used by tests. |
@@ -31,6 +32,23 @@ target/debug/investor gains my.invest --year 2026 --pack jurisdictions/bg/2026.t
 ```
 
 How to export statements and add brokers: [docs/importing.md](docs/importing.md).
+
+## Install it
+
+- **Desktop app** for Windows, macOS and Linux: download it from
+  [the latest release](https://github.com/dobrinov/investor/releases/latest)
+  (`.msi`/`-setup.exe`, `.dmg`, `.AppImage`/`.deb`/`.rpm`). It opens and saves
+  `.invest` files in place and never connects to the internet. The builds are
+  not signed yet: on macOS right-click the app and choose Open; on Windows
+  choose More info, then Run anyway.
+- **From the browser**: open the app in Chrome or Edge and choose Install, or
+  in Safari on a Mac choose File, then Add to Dock. It works offline after the
+  first visit.
+
+To build the desktop app yourself: `cd desktop && npx @tauri-apps/cli@2 build`
+(needs Rust, pnpm and wasm-pack; on Linux also the WebKitGTK 4.1 development
+packages). Pushing a `v*` tag builds all three systems and publishes a release
+(`.github/workflows/desktop.yml`).
 
 ## Ask Claude Code
 

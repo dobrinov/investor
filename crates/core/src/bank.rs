@@ -143,6 +143,21 @@ pub fn set_balance(vault: &mut Vault, id: &str, input: &BalanceInput) -> Result<
     Ok(Some(entry))
 }
 
+/// Gives an account a new name. Its account in the books keeps the id it got
+/// when it was added, so history and balances stay as they are.
+pub fn rename(vault: &mut Vault, id: &str, name: &str) -> Result<()> {
+    let name = name.trim();
+    if ledger::slug(name).is_empty() {
+        return Err(Error::user("name.empty"));
+    }
+    if vault.banks.iter().any(|a| a.id != id && a.name.eq_ignore_ascii_case(name)) {
+        return Err(Error::user("bank.exists").arg("id", name));
+    }
+    let account = vault.banks.iter_mut().find(|a| a.id == id).ok_or_else(|| Error::user("bank.unknown").arg("id", id))?;
+    account.name = name.to_owned();
+    Ok(())
+}
+
 /// Removes an account and every entry that touches it.
 pub fn remove(vault: &mut Vault, id: &str) -> Result<()> {
     let account = account(vault, id)?;

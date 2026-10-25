@@ -54,6 +54,7 @@
 
   function edit(a: BankAccount): void {
     editing = a.id
+    renaming = null
     adding = false
     error = ''
     update = { entry_id: crypto.randomUUID(), date: today, balance: a.balance, fx_rate: a.currency !== base ? String(Number(rateOf(a.currency) ?? '')) || '' : '' }
@@ -69,6 +70,28 @@
         fx_rate: a.currency !== base && decimal(update.fx_rate) ? decimal(update.fx_rate) : null,
       })
       editing = null
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e)
+    }
+  }
+
+  // Renaming changes only the name shown; the account and its history stay.
+  let renaming = $state<string | null>(null)
+  let newName = $state('')
+
+  function startRename(a: BankAccount): void {
+    renaming = a.id
+    editing = null
+    adding = false
+    error = ''
+    newName = a.name
+  }
+
+  async function rename(a: BankAccount): Promise<void> {
+    error = ''
+    try {
+      await app.renameBank(a.id, newName)
+      renaming = null
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
     }
@@ -118,9 +141,23 @@
               <td class="right num">{money(a.balance, a.currency)}{#if a.currency !== base && a.value !== undefined}<span class="muted block">{money(a.value, base)}</span>{/if}</td>
               <td class="right nowrap">
                 <button class="btn ghost small-btn" onclick={() => edit(a)}>{t('bank.update')}</button>
+                <button class="btn ghost small-btn" onclick={() => startRename(a)}>{t('bank.rename')}</button>
                 <button class="btn ghost small-btn" onclick={() => remove(a)}>{t('common.remove')}</button>
               </td>
             </tr>
+            {#if renaming === a.id}
+              <tr class="editor">
+                <td colspan="4">
+                  <form onsubmit={(e) => (e.preventDefault(), rename(a))}>
+                    <label class="field wide-name">{t('bank.name')}<input bind:value={newName} required /></label>
+                    <button class="btn">{t('common.save')}</button>
+                    <button type="button" class="btn ghost" onclick={() => (renaming = null)}>{t('common.cancel')}</button>
+                  </form>
+                  <p class="muted small">{t('bank.renameHint')}</p>
+                  {#if error}<p class="error" role="alert">{error}</p>{/if}
+                </td>
+              </tr>
+            {/if}
             {#if editing === a.id}
               <tr class="editor">
                 <td colspan="4">
@@ -209,5 +246,8 @@
   }
   .editor .field {
     width: 180px;
+  }
+  .editor .wide-name {
+    width: min(100%, 320px);
   }
 </style>

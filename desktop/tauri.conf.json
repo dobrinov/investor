@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Investor",
+  "version": "0.1.0",
+  "identifier": "io.github.dobrinov.investor",
+  "build": {
+    "frontendDist": "../web/dist",
+    "beforeBuildCommand": { "script": "pnpm install --frozen-lockfile && pnpm build:desktop", "cwd": "../web" }
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Investor",
+        "url": "app/index.html",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 360,
+        "minHeight": 560,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Finance",
+    "shortDescription": "Plan, track and rehearse your investing decisions",
+    "longDescription": "Investor keeps your portfolio in one encrypted .invest file on your computer. Import broker statements, plan trades, set goals and see where your money could be in 20 years. No account, no server, no tracking.",
+    "copyright": "Apache-2.0",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "fileAssociations": [
+      { "ext": ["invest"], "name": "Investor file", "description": "Encrypted Investor portfolio", "role": "Editor", "mimeType": "application/x-investor" }
+    ]
+  }
+}

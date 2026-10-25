@@ -588,6 +588,10 @@ export class Book {
     return JSON.parse(this.session.setBankBalance(id, JSON.stringify(input)))
   }
 
+  renameBank(id: string, name: string): void {
+    this.session.renameBank(id, name)
+  }
+
   removeBank(id: string): void {
     this.session.removeBank(id)
   }

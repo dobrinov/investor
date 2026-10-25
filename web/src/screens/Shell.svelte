@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { savesInPlace } from '../lib/files'
+  import { desktop, savesInPlace } from '../lib/files'
   import ExitLink from '../components/ExitLink.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import Logo from '../components/Logo.svelte'
@@ -107,13 +107,13 @@
       {saving ? t('shell.saving') : t('shell.saveShort')}
     </button>
     {/if}
-    <ExitLink label={false} />
+    {#if !desktop}<ExitLink label={false} />{/if}
   </header>
 
   <aside>
     <div class="side-head">
       <div class="brand"><Logo /> Investor</div>
-      <ExitLink />
+      {#if !desktop}<ExitLink />{/if}
     </div>
 
     {#if app.example}
@@ -228,7 +228,7 @@
           </button>
         {/each}
       </div>
-      <a class="more-exit" href="../">{t('shell.exitLong')}</a>
+      {#if !desktop}<a class="more-exit" href="../">{t('shell.exitLong')}</a>{/if}
       <div class="more-bottom">
         <LanguagePicker light />
         <button class="lock" onclick={lock}>

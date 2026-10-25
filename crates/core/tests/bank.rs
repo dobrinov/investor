@@ -69,3 +69,16 @@ fn a_foreign_account_needs_a_rate_and_names_must_be_free() {
     bank::remove(&mut v, "SAVINGS-GBP").unwrap();
     assert!(v.banks.is_empty() && v.ledger.entries.is_empty());
 }
+
+#[test]
+fn renaming_keeps_the_account_and_its_balance() {
+    let mut v = vault();
+    bank::add(&mut v, &bank("UBB", "EUR", "30000")).unwrap();
+    let dsk = NewAccount { balance: balance("dsk", day(10, 1), "100"), ..bank("DSK", "EUR", "100") };
+    bank::add(&mut v, &dsk).unwrap();
+    bank::rename(&mut v, "UBB", "ОББ спестовна").unwrap();
+    let b = &bank::balances(&v)[0];
+    assert_eq!((b.account.id.as_str(), b.account.name.as_str(), b.balance), ("UBB", "ОББ спестовна", dec("30000")));
+    assert!(bank::rename(&mut v, "UBB", "  ").is_err());
+    assert!(bank::rename(&mut v, "UBB", "dsk").is_err(), "names stay distinct");
+}

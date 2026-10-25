@@ -358,6 +358,8 @@ export const en = {
   'bank.updated': 'Last updated',
   'bank.update': 'Update balance',
   'bank.updateHint': 'Type the whole balance; the books record only the change since last time.',
+  'bank.rename': 'Rename',
+  'bank.renameHint': 'Only the name changes; the balance and its history stay as they are.',
   'bank.removeConfirm': 'Remove {name} and all its balances from your books?',
   'metal.title': 'Physical gold and silver',
   'metal.add': 'Add coins or bars',

@@ -1,6 +1,6 @@
 import type { BalanceInput, Entry, MetalInput, MetalPrice, PayoutInput, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
-import { saveFile, saveFileAs, type SaveResult } from './files'
+import { saveFile, saveFileAs, type FileRef, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
 import { Book } from './core'
 import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
@@ -19,11 +19,11 @@ class AppState {
   guideSection = $state<SectionId | null>(null)
   /** False when the browser refuses to keep a draft (private mode, blocked storage). */
   draftKept = $state(true)
-  private handle = $state.raw<FileSystemFileHandle | undefined>()
+  private handle = $state.raw<FileRef | undefined>()
   /** The example portfolio is open: nothing is kept or saved. */
   example = $state(false)
 
-  open(book: Book, fileName: string, options: { handle?: FileSystemFileHandle; changes?: number } = {}): void {
+  open(book: Book, fileName: string, options: { handle?: FileRef; changes?: number } = {}): void {
     this.example = false
     this.book = book
     this.fileName = fileName
@@ -140,6 +140,11 @@ class AppState {
 
   async setBankBalance(id: string, input: BalanceInput): Promise<void> {
     this.book?.setBankBalance(id, input)
+    await this.changed()
+  }
+
+  async renameBank(id: string, name: string): Promise<void> {
+    this.book?.renameBank(id, name)
     await this.changed()
   }
 

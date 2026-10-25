@@ -280,6 +280,12 @@ impl Session {
         json(&bank::set_balance(&mut self.vault, id, &input).map_err(core_error)?)
     }
 
+    /// Gives a bank account a new name; its history stays as it is.
+    #[wasm_bindgen(js_name = renameBank)]
+    pub fn rename_bank(&mut self, id: &str, name: &str) -> Result<(), JsError> {
+        bank::rename(&mut self.vault, id, name).map_err(core_error)
+    }
+
     /// Removes a bank account and its entries.
     #[wasm_bindgen(js_name = removeBank)]
     pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {

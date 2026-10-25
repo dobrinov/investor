@@ -1,5 +1,6 @@
-// Opening and saving files on the user's computer. Chrome and Edge can save
-// back to the same file; other browsers download a new copy.
+// Opening and saving files on the user's computer. The desktop app and
+// Chrome and Edge save back to the same file; other browsers download a new
+// copy.
 
 interface PickerType {
   description: string
@@ -14,12 +15,41 @@ interface FilePickers {
 const pickers = window as unknown as FilePickers
 const types: PickerType[] = [{ description: 'Investor file', accept: { 'application/octet-stream': ['.invest'] } }]
 
-export const savesInPlace = typeof pickers.showSaveFilePicker === 'function'
+// The desktop app (Tauri) opens and saves through its own commands, by path.
+type Invoke = (command: string, args?: unknown, options?: { headers: Record<string, string> }) => Promise<unknown>
+const tauri = (window as unknown as { __TAURI_INTERNALS__?: { invoke: Invoke } }).__TAURI_INTERNALS__
+export const desktop = tauri !== undefined
+
+export const savesInPlace = desktop || typeof pickers.showSaveFilePicker === 'function'
+
+/** Where a file lives: a browser handle, or a path in the desktop app. */
+export type FileRef = FileSystemFileHandle | { path: string }
 
 export interface OpenedFile {
   name: string
   bytes: Uint8Array
-  handle?: FileSystemFileHandle
+  handle?: FileRef
+}
+
+interface Picked {
+  path: string
+  name: string
+}
+
+async function readPath(picked: Picked): Promise<OpenedFile> {
+  const bytes = new Uint8Array((await tauri!.invoke('read_invest', { path: picked.path })) as ArrayBuffer)
+  return { name: picked.name, bytes, handle: { path: picked.path } }
+}
+
+async function writePath(bytes: Uint8Array, path: string): Promise<void> {
+  await tauri!.invoke('write_invest', bytes, { headers: { path: encodeURIComponent(path) } })
+}
+
+/** The .invest file the desktop app was started with, if any. */
+export async function launchedFile(): Promise<OpenedFile | null> {
+  if (!tauri) return null
+  const picked = (await tauri.invoke('launch_file')) as Picked | null
+  return picked ? readPath(picked) : null
 }
 
 function isAbort(e: unknown): boolean {
@@ -40,6 +70,10 @@ export function chooseFiles(accept: string, multiple: boolean): Promise<File[]> 
 }
 
 export async function openInvestFile(): Promise<OpenedFile | null> {
+  if (tauri) {
+    const picked = (await tauri.invoke('pick_invest')) as Picked | null
+    return picked ? readPath(picked) : null
+  }
   if (pickers.showOpenFilePicker) {
     try {
       const [handle] = await pickers.showOpenFilePicker({ types, multiple: false })
@@ -81,7 +115,7 @@ export async function droppedFile(item: DataTransferItem): Promise<OpenedFile | 
 
 export interface SaveResult {
   saved: boolean
-  handle?: FileSystemFileHandle
+  handle?: FileRef
   name?: string
 }
 
@@ -92,7 +126,12 @@ async function write(bytes: Uint8Array, handle: FileSystemFileHandle): Promise<v
 }
 
 /** Saves into the file that was opened; asks where only when there is none yet. */
-export async function saveFile(bytes: Uint8Array, name: string, handle?: FileSystemFileHandle): Promise<SaveResult> {
+export async function saveFile(bytes: Uint8Array, name: string, handle?: FileRef): Promise<SaveResult> {
+  if (handle && 'path' in handle) {
+    if (!tauri) return saveFileAs(bytes, name)
+    await writePath(bytes, handle.path)
+    return { saved: true, handle }
+  }
   if (handle && (await canWrite(handle))) {
     await write(bytes, handle)
     return { saved: true, handle }
@@ -103,6 +142,12 @@ export async function saveFile(bytes: Uint8Array, name: string, handle?: FileSys
 /** Always asks where to save; later saves go to the new file. */
 export async function saveFileAs(bytes: Uint8Array, name: string): Promise<SaveResult> {
   const data = bytes as Uint8Array<ArrayBuffer>
+  if (tauri) {
+    const picked = (await tauri.invoke('save_invest_as', { name })) as Picked | null
+    if (!picked) return { saved: false }
+    await writePath(bytes, picked.path)
+    return { saved: true, handle: { path: picked.path }, name: picked.name }
+  }
   if (pickers.showSaveFilePicker) {
     try {
       const picked = await pickers.showSaveFilePicker({ suggestedName: name, types })

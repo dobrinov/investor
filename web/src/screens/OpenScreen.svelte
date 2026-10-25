@@ -4,7 +4,7 @@
   import Logo from '../components/Logo.svelte'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import { Book } from '../lib/core'
-  import { droppedFile, openInvestFile, savesInPlace, type OpenedFile } from '../lib/files'
+  import { desktop, droppedFile, launchedFile, type OpenedFile, openInvestFile, savesInPlace } from '../lib/files'
   import { countries } from '../lib/configs'
   import { country, dateTime } from '../lib/format'
   import { i18n, t } from '../lib/i18n.svelte'
@@ -27,6 +27,12 @@
   onMount(async () => {
     draft = await loadDraft()
     if (draft) mode = 'restore'
+    // The desktop app may have been started by opening a .invest file.
+    const launched = await launchedFile().catch(() => null)
+    if (launched) {
+      picked = launched
+      go('open')
+    }
     // Installed from the browser, the app can be the one that opens .invest files.
     const queue = (window as unknown as { launchQueue?: { setConsumer(consumer: (params: { files: readonly FileSystemHandle[] }) => void): void } }).launchQueue
     queue?.setConsumer(async ({ files }) => {
@@ -125,7 +131,7 @@
 <div class="page" role="presentation" ondragover={(e) => e.preventDefault()} ondrop={dropped}>
   <header class="site">
     <a class="brand" href="../"><Logo size={30} /> Investor</a>
-    <ExitLink long />
+    {#if !desktop}<ExitLink long />{/if}
   </header>
   <div class="wrap">
     <section class="pitch">

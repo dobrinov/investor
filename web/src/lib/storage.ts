@@ -1,6 +1,8 @@
 // The browser copy of unsaved work, kept in IndexedDB. It holds the same
 // encrypted bytes as a .invest file, never anything readable.
 
+import type { FileRef } from './files'
+
 export interface Draft {
   fileName: string
   bytes: Uint8Array
@@ -8,7 +10,7 @@ export interface Draft {
   changes: number
   updatedAt: string
   /** The opened file, so saving after a refresh still goes back into it. */
-  handle?: FileSystemFileHandle
+  handle?: FileRef
 }
 
 const DB_NAME = 'investor'
