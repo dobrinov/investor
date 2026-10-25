@@ -453,6 +453,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "investor-wasm"
+version = "0.1.0"
+dependencies = [
+ "investor-core",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

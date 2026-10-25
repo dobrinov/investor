@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use investor_core::import::{import_statement, BrokerConfig};
+use investor_core::import::{fit, import_statement, BrokerConfig};
 use investor_core::jurisdiction::{JurisdictionPack, Treatment};
 use investor_core::ledger::{Ledger, Venue};
 use investor_core::{reports, Currency};
@@ -104,4 +104,17 @@ fn ibkr_flex_statement() {
 
     let again = import_statement(&mut ledger, &config, "ibkr.csv", &repo("fixtures/ibkr-flex.csv")).unwrap();
     assert_eq!(again.added, 0);
+}
+
+#[test]
+fn picks_the_right_config_for_each_statement() {
+    let revolut = BrokerConfig::from_toml(&repo("brokers/revolut-trading.toml")).unwrap();
+    let ibkr = BrokerConfig::from_toml(&repo("brokers/ibkr-flex.toml")).unwrap();
+    let revolut_csv = repo("fixtures/revolut-trading.csv");
+    let ibkr_csv = repo("fixtures/ibkr-flex.csv");
+
+    assert_eq!(fit(&revolut, &revolut_csv), 1.0);
+    assert_eq!(fit(&ibkr, &revolut_csv), 0.0);
+    assert_eq!(fit(&revolut, &ibkr_csv), 0.0);
+    assert!(fit(&ibkr, &ibkr_csv) > 0.9, "{}", fit(&ibkr, &ibkr_csv));
 }

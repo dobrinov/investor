@@ -12,7 +12,7 @@ mod post;
 
 pub use config::{AmountStyle, BrokerConfig, BrokerInfo, Condition, CsvOptions, FeeColumn, Fields, FxRateMode, Layout, RecordKind, RecordRule};
 pub use event::{Event, EventKind, FeeCharge, FeeKind, Fx};
-pub use parse::{parse, ParsedFile};
+pub use parse::{fit, parse, ParsedFile};
 pub use post::{post_events, PostReport};
 
 use crate::ledger::Ledger;

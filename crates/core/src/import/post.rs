@@ -8,7 +8,7 @@ use crate::ledger::{self, Instrument, JournalEntry, Ledger, Posting};
 use crate::lots::Lots;
 use crate::{Currency, Error, Money, Result};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
 pub struct PostReport {
     pub added: usize,
     pub duplicates: usize,

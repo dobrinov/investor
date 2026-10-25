@@ -38,6 +38,17 @@ fn round_trips() {
 }
 
 #[test]
+fn resaves_with_the_unlocked_key() {
+    let vault = sample();
+    let bytes = vault::seal(&vault, "correct horse", FAST).unwrap();
+    let (opened, key) = vault::unlock(&bytes, "correct horse").unwrap();
+    let again = vault::seal_with(&opened, &key).unwrap();
+    assert_ne!(again, bytes, "a fresh nonce is used for every save");
+    assert_eq!(&again[..37], &bytes[..37], "same salt and parameters");
+    assert_eq!(vault::open(&again, "correct horse").unwrap(), vault);
+}
+
+#[test]
 fn rejects_wrong_password_and_tampering() {
     let bytes = vault::seal(&sample(), "correct horse", FAST).unwrap();
     assert!(matches!(vault::open(&bytes, "wrong"), Err(Error::Decrypt)));

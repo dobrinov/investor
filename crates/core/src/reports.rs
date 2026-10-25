@@ -4,12 +4,13 @@ use std::collections::BTreeMap;
 
 use chrono::{Datelike, NaiveDate};
 use rust_decimal::Decimal;
+use serde::Serialize;
 
 use crate::ledger::{self, AccountKind, Ledger, Venue};
 use crate::lots::Lots;
 use crate::Currency;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Holding {
     pub broker: String,
     pub symbol: String,
@@ -18,7 +19,7 @@ pub struct Holding {
     pub cost: Decimal,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CashBalance {
     pub broker: String,
     pub currency: Currency,
@@ -52,7 +53,7 @@ pub fn cash(ledger: &Ledger) -> Vec<CashBalance> {
 }
 
 /// One sale and what it realised, in the base currency.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Realization {
     pub date: NaiveDate,
     pub entry_id: String,
@@ -85,7 +86,7 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
     out
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct TrialBalanceRow {
     pub account: String,
     pub debit: Decimal,

@@ -69,23 +69,49 @@ impl Default for KdfParams {
     }
 }
 
+/// A key derived from the password. Kept in memory while a file is open so
+/// that saving does not repeat the deliberately slow key derivation.
+#[derive(Clone)]
+pub struct SealingKey {
+    key: [u8; 32],
+    salt: [u8; 16],
+    params: KdfParams,
+}
+
+impl std::fmt::Debug for SealingKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SealingKey").field("params", &self.params).finish_non_exhaustive()
+    }
+}
+
+impl SealingKey {
+    /// Derives a key for a new file, with a fresh random salt.
+    pub fn derive(password: &str, params: KdfParams) -> Result<Self> {
+        let mut salt = [0u8; 16];
+        OsRng.fill_bytes(&mut salt);
+        Ok(Self { key: derive_key(password, &salt, params)?, salt, params })
+    }
+}
+
 pub fn seal(vault: &Vault, password: &str, params: KdfParams) -> Result<Vec<u8>> {
-    let mut salt = [0u8; 16];
+    seal_with(vault, &SealingKey::derive(password, params)?)
+}
+
+/// Encrypts with an already derived key and a fresh nonce.
+pub fn seal_with(vault: &Vault, key: &SealingKey) -> Result<Vec<u8>> {
     let mut nonce = [0u8; 12];
-    OsRng.fill_bytes(&mut salt);
     OsRng.fill_bytes(&mut nonce);
 
     let mut header = Vec::with_capacity(HEADER_LEN);
     header.extend_from_slice(MAGIC);
     header.extend_from_slice(&FORMAT_VERSION.to_le_bytes());
-    for value in [params.memory_kib, params.iterations, params.lanes] {
+    for value in [key.params.memory_kib, key.params.iterations, key.params.lanes] {
         header.extend_from_slice(&value.to_le_bytes());
     }
-    header.extend_from_slice(&salt);
+    header.extend_from_slice(&key.salt);
     header.extend_from_slice(&nonce);
 
-    let key = derive_key(password, &salt, params)?;
-    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| Error::Crypto(e.to_string()))?;
+    let cipher = Aes256Gcm::new_from_slice(&key.key).map_err(|e| Error::Crypto(e.to_string()))?;
     let plain = serde_json::to_vec(vault)?;
     let sealed = cipher
         .encrypt(Nonce::from_slice(&nonce), Payload { msg: &plain, aad: &header })
@@ -96,6 +122,11 @@ pub fn seal(vault: &Vault, password: &str, params: KdfParams) -> Result<Vec<u8>>
 }
 
 pub fn open(bytes: &[u8], password: &str) -> Result<Vault> {
+    unlock(bytes, password).map(|(vault, _)| vault)
+}
+
+/// Decrypts a file and returns the key for saving it again.
+pub fn unlock(bytes: &[u8], password: &str) -> Result<(Vault, SealingKey)> {
     if bytes.len() < HEADER_LEN || &bytes[..7] != MAGIC {
         return Err(Error::NotInvestFile);
     }
@@ -109,15 +140,15 @@ pub fn open(bytes: &[u8], password: &str) -> Result<Vault> {
         return Err(Error::Decrypt);
     }
     let (header, sealed) = bytes.split_at(HEADER_LEN);
-    let salt = &header[21..37];
+    let salt: [u8; 16] = header[21..37].try_into().expect("16 bytes");
     let nonce = &header[37..49];
 
-    let key = derive_key(password, salt, params)?;
-    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| Error::Crypto(e.to_string()))?;
+    let key = SealingKey { key: derive_key(password, &salt, params)?, salt, params };
+    let cipher = Aes256Gcm::new_from_slice(&key.key).map_err(|e| Error::Crypto(e.to_string()))?;
     let plain = cipher
         .decrypt(Nonce::from_slice(nonce), Payload { msg: sealed, aad: header })
         .map_err(|_| Error::Decrypt)?;
-    Ok(serde_json::from_slice(&plain)?)
+    Ok((serde_json::from_slice(&plain)?, key))
 }
 
 fn derive_key(password: &str, salt: &[u8], params: KdfParams) -> Result<[u8; 32]> {

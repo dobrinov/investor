@@ -68,6 +68,55 @@ pub fn parse(config: &BrokerConfig, file_name: &str, text: &str) -> Result<Parse
     Ok(parsed)
 }
 
+/// How well a config fits a statement, from 0 to 1: the share of columns the
+/// config refers to that the file's headers contain. Used to pick a broker
+/// config automatically.
+pub fn fit(config: &BrokerConfig, text: &str) -> f64 {
+    let text = text.trim_start_matches('\u{feff}');
+    let mut reader = csv::ReaderBuilder::new()
+        .delimiter(config.csv.delimiter as u8)
+        .has_headers(false)
+        .flexible(true)
+        .from_reader(text.as_bytes());
+
+    let mut headers: HashMap<String, Vec<String>> = HashMap::new();
+    for record in reader.records().take(500).flatten() {
+        let cells: Vec<String> = record.iter().map(|c| c.trim().to_owned()).collect();
+        match config.csv.layout {
+            Layout::Table => {
+                if cells.first().is_some_and(|c| c == "HEADER") {
+                    return 0.0;
+                }
+                headers.insert(String::new(), cells);
+                break;
+            }
+            Layout::Sectioned => match cells.first().map(String::as_str) {
+                Some("HEADER") if cells.len() > 2 => {
+                    headers.insert(cells[1].clone(), cells[2..].to_vec());
+                }
+                Some("HEADER" | "DATA" | "BOF" | "EOF" | "BOA" | "EOA" | "BOS" | "EOS") => {}
+                _ => return 0.0,
+            },
+        }
+    }
+
+    let (mut wanted, mut found) = (0usize, 0usize);
+    for rule in &config.records {
+        let Some(columns) = headers.get(rule.section.as_deref().unwrap_or("")) else { continue };
+        let f = &rule.fields;
+        let named = [&f.date, &f.symbol, &f.name, &f.isin, &f.venue, &f.quantity, &f.amount, &f.currency, &f.fx_rate, &f.external_id]
+            .into_iter()
+            .flatten()
+            .chain(rule.when.iter().map(|c| &c.column))
+            .chain(rule.fees.iter().map(|c| &c.column));
+        for column in named {
+            wanted += 1;
+            found += usize::from(columns.contains(column));
+        }
+    }
+    if wanted == 0 { 0.0 } else { found as f64 / wanted as f64 }
+}
+
 fn applies(rule: &RecordRule, row: &Row) -> bool {
     rule.section.as_deref().is_none_or(|s| row.section.as_deref() == Some(s))
         && rule.when.iter().all(|c| c.matches(row.cells.get(&c.column).map(String::as_str)))

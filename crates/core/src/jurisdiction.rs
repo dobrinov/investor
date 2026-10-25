@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ledger::Venue;
 use crate::reports::Realization;
@@ -20,7 +20,7 @@ pub struct JurisdictionPack {
     pub deadlines: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PackInfo {
     pub id: String,
@@ -58,7 +58,8 @@ pub struct Dividends {
     pub foreign_tax_credit: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Treatment {
     Exempt,
     Taxable,
@@ -66,7 +67,7 @@ pub enum Treatment {
     VenueUnknown,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct GainsSummary {
     pub taxable_gains: Decimal,
     pub taxable_losses: Decimal,

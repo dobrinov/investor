@@ -1,0 +1,234 @@
+:root {
+  --ground: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #f7f9fb;
+  --ink: #111821;
+  --ink-2: #3d4753;
+  --muted: #55606e;
+  --line: #d9dee5;
+  --line-soft: #edf0f3;
+  --field: #c2cad4;
+  --accent: #1f5fbf;
+  --accent-strong: #174a94;
+  --accent-soft: #f1f5fc;
+  --accent-tint: #e3ecfa;
+  --on-accent: #ffffff;
+  --warn: #a04a06;
+  --warn-ink: #6b3304;
+  --warn-soft: #fff7f0;
+  --warn-line: #f0d3b8;
+  --warn-tint: #fff0e3;
+  --side: #111821;
+  --side-2: #1c2531;
+  --side-active: #243246;
+  --side-text: #c9d1db;
+  --side-accent: #7fa8e8;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #0b1016;
+    --surface: #141b24;
+    --surface-2: #18212c;
+    --ink: #e7ecf2;
+    --ink-2: #c3ccd6;
+    --muted: #9aa5b1;
+    --line: #2a3542;
+    --line-soft: #1e2833;
+    --field: #3a4656;
+    --accent: #7fa8e8;
+    --accent-strong: #a9c6f0;
+    --accent-soft: #18243a;
+    --accent-tint: #1c2c46;
+    --on-accent: #0b1016;
+    --warn: #f0b98a;
+    --warn-ink: #f0b98a;
+    --warn-soft: #2a1c10;
+    --warn-line: #5a3a1e;
+    --warn-tint: #3a2614;
+    --side: #070b10;
+    --side-2: #141b24;
+    --side-active: #1c2c46;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--ground);
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-strong);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 600 14px var(--sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.btn.ghost {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--line);
+}
+
+.btn.ghost:hover {
+  background: var(--accent-soft);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.field input,
+.field select,
+select.input,
+input.input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--field);
+  border-radius: 8px;
+  font: 15px var(--sans);
+  color: var(--ink);
+  background: var(--surface);
+  width: 100%;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
+.pill.warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+
+.pill.plain {
+  background: var(--line-soft);
+  color: var(--ink-2);
+}
+
+.notice {
+  border: 1px solid var(--warn-line);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.error {
+  color: var(--warn);
+  font-size: 14px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  font-weight: 500;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.right {
+  text-align: right;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
