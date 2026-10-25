@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Investor — plan, track and rehearse your investing decisions</title>
+    <meta name="description" content="A free, open-source investing tool that runs in your browser. Import broker statements, keep double-entry books, plan trades before you make them and see where your money could be in 20 years. No account, no server, no tracking: everything stays in one encrypted file you keep." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Investor — plan, track and rehearse your investing decisions" />
+    <meta property="og:description" content="Import broker statements, plan trades before you make them and see where your money could be in 20 years. No account, no server, no tracking." />
+    <meta property="og:url" content="https://dobrinov.github.io/investor/" />
+    <meta property="og:image" content="https://dobrinov.github.io/investor/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="./">
+        <svg width="28" height="28" viewBox="10 10 44 44" aria-hidden="true"><g stroke="#10141d" stroke-width="2.6"><rect x="29.01" y="13.82" width="22.99" height="22.99" rx="6.9" fill="#45c75b" /><rect x="19.09" y="28.19" width="16.42" height="16.42" rx="4.93" fill="#2a9ba3" /><rect x="12" y="38.45" width="11.73" height="11.73" rx="3.52" fill="#4a6cff" /></g></svg>
+        Investor
+      </a>
+      <nav aria-label="Page">
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="https://github.com/dobrinov/investor">GitHub</a>
+        <a class="btn small" href="./app/">Open the app</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Free · Open source · Runs in your browser</p>
+        <h1>Plan, track and rehearse your <span class="grad">investing decisions.</span></h1>
+        <p class="lede">Import your broker statements, see what you own and what it cost, try a trade before you make it, and see where your money could be in 20 years. Your portfolio lives in one encrypted file on your own computer.</p>
+        <div class="cta">
+          <a class="btn primary" href="./app/">Open the app</a>
+          <a class="btn" href="https://github.com/dobrinov/investor">View on GitHub</a>
+        </div>
+        <p class="note">No sign-up and nothing to install. In English and Bulgarian.</p>
+      </section>
+
+      <figure class="shot">
+        <img src="/shots/overview.png" width="1440" height="900" alt="The Overview screen: net worth, holdings at their latest prices, cash and recent entries." />
+      </figure>
+
+      <section id="features" class="features" aria-labelledby="features-title">
+        <h2 id="features-title">Everything in one place</h2>
+        <div class="grid">
+          <article>
+            <h3>Import your statements</h3>
+            <p>Drop in a CSV from Interactive Brokers or Revolut. Re-importing the same file adds nothing twice. New brokers are one small config file.</p>
+          </article>
+          <article>
+            <h3>Real books, not a spreadsheet</h3>
+            <p>Every deposit, trade, dividend and fee becomes a balanced double-entry journal entry, with FIFO lots for what each share cost.</p>
+          </article>
+          <article>
+            <h3>Plan a trade first</h3>
+            <p>Before you buy or sell, see the fees, the profit and tax on a sale, how your holdings shift, and the effect on your money in 20 years. Record it only when you are sure.</p>
+          </article>
+          <article>
+            <h3>Goals and projections</h3>
+            <p>Set an emergency fund and savings goals, then see a range of outcomes, not one hopeful line. Try what-if moves and plan your retirement.</p>
+          </article>
+          <article>
+            <h3>Tax help for Bulgaria</h3>
+            <p>Realised gains per year with the treatment for each sale, including the exemption for sales on EU regulated markets. The rules are drafts, not tax advice.</p>
+          </article>
+          <article>
+            <h3>Private holdings too</h3>
+            <p>An employer co-investment or a stake in a private company counts in your net worth at cost or at a value you set, and stays out of projections.</p>
+          </article>
+        </div>
+      </section>
+
+      <figure class="shot">
+        <img src="/shots/trade.png" width="1440" height="900" alt="The Plan a trade screen: a purchase previewed with its fees, the cash it needs and a 20-year projection with and without it." />
+      </figure>
+
+      <section id="privacy" class="privacy" aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Your data never leaves your computer</h2>
+        <div class="grid three">
+          <article>
+            <h3>No account</h3>
+            <p>Nobody to sign up with. There is no server and no copy of your data anywhere but your own file.</p>
+          </article>
+          <article>
+            <h3>Encrypted file</h3>
+            <p>Your portfolio is one <code>.invest</code> file, encrypted with your password (Argon2id and AES-256-GCM). Keep a backup: a lost password cannot be recovered.</p>
+          </article>
+          <article>
+            <h3>No tracking</h3>
+            <p>No analytics, no cookies, no ads. The app may only talk to the page it was loaded from, so nothing can be sent anywhere else.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="steps" aria-labelledby="steps-title">
+        <h2 id="steps-title">Start in a minute</h2>
+        <ol>
+          <li><strong>Create a file.</strong> Pick a password and save your new <code>.invest</code> file somewhere safe.</li>
+          <li><strong>Import a statement.</strong> Export a CSV from your broker and drop it in.</li>
+          <li><strong>Plan.</strong> Add your goals, try a trade, and come back whenever you invest.</li>
+        </ol>
+        <a class="btn primary" href="./app/">Open the app</a>
+      </section>
+
+      <section class="ai" aria-labelledby="ai-title">
+        <h2 id="ai-title">Ask Claude Code, if you like</h2>
+        <p>The app works without AI. If you use Claude Code, the read-only <code>investor-mcp</code> server lets it open your saved file and answer questions with the same numbers as the app. It never changes the file. <a href="https://github.com/dobrinov/investor#ask-claude-code">How to connect it</a></p>
+      </section>
+    </main>
+
+    <footer>
+      <span>Investor is open source under the Apache 2.0 licence. Not financial or tax advice.</span>
+      <span class="links"><a href="https://github.com/dobrinov/investor">GitHub</a><a href="https://dobrinov.github.io/products/">More tools</a><a href="https://dobrinov.github.io/">Deyan Dobrinov</a></span>
+    </footer>
+    <script type="module" src="/src/landing.ts"></script>
+  </body>
+</html>

@@ -25,6 +25,8 @@ const csp: Plugin = {
 export default defineConfig({
   base: './',
   plugins: [svelte(), csp],
+  // The marketing page at the root, the app itself under app/.
+  build: { rollupOptions: { input: { main: 'index.html', app: 'app/index.html' } } },
   // Broker configs and tax packs live at the repository root.
   server: { fs: { allow: ['..'] } },
 })

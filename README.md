@@ -68,11 +68,12 @@ RUSTC=$(rustup which rustc) CARGO_TARGET_DIR=target/wasm \
 
 ## Status
 
-Browser edition (`cd web && pnpm dev`): open/create/restore an encrypted
-`.invest` file, import IBKR and Revolut statements, prices, overview, general
-ledger, goals with plan vs. actual, projections with what-if moves and
-retirement, planning and recording trades, and Bulgarian capital-gains
-reporting. English and Bulgarian. Claude Code can read the file through
+Browser edition, live at <https://dobrinov.github.io/investor/app/> (the
+marketing page is one level up). Locally: `cd web && pnpm dev`, then open
+`/app/`. It can open/create/restore an encrypted `.invest` file, import IBKR
+and Revolut statements, prices, overview, general ledger, goals with plan vs.
+actual, projections with what-if moves and retirement, planning and recording
+trades, private holdings, and Bulgarian capital-gains reporting. English and Bulgarian. Claude Code can read the file through
 `investor-mcp`.
 
 Next: Claude proposing changes for approval, market data, more languages.
