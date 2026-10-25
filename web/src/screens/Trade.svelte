@@ -22,7 +22,7 @@
   const feeKinds: FeeKind[] = ['commission', 'fx_conversion', 'other']
 
   function blank(broker = ''): Record<string, string> {
-    return { id: crypto.randomUUID(), side: 'buy', broker, otherBroker: '', symbol: '', name: '', isin: '', units: '1', price: '', currency: '', date: today, venue: '', fx_rate: '', commission: '', fx_conversion: '', other: '' }
+    return { id: crypto.randomUUID(), side: 'buy', broker, otherBroker: '', symbol: '', name: '', isin: '', by: 'units', units: '1', amount: '', whole: '1', price: '', currency: '', date: today, venue: '', fx_rate: '', commission: '', fx_conversion: '', other: '' }
   }
 
   let form = $state(blank())
@@ -57,8 +57,22 @@
   })
 
   const decimal = (v: string) => v.trim().replace(',', '.')
+
+  // Units from an amount: a purchase never spends more than the amount, a
+  // sale raises at least it. Fractions go to six decimals.
+  const units = $derived.by(() => {
+    if (form.by === 'units') return decimal(form.units)
+    const amount = Number(decimal(form.amount))
+    const price = Number(decimal(form.price))
+    if (!(amount > 0) || !(price > 0)) return ''
+    const step = form.whole ? 1 : 1e6
+    const round = form.side === 'buy' ? Math.floor : Math.ceil
+    const n = round((amount / price) * step + (form.side === 'buy' ? 1e-9 : -1e-9)) / step
+    return n > 0 ? String(n) : '0'
+  })
+  const spent = $derived(Number(units || 0) * Number(decimal(form.price) || 0))
   const input = $derived.by((): TradeInput | null => {
-    if (!broker || !form.symbol || !(Number(decimal(form.units)) > 0) || decimal(form.price) === '') return null
+    if (!broker || !form.symbol || !(Number(units) > 0) || decimal(form.price) === '') return null
     return {
       id: form.id,
       date: form.date || today,
@@ -67,7 +81,7 @@
       symbol: form.symbol,
       name: form.name || null,
       isin: form.isin || null,
-      units: decimal(form.units),
+      units,
       price: decimal(form.price),
       currency,
       fees: feeKinds.filter((k) => decimal(form[k]) !== '').map((kind) => ({ kind, amount: decimal(form[kind]) })),
@@ -186,16 +200,40 @@
       {/if}
     {/if}
 
+    <div class="field">
+      <span id="by-label">{t('trade.enter')}</span>
+      <div role="radiogroup" aria-labelledby="by-label" class="segmented">
+        {#each ['units', 'amount'] as const as by (by)}
+          <button type="button" role="radio" aria-checked={form.by === by} class:on={form.by === by} onclick={() => (form.by = by)}>
+            {t(by === 'units' ? 'trade.byUnits' : form.side === 'buy' ? 'trade.byAmountBuy' : 'trade.byAmountSell')}
+          </button>
+        {/each}
+      </div>
+    </div>
     <div class="row">
-      <label class="field">{t('trade.units')}
-        <input inputmode="decimal" bind:value={form.units} required />
-        {#if heldUnits}<span class="hint">{t('trade.held', { units: formatUnits(heldUnits) })}</span>{/if}
-      </label>
+      {#if form.by === 'units'}
+        <label class="field">{t('trade.units')}
+          <input inputmode="decimal" bind:value={form.units} required />
+          {#if heldUnits}<span class="hint">{t('trade.held', { units: formatUnits(heldUnits) })}</span>{/if}
+        </label>
+      {:else}
+        <label class="field">{t('trade.amountIn', { currency })}
+          <input inputmode="decimal" bind:value={form.amount} required />
+          {#if units === '0'}
+            <span class="hint warn-text">{t('trade.lessThanOne')}</span>
+          {:else if units}
+            <span class="hint">{t(form.side === 'buy' ? 'trade.buysUnits' : 'trade.sellsUnits', { units: formatUnits(units), value: money(spent, currency), left: money(Math.max(0, Number(decimal(form.amount)) - spent), currency) })}</span>
+          {/if}
+        </label>
+      {/if}
       <label class="field">{t('trade.price')}
         <input inputmode="decimal" bind:value={form.price} required />
         {#if quote}<span class="hint">{t('trade.lastPrice', { price: money(quote.price.amount, quote.price.currency), date: formatDate(quote.date) })}</span>{/if}
       </label>
     </div>
+    {#if form.by === 'amount'}
+      <label class="choice"><input type="checkbox" checked={!!form.whole} onchange={(e) => (form.whole = e.currentTarget.checked ? '1' : '')} />{t('trade.wholeUnits')}</label>
+    {/if}
     <div class="row">
       <label class="field">{t('trade.currency')}<input value={currency} oninput={(e) => (form.currency = e.currentTarget.value.trim().toUpperCase())} maxlength="3" /></label>
       <label class="field">{t('trade.date')}<input type="date" bind:value={form.date} /></label>
@@ -386,6 +424,21 @@
   }
   .pill {
     align-self: flex-start;
+  }
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-top: -6px;
+  }
+  .choice input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+  .warn-text {
+    color: var(--warn);
   }
   .hint {
     font-weight: 400;

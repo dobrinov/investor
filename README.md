@@ -11,6 +11,8 @@ server database, no tracking. Everything lives in one password-encrypted
 |------|------|
 | `crates/core` | Ledger, FIFO lots, config-driven importers, tax packs, `.invest` encryption. Pure Rust, compiles to WebAssembly. |
 | `crates/cli` | `investor` command for development and scripting. |
+| `crates/mcp` | `investor-mcp`: read-only MCP server so Claude Code can analyse your file. |
+| `crates/wasm` and `web/` | The browser edition. |
 | `brokers/` | One TOML file per broker or exchange statement format. |
 | `jurisdictions/` | One tax pack per country and tax year. |
 | `fixtures/` | Anonymised sample statements used by tests. |
@@ -29,6 +31,24 @@ target/debug/investor gains my.invest --year 2026 --pack jurisdictions/bg/2026.t
 ```
 
 How to export statements and add brokers: [docs/importing.md](docs/importing.md).
+
+## Ask Claude Code
+
+`investor-mcp` lets Claude Code read a saved `.invest` file and run the
+app's calculations: portfolio, plan and goals, projections with what-if
+moves, trade previews, realised gains with tax treatment, and the journal.
+It never writes to the file.
+
+```sh
+cargo build --release -p investor-mcp
+# macOS: keep the password in the Keychain (prompted, never on the command line)
+./target/release/investor-mcp --file ~/Documents/portfolio.invest remember-password
+claude mcp add investor -- "$PWD/target/release/investor-mcp" --file ~/Documents/portfolio.invest
+```
+
+Elsewhere, set `INVESTOR_PASSWORD_COMMAND` to a command that prints the
+password (e.g. `pass show investor`). What Claude reads is sent to Anthropic
+as part of the conversation.
 
 ## `.invest` format
 
@@ -49,11 +69,12 @@ RUSTC=$(rustup which rustc) CARGO_TARGET_DIR=target/wasm \
 ## Status
 
 Browser edition (`cd web && pnpm dev`): open/create/restore an encrypted
-`.invest` file, import IBKR and Revolut statements, overview, general ledger,
-goals, projections with retirement planning, and Bulgarian capital-gains
-reporting. English and Bulgarian.
+`.invest` file, import IBKR and Revolut statements, prices, overview, general
+ledger, goals with plan vs. actual, projections with what-if moves and
+retirement, planning and recording trades, and Bulgarian capital-gains
+reporting. English and Bulgarian. Claude Code can read the file through
+`investor-mcp`.
 
-Next: market prices, a sandbox for planned trades, more languages, and the
-desktop edition with the Claude Code advisor.
+Next: Claude proposing changes for approval, market data, more languages.
 
 Tax packs are drafts and have not been reviewed by a tax professional.

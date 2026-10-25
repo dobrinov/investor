@@ -15,4 +15,4 @@ export interface Section {
   blocks: Block[]
 }
 
-export type SectionId = 'start' | 'file' | 'export-ibkr' | 'export-revolut' | 'add-broker' | 'add-tax' | 'glossary'
+export type SectionId = 'start' | 'file' | 'claude' | 'export-ibkr' | 'export-revolut' | 'add-broker' | 'add-tax' | 'glossary'

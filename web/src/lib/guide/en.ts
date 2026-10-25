@@ -34,6 +34,16 @@ rate = "0.00"
 form = "Annual return, schedule Y"
 foreign_tax_credit = true`
 
+export const CLAUDE_SETUP = `git clone https://github.com/dobrinov/investor
+cd investor
+cargo build --release -p investor-mcp
+
+# macOS: store the password in your Keychain (asked for, never shown)
+./target/release/investor-mcp --file ~/Documents/portfolio.invest remember-password
+
+# connect it to Claude Code
+claude mcp add investor -- "\$PWD/target/release/investor-mcp" --file ~/Documents/portfolio.invest`
+
 export const en: Section[] = [
   {
     id: 'start',
@@ -63,6 +73,32 @@ export const en: Section[] = [
           'There is no password reset. Write the password down somewhere safe, or use a password manager.',
           'Unsaved changes are kept encrypted in this browser so a refresh does not lose them. Clearing your browser data deletes that copy — save the file to keep your work.',
           'Changing the password (Settings) only affects copies saved afterwards. Older copies still open with the old password, so replace them.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'claude',
+    title: 'Ask Claude Code about your investments',
+    blocks: [
+      { p: 'If you use Claude Code on your computer, it can read your saved .invest file and run the same calculations as this app: your holdings, goals, projections, what-if moves, trade previews and tax. It only reads. It never changes the file, and you record trades yourself here.' },
+      { p: 'What you need: Claude Code, and Rust to build the connector once (rustup.rs). Then run, in a terminal:' },
+      { code: CLAUDE_SETUP },
+      { p: 'Not on a Mac? Instead of remember-password, set INVESTOR_PASSWORD_COMMAND to a command that prints the password, for example from your password manager.' },
+      {
+        list: [
+          'Claude reads the saved file. Save here first; changes that are only kept in this browser are not seen.',
+          'The password never goes into the chat. If Claude says it cannot open the file, it tells you which command to run in your terminal.',
+          'What Claude reads is sent to Anthropic to answer you, like anything else in a Claude Code conversation.',
+        ],
+      },
+      { p: 'Things to ask:' },
+      {
+        list: [
+          '“What do I hold, and how much is in cash?”',
+          '“Compare investing €10,000 at once with spreading it over 12 months, over 20 years.”',
+          '“What would selling 2 VUAA on Xetra change, including tax?”',
+          '“Am I on track for my goals? What would it take to retire at 60?”',
         ],
       },
     ],

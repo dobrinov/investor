@@ -93,3 +93,11 @@ fn recording_once_then_undoing() {
     trade::undo(&mut ledger, &entry.id).unwrap();
     assert_eq!(ledger.entries.len(), before);
 }
+
+#[test]
+fn an_amount_buys_units_rounded_down() {
+    assert_eq!(trade::units_for(dec("1000"), dec("132.275"), true), dec("7"));
+    assert_eq!(trade::units_for(dec("1000"), dec("132.275"), false), dec("7.560007"));
+    assert!(trade::units_for(dec("1000"), dec("132.275"), false) * dec("132.275") <= dec("1000"));
+    assert_eq!(trade::units_for(dec("1000"), Decimal::ZERO, false), Decimal::ZERO);
+}

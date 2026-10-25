@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 use crate::import::{BrokerConfig, Event, EventKind, FeeCharge, FeeKind, Fx, FxRateMode, post_events};
 use crate::ledger::{self, Instrument, JournalEntry, Ledger, Source, Venue};
 use crate::prices::{self, PriceBook};
+use crate::jurisdiction::{JurisdictionPack, Treatment};
+use crate::plan::{Plan, to_f64};
+use crate::whatif::{self, Band, WhatIfInput};
 use crate::{Currency, Error, Money, Result};
 
 /// Recorded trades carry this as their source broker.
@@ -156,6 +159,16 @@ impl TradeInput {
     }
 }
 
+/// Units an amount buys at `price`: whole units, or fractions to six
+/// decimals, always rounded down so the amount is never exceeded.
+pub fn units_for(amount: Decimal, price: Decimal, whole: bool) -> Decimal {
+    if price <= Decimal::ZERO {
+        return Decimal::ZERO;
+    }
+    let dp = if whole { 0 } else { 6 };
+    (amount / price).round_dp_with_strategy(dp, rust_decimal::RoundingStrategy::ToZero)
+}
+
 /// Books the trade. Returns the new entry.
 pub fn record(ledger: &mut Ledger, prices: &mut PriceBook, input: &TradeInput) -> Result<JournalEntry> {
     input.check()?;
@@ -227,6 +240,49 @@ pub fn preview(ledger: &Ledger, prices: &PriceBook, input: &TradeInput) -> Resul
         holdings,
         entry,
     })
+}
+
+/// A preview with the tax pack's view of a sale and the long-run effect.
+#[derive(Debug, Clone, Serialize)]
+pub struct TradeOutlook {
+    #[serde(flatten)]
+    pub preview: TradePreview,
+    /// For a sale, when there is a tax pack for its year.
+    pub tax: Option<TradeTax>,
+    /// Where all your money could be at the end of the projection, without and with the trade.
+    pub before: Band,
+    pub after: Band,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TradeTax {
+    pub treatment: Treatment,
+    pub rate: Decimal,
+    pub form: String,
+    /// Tax on this gain alone, before netting the year's other gains and losses.
+    pub estimate: Decimal,
+    pub verified: bool,
+}
+
+/// Previews a trade and adds tax and the projection under the plan.
+/// `settings` sets the projection; its holdings and retirement are ignored.
+pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeInput, pack: Option<&JurisdictionPack>, settings: &WhatIfInput) -> Result<TradeOutlook> {
+    let preview = preview(ledger, prices, input)?;
+    let tax = match (preview.gain, pack) {
+        (Some(gain), Some(pack)) => {
+            let treatment = pack.treatment(preview.entry.venue.as_ref());
+            let rate = pack.capital_gains.rate;
+            let estimate = if treatment == Treatment::Taxable { (gain.max(Decimal::ZERO) * rate).round_dp(2) } else { Decimal::ZERO };
+            Some(TradeTax { treatment, rate, form: pack.capital_gains.form.clone(), estimate, verified: pack.pack.verified })
+        }
+        _ => None,
+    };
+    let end = |cash: Decimal, invested: Decimal| {
+        let input = WhatIfInput { cash: to_f64(cash), invested: to_f64(invested), retirement: None, ..settings.clone() };
+        whatif::what_if(&input, plan).plan.bands.pop().expect("year zero at least")
+    };
+    let (before, after) = (end(preview.cash_before, preview.invested_before), end(preview.cash_after, preview.invested_after));
+    Ok(TradeOutlook { preview, tax, before, after })
 }
 
 /// Removes a trade entered by hand, if it is the latest entry in the books.

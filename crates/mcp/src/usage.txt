@@ -1,0 +1,13 @@
+investor-mcp — lets Claude Code read and analyse a .invest file (read-only)
+
+USAGE
+  investor-mcp --file PATH                     serve MCP over stdio
+  investor-mcp --file PATH remember-password   store the password in the macOS Keychain
+
+The password is taken from, in order:
+  INVESTOR_PASSWORD_COMMAND   a shell command that prints it, e.g. "pass show investor"
+  the macOS Keychain          item "investor" for the file's full path
+  INVESTOR_PASSWORD           the password itself (least safe)
+
+Add it to Claude Code:
+  claude mcp add investor -- /path/to/investor-mcp --file ~/Documents/portfolio.invest

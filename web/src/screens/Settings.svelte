@@ -74,6 +74,12 @@
   <p class="muted small">{t('settings.stayText')}</p>
 </section>
 
+<section class="card" aria-labelledby="ai-title">
+  <h2 id="ai-title">{t('settings.aiTitle')}</h2>
+  <p class="muted">{t('settings.aiText')}</p>
+  <div><button class="btn ghost" onclick={() => app.openGuide('claude')}>{t('settings.aiHow')}</button></div>
+</section>
+
 <section class="card" aria-labelledby="file-title">
   <h2 id="file-title">{t('settings.fileTitle')}</h2>
   <dl>

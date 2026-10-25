@@ -1,0 +1,19 @@
+[package]
+name = "investor-mcp"
+description = "MCP server that lets Claude Code read and analyse a .invest file"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "investor-mcp"
+path = "src/main.rs"
+
+[dependencies]
+investor-core.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono = { workspace = true, features = ["clock"] }
+anyhow = "1"

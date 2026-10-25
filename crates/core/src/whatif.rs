@@ -464,6 +464,14 @@ impl Scenario {
     }
 }
 
+/// Cash and investments held today in the base currency: investments at
+/// market value where a price is known, otherwise at what was paid.
+pub fn starting_point(ledger: &crate::ledger::Ledger, prices: &crate::prices::PriceBook) -> (f64, f64) {
+    let cash = ledger.balances().iter().filter(|(account, _)| account.starts_with("Assets:Cash:")).map(|(_, b)| to_f64(b.base)).sum();
+    let invested = crate::prices::valuations(ledger, prices).iter().map(|v| to_f64(v.value.unwrap_or(v.cost))).sum();
+    (cash, invested)
+}
+
 pub fn what_if(input: &WhatIfInput, plan: &Plan) -> WhatIf {
     let months = input.years as usize * 12;
     let paths = input.paths.max(1) as usize;
