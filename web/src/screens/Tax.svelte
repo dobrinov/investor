@@ -1,6 +1,6 @@
 <script lang="ts">
   import { packs } from '../lib/configs'
-  import type { Gains, Realization, Treatment } from '../lib/core'
+  import type { Gains, Metal, Realization, Treatment } from '../lib/core'
   import { country, date, money } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
@@ -34,7 +34,10 @@
     exempt: () => t('tax.exempt'),
     taxable: () => t('tax.taxable'),
     venue_unknown: () => t('tax.venueUnknown'),
+    not_estimated: () => t('tax.notEstimated'),
   }
+  const metalNames: Record<string, Metal> = { XAU: 'gold', XAG: 'silver', XPT: 'platinum', XPD: 'palladium' }
+  const what = (r: Realization) => (r.physical && metalNames[r.symbol] ? t(`metal.${metalNames[r.symbol]}` as const) : r.symbol)
 </script>
 
 <header>
@@ -66,14 +69,14 @@
             <tr><th>{t('common.date')}</th><th>{t('common.instrument')}</th><th class="right">{t('tax.proceeds')}</th><th class="right">{t('tax.cost')}</th><th class="right">{t('tax.gain')}</th><th>{t('tax.venue')}</th></tr>
           </thead>
           <tbody>
-            {#each unclassified as r (r.entry_id)}
+            {#each unclassified as r, i (r.entry_id + ':' + i)}
               <tr>
                 <td>{date(r.date)}</td>
-                <td class="num"><strong>{r.symbol}</strong></td>
+                <td class="num"><strong>{what(r)}</strong>{#if r.physical && r.held_from}<span class="muted block">{t('tax.boughtOn', { date: date(r.held_from) })}</span>{/if}</td>
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.venue?.code ?? '—'}</td>
+                <td class="num">{r.physical ? t('tax.physical') : r.venue?.code ?? '—'}</td>
               </tr>
             {:else}
               <tr><td colspan="6" class="muted">{t('tax.noSales')}</td></tr>
@@ -91,6 +94,7 @@
       <p class="notice">{t('tax.draftPack', { id: result.pack.id, version: result.pack.version })}</p>
     {/if}
     {#if result.pack.notes}<p class="muted pack-notes">{result.pack.notes}</p>{/if}
+    {#if result.metals?.note && result.rows.some((r) => r.physical)}<p class="muted pack-notes">{t('tax.metalsNote', { note: result.metals.note })}</p>{/if}
 
     <section class="summary" aria-label={t('tax.summary')}>
       <div class="card kpi">
@@ -120,6 +124,13 @@
           <span class="hint">{t('tax.undecidedHint')}</span>
         </div>
       {/if}
+      {#if result.rows.some((r) => r.treatment === 'not_estimated')}
+        <div class="card kpi warn">
+          <span class="label">{t('tax.notEstimatedTotal')}</span>
+          <span class="value num">{money(result.summary.not_estimated, result.pack.currency)}</span>
+          <span class="hint">{t('tax.notEstimatedHint')}</span>
+        </div>
+      {/if}
     </section>
 
     <section class="card">
@@ -133,14 +144,14 @@
             </tr>
           </thead>
           <tbody>
-            {#each result.rows as r (r.entry_id)}
+            {#each result.rows as r, i (r.entry_id + ':' + i)}
               <tr>
                 <td>{date(r.date)}</td>
-                <td class="num"><strong>{r.symbol}</strong></td>
+                <td class="num"><strong>{what(r)}</strong>{#if r.physical && r.held_from}<span class="muted block">{t('tax.boughtOn', { date: date(r.held_from) })}</span>{/if}</td>
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
+                <td class="num">{r.physical ? t('tax.physical') : r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
                 <td><span class="pill" class:warn={r.treatment !== 'exempt'} class:plain={r.treatment === 'taxable'}>{labels[r.treatment]()}</span></td>
               </tr>
             {:else}
@@ -200,6 +211,10 @@
   .value {
     font-size: 24px;
     font-weight: 500;
+  }
+  .block {
+    display: block;
+    font-size: 12px;
   }
   .pack-notes {
     margin: 0;

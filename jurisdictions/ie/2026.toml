@@ -22,5 +22,10 @@ rate = "0.40"
 form = "Form 11"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "capital_gains"
+note = "Gains on gold and silver pay CGT like shares; the annual exemption is shared."
+
 [deadlines]
 annual_return = "2027-10-31"

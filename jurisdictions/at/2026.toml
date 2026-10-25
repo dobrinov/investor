@@ -21,5 +21,11 @@ rate = "0.275"
 form = "E 1kv"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+exempt_after_months = 12
+note = "Private sale (§ 31 EStG): tax-free after one year; within a year the gain is taxed at your personal income tax rate. Not estimated here."
+
 [deadlines]
 annual_return = "2027-06-30"

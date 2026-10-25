@@ -11,6 +11,7 @@ pub mod import;
 pub mod jurisdiction;
 pub mod ledger;
 pub mod lots;
+pub mod metal;
 mod money;
 pub mod plan;
 pub mod prices;

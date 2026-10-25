@@ -16,6 +16,9 @@ pub struct JurisdictionPack {
     pub pack: PackInfo,
     pub capital_gains: CapitalGains,
     pub dividends: Dividends,
+    /// Coins and bars. Without this section their sales are not estimated.
+    #[serde(default)]
+    pub physical_metals: Option<PhysicalMetals>,
     #[serde(default)]
     pub deadlines: BTreeMap<String, String>,
 }
@@ -75,6 +78,27 @@ pub struct Dividends {
     pub foreign_tax_credit: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PhysicalMetals {
+    pub treatment: MetalTreatment,
+    /// Sales of metal held at least this long are tax-free.
+    #[serde(default)]
+    pub exempt_after_months: Option<u32>,
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MetalTreatment {
+    Exempt,
+    /// Taxed with shares, at the capital gains rate.
+    CapitalGains,
+    /// Taxed some other way, e.g. as income; the estimate leaves it out.
+    Other,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Treatment {
@@ -82,6 +106,8 @@ pub enum Treatment {
     Taxable,
     /// The venue is missing, so the rules cannot decide.
     VenueUnknown,
+    /// Taxed outside this estimate; the pack's notes say how.
+    NotEstimated,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -91,6 +117,8 @@ pub struct GainsSummary {
     pub tax_due: Decimal,
     pub exempt: Decimal,
     pub unknown: Decimal,
+    /// Gains taxed outside this estimate, e.g. physical metal taxed as income.
+    pub not_estimated: Decimal,
     /// The part of the net gain the annual allowance made tax-free.
     pub allowance_used: Decimal,
 }
@@ -113,13 +141,33 @@ impl JurisdictionPack {
         }
     }
 
+    /// How one sale is taxed: by venue for securities, by the metals rule
+    /// and holding period for coins and bars.
+    pub fn classify(&self, sale: &Realization) -> Treatment {
+        if !sale.physical {
+            return self.treatment(sale.venue.as_ref());
+        }
+        let Some(rule) = &self.physical_metals else { return Treatment::NotEstimated };
+        let held_long = match (rule.exempt_after_months, sale.held_from) {
+            (Some(months), Some(from)) => from.checked_add_months(chrono::Months::new(months)).is_some_and(|d| d <= sale.date),
+            _ => false,
+        };
+        match rule.treatment {
+            _ if held_long => Treatment::Exempt,
+            MetalTreatment::Exempt => Treatment::Exempt,
+            MetalTreatment::CapitalGains => Treatment::Taxable,
+            MetalTreatment::Other => Treatment::NotEstimated,
+        }
+    }
+
     /// Losses on taxable sales offset taxable gains within the year.
     pub fn summarize(&self, realizations: &[Realization]) -> GainsSummary {
         let mut summary = GainsSummary::default();
         for r in realizations {
-            match self.treatment(r.venue.as_ref()) {
+            match self.classify(r) {
                 Treatment::Exempt => summary.exempt += r.gain,
                 Treatment::VenueUnknown => summary.unknown += r.gain,
+                Treatment::NotEstimated => summary.not_estimated += r.gain,
                 Treatment::Taxable if r.gain.is_sign_negative() => summary.taxable_losses += r.gain,
                 Treatment::Taxable => summary.taxable_gains += r.gain,
             }

@@ -1,5 +1,5 @@
 //! The example portfolio: a made-up investor with ETFs, shares, a bond fund,
-//! gold, crypto, a savings account and a private stake, booked through the
+//! gold on an exchange and as a coin and a bar, crypto, a savings account and a private stake, booked through the
 //! same code as real trades. Dates count back from `today`, so prices are
 //! always fresh. Every figure is invented.
 
@@ -11,6 +11,7 @@ use rust_decimal::Decimal;
 use crate::bank::{self, BalanceInput, NewAccount};
 use crate::import::FeeKind;
 use crate::ledger::{self, JournalEntry, Posting};
+use crate::metal::{self, Metal, MetalInput, MetalPrice};
 use crate::plan::{Goal, GoalKind, Plan, Profile, Risk};
 use crate::prices::{FxQuote, Quote, QuoteSource};
 use crate::private::{self, Estimate, Payout, PrivateInput};
@@ -171,6 +172,14 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     let estimate = Estimate { date: b.ago(2), amount: d("8000") };
     private::set_estimate(&mut b.vault, &id, Some(estimate))?;
 
+    // A gold coin and a small bar, kept at home.
+    for (id, months, grams, paid, what) in [("example-coin", 18, "31.1035", "2410", "Krugerrand 1 oz"), ("example-bar", 7, "20", "2140", "Bar")] {
+        let input = MetalInput { entry_id: id.into(), date: b.ago(months), metal: Metal::Gold, grams: d(grams), amount: d(paid), currency: cur("EUR"), fx_rate: None, description: what.into() };
+        metal::buy(&mut b.vault, &input)?;
+    }
+    let price = MetalPrice { date: today - chrono::Days::new(1), metal: Metal::Gold, per_gram: d("118.20"), currency: cur("EUR"), fx_rate: None };
+    metal::set_price(&mut b.vault, &price)?;
+
     // Today's prices.
     for (symbol, amount, currency) in [
         ("VWCE", "131.40", "EUR"),
@@ -223,5 +232,6 @@ mod tests {
         assert!(reports::cash(&v.ledger).iter().all(|c| c.amount >= Decimal::ZERO), "no cash goes negative");
         assert_eq!(reports::realized_gains(&v.ledger, 2026).len(), 2);
         assert_eq!((v.banks.len(), v.private.len(), v.plan.goals.len()), (1, 1, 2));
+        assert_eq!(metal::holdings(&v)[0].value, Some(d("6040.43")));
     }
 }

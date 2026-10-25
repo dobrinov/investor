@@ -19,7 +19,7 @@
 
   // Brokers you already use first, then the ones Investor can import.
   const knownBrokers = $derived(
-    [...new Set([...s.valuations.map((v) => v.broker), ...s.cash.map((c) => c.broker), ...brokers.map((b) => b.account)])].filter((b) => !s.banks.some((a) => a.id === b)),
+    [...new Set([...s.valuations.map((v) => v.broker), ...s.cash.map((c) => c.broker), ...brokers.map((b) => b.account)])].filter((b) => b !== 'PHYSICAL' && !s.banks.some((a) => a.id === b)),
   )
 
   const feeKinds: FeeKind[] = ['commission', 'fx_conversion', 'other']

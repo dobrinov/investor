@@ -21,5 +21,10 @@ rate = "0.314"
 form = "2042"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+note = "Precious metals pay the taxe forfaitaire of 11.5% of the sale price, or, with proof of purchase, 36.2% of the gain less 5% a year after the second year (tax-free after 22 years). Not estimated here."
+
 [deadlines]
 annual_return = "2027-05-31"

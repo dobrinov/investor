@@ -280,6 +280,42 @@ export interface BalanceInput {
   fx_rate?: Decimal | null
 }
 
+export type Metal = 'gold' | 'silver' | 'platinum' | 'palladium'
+
+export interface MetalHolding {
+  metal: Metal
+  /** Fine weight. */
+  grams: Decimal
+  /** In the base currency. */
+  cost: Decimal
+  /** Per gram. */
+  price?: Quote
+  value?: Decimal
+  gain?: Decimal
+  /** Purchases and sales, newest first. */
+  entries: string[]
+}
+
+/** A purchase or sale; `amount` is everything paid or received. */
+export interface MetalInput {
+  entry_id: string
+  date: string
+  metal: Metal
+  grams: Decimal
+  amount: Decimal
+  currency: string
+  fx_rate?: Decimal | null
+  description: string
+}
+
+export interface MetalPrice {
+  date: string
+  metal: Metal
+  per_gram: Decimal
+  currency: string
+  fx_rate?: Decimal | null
+}
+
 export interface Snapshot {
   settings: Settings
   plan: Plan
@@ -288,6 +324,8 @@ export interface Snapshot {
   private: PrivateHolding[]
   /** Their cash is also in `cash`. */
   banks: BankAccount[]
+  /** Coins and bars; also in `valuations` at the PHYSICAL location. */
+  metals: MetalHolding[]
   fx: [string, FxQuote][]
   holdings: Holding[]
   cash: CashBalance[]
@@ -303,7 +341,7 @@ export interface ImportReport {
   warnings: string[]
 }
 
-export type Treatment = 'exempt' | 'taxable' | 'venue_unknown'
+export type Treatment = 'exempt' | 'taxable' | 'venue_unknown' | 'not_estimated'
 
 export interface Realization {
   date: string
@@ -314,6 +352,10 @@ export interface Realization {
   cost: Decimal
   gain: Decimal
   venue?: Venue
+  /** Coins or bars rather than a security. */
+  physical: boolean
+  /** When the oldest of the units sold was bought. */
+  held_from?: string | null
 }
 
 export interface GainRow extends Realization {
@@ -328,8 +370,10 @@ export interface Gains {
   /** Net gains up to this much a year are tax-free, in the pack's currency. */
   allowance: Decimal | null
   form: string
+  /** How the pack taxes coins and bars, when it says. */
+  metals: { treatment: 'exempt' | 'capital_gains' | 'other'; exempt_after_months?: number; note?: string } | null
   rows: GainRow[]
-  summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal; allowance_used: Decimal }
+  summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal; not_estimated: Decimal; allowance_used: Decimal }
 }
 
 export type FeeKind = 'commission' | 'fx_conversion' | 'exchange' | 'transaction_tax' | 'other'
@@ -470,6 +514,22 @@ export class Book {
 
   removeBank(id: string): void {
     this.session.removeBank(id)
+  }
+
+  buyMetal(input: MetalInput): Entry {
+    return JSON.parse(this.session.buyMetal(JSON.stringify(input)))
+  }
+
+  sellMetal(input: MetalInput): Entry {
+    return JSON.parse(this.session.sellMetal(JSON.stringify(input)))
+  }
+
+  setMetalPrice(input: MetalPrice): void {
+    this.session.setMetalPrice(JSON.stringify(input))
+  }
+
+  removeMetalEntry(id: string): void {
+    this.session.removeMetalEntry(id)
   }
 
   addPrivate(input: PrivateInput): Entry {

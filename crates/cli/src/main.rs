@@ -129,10 +129,12 @@ fn main() -> Result<()> {
             let gains = reports::realized_gains(&vault.ledger, year);
             println!("{:<10} {:<8} {:>12} {:>12} {:>12} {:>10}  Treatment", "Date", "Symbol", "Proceeds", "Cost", "Gain", "Venue");
             for g in &gains {
-                let treatment = match pack.treatment(g.venue.as_ref()) {
+                let treatment = match pack.classify(g) {
+                    Treatment::Exempt if g.physical => "exempt",
                     Treatment::Exempt => "exempt (EU regulated market)",
                     Treatment::Taxable => "taxable",
                     Treatment::VenueUnknown => "venue unknown: check where it was sold",
+                    Treatment::NotEstimated => "not estimated: see the pack's notes",
                 };
                 let venue = g.venue.as_ref().map_or("?".to_owned(), |v| v.code.clone());
                 println!("{:<10} {:<8} {:>12} {:>12} {:>12} {:>10}  {treatment}", g.date, g.symbol, money(g.proceeds), money(g.cost), money(g.gain), venue);

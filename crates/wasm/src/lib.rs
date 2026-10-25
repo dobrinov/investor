@@ -7,6 +7,7 @@ use investor_core::bank::{self, BalanceInput, BankBalance, NewAccount};
 use investor_core::import::{self, BrokerConfig};
 use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
+use investor_core::metal::{self, MetalHolding, MetalInput, MetalPrice};
 use investor_core::reports::{self, CashBalance, Holding, TrialBalanceRow};
 use investor_core::plan::{self, Market, Plan, ProjectionInput};
 use investor_core::prices::{self, FxQuote, Quote, QuoteSource, Valuation};
@@ -43,6 +44,8 @@ struct Snapshot<'a> {
     private: Vec<PrivateValuation>,
     /// Bank accounts whose balance is typed in; their cash is also in `cash`.
     banks: Vec<BankBalance>,
+    /// Coins and bars; they are also in `valuations`, at the `PHYSICAL` location.
+    metals: Vec<MetalHolding>,
     /// Latest rate per currency: units of the base currency for one unit.
     fx: Vec<(&'a Currency, &'a FxQuote)>,
     cash: Vec<CashBalance>,
@@ -61,6 +64,8 @@ struct Gains {
     /// Net gains up to this much a year are tax-free, in the pack's currency.
     allowance: Option<String>,
     form: String,
+    /// How the pack taxes coins and bars, when it says.
+    metals: Option<investor_core::jurisdiction::PhysicalMetals>,
     rows: Vec<GainRow>,
     summary: investor_core::jurisdiction::GainsSummary,
 }
@@ -125,6 +130,7 @@ impl Session {
             valuations: prices::valuations(ledger, &self.vault.prices),
             private: private::valuations(&self.vault),
             banks: bank::balances(&self.vault),
+            metals: metal::holdings(&self.vault),
             fx: self.vault.prices.fx.iter().filter_map(|(c, q)| Some((c, q.last()?))).collect(),
             cash: reports::cash(ledger),
             trial_balance: reports::trial_balance(ledger),
@@ -150,7 +156,7 @@ impl Session {
         let pack = JurisdictionPack::from_toml(pack_toml).map_err(js_error)?;
         let rows: Vec<GainRow> = reports::realized_gains(&self.vault.ledger, year)
             .into_iter()
-            .map(|r| GainRow { treatment: pack.treatment(r.venue.as_ref()), realization: r })
+            .map(|r| GainRow { treatment: pack.classify(&r), realization: r })
             .collect();
         let summary = pack.summarize(&rows.iter().map(|r| r.realization.clone()).collect::<Vec<_>>());
         json(&Gains {
@@ -158,6 +164,7 @@ impl Session {
             banded: !pack.capital_gains.bands.is_empty(),
             allowance: pack.capital_gains.annual_exempt_amount.map(|a| a.to_string()),
             form: pack.capital_gains.form.clone(),
+            metals: pack.physical_metals.clone(),
             pack: pack.pack,
             rows,
             summary,
@@ -248,6 +255,33 @@ impl Session {
     #[wasm_bindgen(js_name = removeBank)]
     pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {
         bank::remove(&mut self.vault, id).map_err(js_error)
+    }
+
+    /// Records a purchase of coins or bars. `input` is JSON; returns the entry.
+    #[wasm_bindgen(js_name = buyMetal)]
+    pub fn buy_metal(&mut self, input: &str) -> Result<String, JsError> {
+        let input: MetalInput = serde_json::from_str(input).map_err(js_error)?;
+        json(&metal::buy(&mut self.vault, &input).map_err(js_error)?)
+    }
+
+    /// Records a sale of coins or bars. `input` is JSON; returns the entry.
+    #[wasm_bindgen(js_name = sellMetal)]
+    pub fn sell_metal(&mut self, input: &str) -> Result<String, JsError> {
+        let input: MetalInput = serde_json::from_str(input).map_err(js_error)?;
+        json(&metal::sell(&mut self.vault, &input).map_err(js_error)?)
+    }
+
+    /// Sets a metal's price per gram. `input` is JSON.
+    #[wasm_bindgen(js_name = setMetalPrice)]
+    pub fn set_metal_price(&mut self, input: &str) -> Result<(), JsError> {
+        let input: MetalPrice = serde_json::from_str(input).map_err(js_error)?;
+        metal::set_price(&mut self.vault, &input).map_err(js_error)
+    }
+
+    /// Removes a purchase or sale of coins or bars.
+    #[wasm_bindgen(js_name = removeMetalEntry)]
+    pub fn remove_metal_entry(&mut self, entry_id: &str) -> Result<(), JsError> {
+        metal::remove(&mut self.vault, entry_id).map_err(js_error)
     }
 
     /// Records a private holding and the payment into it. `input` is JSON;

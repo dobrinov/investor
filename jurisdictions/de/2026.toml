@@ -23,5 +23,11 @@ rate = "0.26375"
 form = "Anlage KAP"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+exempt_after_months = 12
+note = "Private sale (§ 23 EStG): tax-free after one year; within a year the gain is taxed at your personal income tax rate, with a EUR 1,000 exemption limit for all such sales. Not estimated here."
+
 [deadlines]
 annual_return = "2027-07-31"

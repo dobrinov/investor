@@ -28,5 +28,10 @@ rate = "0.19"
 form = "Modelo 100 (Renta)"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "capital_gains"
+note = "Gains on gold are a ganancia patrimonial in the savings base, taxed with share gains."
+
 [deadlines]
 annual_return = "2027-06-30"

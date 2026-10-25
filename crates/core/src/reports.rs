@@ -7,7 +7,8 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 
 use crate::ledger::{self, AccountKind, Ledger, Venue};
-use crate::lots::Lots;
+use crate::lots::{Lot, Lots};
+use crate::metal;
 use crate::Currency;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -52,7 +53,9 @@ pub fn cash(ledger: &Ledger) -> Vec<CashBalance> {
     out
 }
 
-/// One sale and what it realised, in the base currency.
+/// One sale and what it realised, in the base currency. A sale of physical
+/// metal is split by purchase, since some countries tax it by how long it
+/// was held.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Realization {
     pub date: NaiveDate,
@@ -63,16 +66,35 @@ pub struct Realization {
     pub cost: Decimal,
     pub gain: Decimal,
     pub venue: Option<Venue>,
+    /// Coins or bars rather than a security.
+    #[serde(default)]
+    pub physical: bool,
+    /// When the oldest of the units sold was bought.
+    #[serde(default)]
+    pub held_from: Option<NaiveDate>,
 }
 
 pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
     let mut out = Vec::new();
-    for entry in ledger.entries_by_date().into_iter().filter(|e| e.date.year() == year) {
+    let mut lots = Lots::default();
+    for entry in ledger.entries_by_date() {
+        let mut disposals = Vec::new();
+        for p in &entry.postings {
+            match p.units {
+                Some(u) if u > Decimal::ZERO => lots.open(&p.account, entry.date, &entry.id, u, p.base),
+                Some(u) if u < Decimal::ZERO => disposals.push(lots.dispose(&p.account, -u).ok()),
+                _ => {}
+            }
+        }
+        if entry.date.year() != year {
+            continue;
+        }
         let Some(gain) = entry.postings.iter().find(|p| p.account == ledger::CAPITAL_GAINS) else { continue };
         let Some(sold) = entry.postings.iter().find(|p| p.units.is_some_and(|u| u.is_sign_negative())) else { continue };
+        let disposal = disposals.into_iter().next().flatten();
         let gain = -gain.base;
         let cost = -sold.base;
-        out.push(Realization {
+        let sale = Realization {
             date: entry.date,
             entry_id: entry.id.clone(),
             symbol: sold.account.rsplit(':').next().unwrap_or_default().to_owned(),
@@ -81,9 +103,31 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             cost,
             gain,
             venue: entry.venue.clone(),
-        });
+            physical: metal::is_physical(&sold.account),
+            held_from: disposal.as_ref().and_then(|d| d.lots.first()).map(|l| l.opened),
+        };
+        match disposal {
+            Some(d) if sale.physical && d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
+            _ => out.push(sale),
+        }
     }
     out
+}
+
+/// Splits a sale across the purchases it came from, sharing the proceeds by
+/// weight; the last part takes the rounding so the parts add up.
+fn by_lot(sale: &Realization, lots: &[Lot]) -> Vec<Realization> {
+    let (mut proceeds_left, mut cost_left) = (sale.proceeds, sale.cost);
+    lots.iter()
+        .enumerate()
+        .map(|(i, lot)| {
+            let last = i + 1 == lots.len();
+            let proceeds = if last { proceeds_left } else { (sale.proceeds * lot.units / sale.units).round_dp(2) };
+            let cost = if last { cost_left } else { lot.cost.round_dp(2) };
+            (proceeds_left, cost_left) = (proceeds_left - proceeds, cost_left - cost);
+            Realization { units: lot.units, proceeds, cost, gain: proceeds - cost, held_from: Some(lot.opened), ..sale.clone() }
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

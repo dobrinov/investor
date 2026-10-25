@@ -1,4 +1,4 @@
-import type { BalanceInput, Entry, Plan, PrivateInput, Snapshot, TradeInput } from './core'
+import type { BalanceInput, Entry, MetalInput, MetalPrice, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
 import { saveFile, saveFileAs, type SaveResult } from './files'
 import { useLanguage } from './i18n.svelte'
@@ -145,6 +145,26 @@ class AppState {
 
   async removeBank(id: string): Promise<void> {
     this.book?.removeBank(id)
+    await this.changed()
+  }
+
+  async buyMetal(input: MetalInput): Promise<void> {
+    this.book?.buyMetal(input)
+    await this.changed()
+  }
+
+  async sellMetal(input: MetalInput): Promise<void> {
+    this.book?.sellMetal(input)
+    await this.changed()
+  }
+
+  async setMetalPrice(input: MetalPrice): Promise<void> {
+    this.book?.setMetalPrice(input)
+    await this.changed()
+  }
+
+  async removeMetalEntry(id: string): Promise<void> {
+    this.book?.removeMetalEntry(id)
     await this.changed()
   }
 

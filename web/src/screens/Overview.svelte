@@ -1,5 +1,6 @@
 <script lang="ts">
   import BankAccounts from '../components/BankAccounts.svelte'
+  import PhysicalMetals from '../components/PhysicalMetals.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
   import type { Valuation } from '../lib/core'
   import { date, money, units } from '../lib/format'
@@ -33,6 +34,8 @@
   const withheld = $derived(total('Expenses:Taxes'))
   const names = $derived(new Map(s.instruments.map((i) => [i.symbol, i])))
   const recent = $derived(s.entries.slice(0, 6))
+  // Coins and bars have their own card; they still count in the totals above.
+  const securities = $derived(s.valuations.filter((v) => v.broker !== 'PHYSICAL'))
 
   // Currencies that need a rate to show values in the base currency.
   const fxNeeded = $derived(
@@ -100,6 +103,7 @@
     <button class="btn" onclick={() => (app.view = 'import')}>{t('overview.importFirst')}</button>
   </section>
   <BankAccounts />
+  <PhysicalMetals />
   <PrivateHoldings />
 {:else}
   <section class="kpis" aria-label={t('overview.keyFigures')}>
@@ -138,7 +142,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each s.valuations as v (v.broker + v.symbol)}
+          {#each securities as v (v.broker + v.symbol)}
             {@const key = `${v.broker}:${v.symbol}`}
             <tr>
               <td><strong class="num">{v.symbol}</strong> <span class="muted">{names.get(v.symbol)?.name ?? ''}</span></td>
@@ -172,7 +176,7 @@
 
     <!-- On a phone the table becomes rows: what you hold, its value and gain. -->
     <ul class="holding-list">
-      {#each s.valuations as v (v.broker + v.symbol)}
+      {#each securities as v (v.broker + v.symbol)}
         <li>
           <button class="holding" aria-expanded={editing === `${v.broker}:${v.symbol}`} onclick={() => (editing === `${v.broker}:${v.symbol}` ? (editing = null) : editPrice(v))}>
             <span class="what">
@@ -204,6 +208,7 @@
   {/snippet}
 
   <BankAccounts />
+  <PhysicalMetals />
   <PrivateHoldings />
 
   <div class="row">

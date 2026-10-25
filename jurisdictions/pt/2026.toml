@@ -21,5 +21,10 @@ rate = "0.28"
 form = "Modelo 3, Anexo J"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+note = "Draft: gains on physical gold are not clearly within IRS category G; check how your sale is treated. Not estimated here."
+
 [deadlines]
 annual_return = "2027-06-30"

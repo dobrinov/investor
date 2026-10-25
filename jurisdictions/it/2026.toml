@@ -21,5 +21,10 @@ rate = "0.26"
 form = "Redditi PF, quadro RM"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "capital_gains"
+note = "Gains on investment gold are redditi diversi at 26%. Without proof of purchase the cost is taken as 25% of the sale price."
+
 [deadlines]
 annual_return = "2027-10-31"

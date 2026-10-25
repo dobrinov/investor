@@ -21,5 +21,11 @@ rate = "0.19"
 form = "PIT-38 / PIT-36"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+exempt_after_months = 6
+note = "Sale of movable property: tax-free once six months have passed from the end of the month of purchase; otherwise the gain is income at the scale rates (12% or 32%). Not estimated here."
+
 [deadlines]
 annual_return = "2027-04-30"

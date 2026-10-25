@@ -35,5 +35,10 @@ rate = "0.05"
 form = "Приложение 8 (Appendix 8)"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "exempt"
+note = "Draft: income from selling movable property is generally not taxed (ZDDFL art. 13(1)(2)); check that investment gold and silver are not among the exceptions."
+
 [deadlines]
 annual_return = "2027-04-30"

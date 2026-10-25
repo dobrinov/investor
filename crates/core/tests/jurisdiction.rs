@@ -29,6 +29,8 @@ fn sale(gain: &str) -> Realization {
         cost: dec("0"),
         gain: dec(gain),
         venue: None,
+        physical: false,
+        held_from: None,
     }
 }
 
@@ -66,4 +68,21 @@ fn bands_tax_each_slice_at_its_own_rate() {
     assert_eq!(es.tax_on(dec("4000")), dec("760"));
     // Above the last limit the top rate applies.
     assert_eq!(es.tax_on(dec("400000")), dec("1140") + dec("9240") + dec("34500") + dec("27000") + dec("30000"));
+}
+
+#[test]
+fn physical_metal_follows_the_metals_rule_and_holding_period() {
+    use investor_core::jurisdiction::Treatment;
+    let bar = |from: (i32, u32, u32), gain: &str| Realization {
+        physical: true,
+        held_from: NaiveDate::from_ymd_opt(from.0, from.1, from.2),
+        ..sale(gain)
+    };
+    let de = pack("de");
+    assert_eq!(de.classify(&bar((2025, 6, 1), "500")), Treatment::Exempt, "a year and more");
+    assert_eq!(de.classify(&bar((2025, 6, 2), "500")), Treatment::NotEstimated, "under a year");
+    assert_eq!(pack("bg").classify(&bar((2026, 5, 1), "500")), Treatment::Exempt);
+    assert_eq!(pack("it").classify(&bar((2026, 5, 1), "500")), Treatment::Taxable);
+    let s = de.summarize(&[bar((2026, 1, 1), "300"), bar((2020, 1, 1), "900"), sale("100")]);
+    assert_eq!((s.not_estimated, s.exempt, s.taxable_gains), (dec("300"), dec("900"), dec("100")));
 }

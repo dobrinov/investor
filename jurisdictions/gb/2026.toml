@@ -22,5 +22,10 @@ rate = "0.3575"
 form = "SA100"
 foreign_tax_credit = true
 
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "capital_gains"
+note = "Gold bars and most foreign coins are taxed with share gains. UK legal-tender coins such as Sovereigns and Britannias are exempt from CGT: leave them out or check the result."
+
 [deadlines]
 annual_return = "2028-01-31"

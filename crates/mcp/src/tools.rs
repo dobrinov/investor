@@ -264,7 +264,7 @@ fn realized_gains(v: &Vault, args: &Value) -> Result<Value> {
     let Some(pack) = pack(&v.settings.tax_residency, year) else {
         return Ok(json!({ "sales": gains, "tax": format!("no tax pack for {} {year}", v.settings.tax_residency) }));
     };
-    let sales: Vec<Value> = gains.iter().map(|g| json!({ "sale": g, "treatment": pack.treatment(g.venue.as_ref()) })).collect();
+    let sales: Vec<Value> = gains.iter().map(|g| json!({ "sale": g, "treatment": pack.classify(g) })).collect();
     Ok(json!({
         "sales": sales,
         "summary": pack.summarize(&gains),
