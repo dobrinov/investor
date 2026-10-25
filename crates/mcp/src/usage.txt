@@ -1,8 +1,14 @@
-investor-mcp — lets Claude Code read and analyse a .invest file (read-only)
+investor-mcp — lets an AI assistant read a .invest file, run Investor's
+calculations, and record changes you agree to (Model Context Protocol, stdio)
 
 USAGE
   investor-mcp --file PATH                     serve MCP over stdio
+  investor-mcp --file PATH --read-only         serve without the tools that write
   investor-mcp --file PATH remember-password   store the password in the macOS Keychain
+
+The file can also be given with INVESTOR_FILE, and INVESTOR_READ_ONLY=1 turns
+writing off. Every change keeps the previous version in PATH.history/ (the
+last 20), and the undo_last_change tool puts them back one at a time.
 
 The password is taken from, in order:
   INVESTOR_PASSWORD_COMMAND   a shell command that prints it, e.g. "pass show investor"
@@ -11,3 +17,4 @@ The password is taken from, in order:
 
 Add it to Claude Code:
   claude mcp add investor -- /path/to/investor-mcp --file ~/Documents/portfolio.invest
+Any other MCP client takes the same command and arguments.

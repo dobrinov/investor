@@ -4,6 +4,7 @@
 //! Everything here is pure computation so the same code runs natively in the
 //! desktop app and as WebAssembly in the browser edition.
 
+pub mod assistant;
 pub mod bank;
 pub mod example;
 mod error;

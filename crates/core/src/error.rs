@@ -131,6 +131,8 @@ fn english(code: &str) -> &'static str {
         "file.wrongPassword" => "wrong password",
         "currency.invalid" => "invalid currency code {currency}",
         "country.invalid" => "a country is two letters, e.g. DE",
+        "assistant.unknownTool" => "there is no tool called {name}",
+        "assistant.badArgs" => "{detail}",
         "input.invalid" => "check the numbers and dates you entered ({detail})",
         "import.line" => "{file}, line {line}: {message}",
         _ => "something went wrong",

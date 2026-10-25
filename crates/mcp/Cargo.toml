@@ -1,6 +1,6 @@
 [package]
 name = "investor-mcp"
-description = "MCP server that lets Claude Code read and analyse a .invest file"
+description = "MCP server that lets an AI assistant read a .invest file and record changes you agree to"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,5 +1,6 @@
-//! The `.invest` file, read again whenever it changes on disk, and the
-//! sources its password may come from.
+//! The `.invest` file, read again whenever it changes on disk, saved after
+//! each change with the previous version kept in a history folder next to
+//! it, and the sources its password may come from.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -10,6 +11,8 @@ use anyhow::{Context, Result, bail};
 use investor_core::vault::{self, SealingKey, Vault};
 
 const KEYCHAIN_SERVICE: &str = "investor";
+/// Earlier versions kept for undo.
+const HISTORY: usize = 20;
 
 pub struct Book {
     path: PathBuf,
@@ -46,6 +49,65 @@ impl Book {
         }
         Ok(&self.open.as_ref().expect("just opened").0)
     }
+}
+
+impl Book {
+    /// `portfolio.invest` keeps its earlier versions in `portfolio.invest.history/`.
+    fn history(&self) -> PathBuf {
+        let mut name = self.path.file_name().unwrap_or_default().to_owned();
+        name.push(".history");
+        self.path.with_file_name(name)
+    }
+
+    /// Applies `change` to the file as it is on disk now, then saves: the old
+    /// version goes into the history and the new one replaces the file by way
+    /// of a temporary file, so a failed save leaves the file as it was.
+    pub fn change<T: serde::Serialize>(&mut self, change: impl FnOnce(&mut Vault) -> Result<T>) -> Result<serde_json::Value> {
+        let mut vault = self.vault()?.clone();
+        let out = change(&mut vault)?;
+        let key = self.key.as_ref().context("the file is not open")?;
+        let bytes = vault::seal_with(&vault, key)?;
+
+        let history = self.history();
+        fs::create_dir_all(&history).with_context(|| format!("cannot create {}", history.display()))?;
+        let stamp = chrono::Local::now().format("%Y-%m-%dT%H-%M-%S%.3f");
+        fs::copy(&self.path, history.join(format!("{stamp}.invest")))?;
+        let mut kept: Vec<PathBuf> = fs::read_dir(&history)?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|e| e == "invest")).collect();
+        kept.sort();
+        for old in kept.iter().take(kept.len().saturating_sub(HISTORY)) {
+            let _ = fs::remove_file(old);
+        }
+
+        write_atomically(&self.path, &bytes)?;
+        let modified = fs::metadata(&self.path)?.modified()?;
+        self.open = Some((vault, modified));
+        let mut value = serde_json::to_value(out)?;
+        if let Some(o) = value.as_object_mut() {
+            o.insert("saved".into(), serde_json::json!(format!("Saved to {}. If the Investor app has this file open, lock it and open it again to see the change.", self.path.display())));
+        }
+        Ok(value)
+    }
+
+    /// Puts back the newest version from the history.
+    pub fn undo(&mut self) -> Result<serde_json::Value> {
+        let history = self.history();
+        let mut kept: Vec<PathBuf> = fs::read_dir(&history).map(|d| d.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|e| e == "invest")).collect()).unwrap_or_default();
+        kept.sort();
+        let newest = kept.pop().context("there is nothing to undo: no earlier version was kept")?;
+        let bytes = fs::read(&newest)?;
+        write_atomically(&self.path, &bytes)?;
+        fs::remove_file(&newest)?;
+        self.open = None;
+        self.vault()?;
+        Ok(serde_json::json!({ "restored": newest.file_stem().map(|s| s.to_string_lossy().into_owned()), "earlier_versions_left": kept.len() }))
+    }
+}
+
+fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
+    let temporary = path.with_extension("invest.saving");
+    fs::write(&temporary, bytes).with_context(|| format!("cannot write next to {}", path.display()))?;
+    fs::rename(&temporary, path)?;
+    Ok(())
 }
 
 fn full(path: &Path) -> String {
