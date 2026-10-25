@@ -53,9 +53,9 @@ pub fn cash(ledger: &Ledger) -> Vec<CashBalance> {
     out
 }
 
-/// One sale and what it realised, in the base currency. A sale of physical
-/// metal is split by purchase, since some countries tax it by how long it
-/// was held.
+/// One sale and what it realised, in the base currency. A sale that takes
+/// units from several purchases is split by purchase, since some countries
+/// tax a gain by how long it was held.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Realization {
     pub date: NaiveDate,
@@ -107,7 +107,7 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             held_from: disposal.as_ref().and_then(|d| d.lots.first()).map(|l| l.opened),
         };
         match disposal {
-            Some(d) if sale.physical && d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
+            Some(d) if d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
             _ => out.push(sale),
         }
     }

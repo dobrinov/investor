@@ -179,6 +179,7 @@
                 <option value="EUR">EUR</option>
                 <option value="USD">USD</option>
                 <option value="GBP">GBP</option>
+                <option value="CAD">CAD</option>
               </select>
             </label>
             <label class="field">{t('create.residency')}

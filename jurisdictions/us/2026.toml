@@ -1,0 +1,31 @@
+# United States (federal), tax year 2026 (return due 15 April 2027).
+# DRAFT: not reviewed by a tax professional. Check against irs.gov.
+
+[pack]
+id = "us-irs"
+version = "2026.1"
+country = "US"
+authority = "Internal Revenue Service (IRS)"
+website = "https://www.irs.gov/taxtopics/tc409"
+tax_year = 2026
+currency = "USD"
+verified = false
+notes = "Draft rules, federal tax only: state income tax comes on top. Gains on shares held more than a year are long-term and taxed at 0%, 15% or 20% depending on your taxable income; 15% is assumed. The 3.8% net investment income tax applies above USD 200,000 (single) or USD 250,000 (joint) and is not added. Gains on shares held a year or less are short-term, taxed as ordinary income, and left out of the estimate. Up to USD 3,000 of net losses a year can offset other income and the rest carries forward; the wash-sale rule (buying back within 30 days of a loss) is not modelled. Non-US funds such as UCITS ETFs are usually PFICs for US taxpayers, with punitive rules and Form 8621: get advice before holding them. IRAs and 401(k)s are not modelled."
+
+[capital_gains]
+rate = "0.15"
+form = "Form 8949 and Schedule D (Form 1040)"
+short_term_months = 12
+
+[dividends]
+rate = "0.15"
+form = "Schedule B (Form 1040); Form 1116 for foreign tax"
+foreign_tax_credit = true
+
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "other"
+note = "Gold and silver are collectibles: long-term gains are taxed at up to 28%, short-term gains as ordinary income. Gold ETFs that hold metal are usually collectibles too. Not estimated here."
+
+[deadlines]
+annual_return = "2027-04-15"

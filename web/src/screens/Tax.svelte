@@ -6,6 +6,7 @@
   import { app } from '../lib/state.svelte'
 
   const s = $derived(app.snapshot!)
+  const base = $derived(s.settings.base_currency)
   const available = $derived(packs.filter((p) => p.country === s.settings.tax_residency))
   const saleYears = $derived(
     s.entries.filter((e) => e.postings.some((p) => p.account === 'Income:CapitalGains')).map((e) => Number(e.date.slice(0, 4))),
@@ -94,40 +95,41 @@
       <p class="notice">{t('tax.draftPack', { id: result.pack.id, version: result.pack.version })}</p>
     {/if}
     {#if result.pack.notes}<p class="muted pack-notes">{result.pack.notes}</p>{/if}
+    {#if result.pack.currency !== base}<p class="notice">{t('tax.currencyNote', { base, currency: result.pack.currency })}</p>{/if}
     {#if result.metals?.note && result.rows.some((r) => r.physical)}<p class="muted pack-notes">{t('tax.metalsNote', { note: result.metals.note })}</p>{/if}
 
     <section class="summary" aria-label={t('tax.summary')}>
       <div class="card kpi">
         <span class="label">{t('tax.taxableNet')}</span>
-        <span class="value num">{money(Number(result.summary.taxable_gains) + Number(result.summary.taxable_losses), result.pack.currency)}</span>
+        <span class="value num">{money(Number(result.summary.taxable_gains) + Number(result.summary.taxable_losses), base)}</span>
       </div>
       <div class="card kpi">
         <span class="label">{result.banded ? t('tax.estimatedBands') : t('tax.estimated', { rate: +(Number(result.rate) * 100).toFixed(3) })}</span>
-        <span class="value num">{money(result.summary.tax_due, result.pack.currency)}</span>
-        <span class="hint">{result.form}</span>
+        <span class="value num">{money(result.summary.tax_due, base)}</span>
+        <span class="hint">{#if result.inclusion}{t('tax.inclusionHint', { share: +(Number(result.inclusion) * 100).toFixed(1), rate: +(Number(result.marginal) * 100).toFixed(3) })}{' · '}{/if}{result.form}</span>
       </div>
       {#if result.allowance}
         <div class="card kpi">
           <span class="label">{t('tax.allowance')}</span>
-          <span class="value num">{money(result.summary.allowance_used, result.pack.currency)}</span>
+          <span class="value num">{money(result.summary.allowance_used, base)}</span>
           <span class="hint">{t('tax.allowanceOf', { amount: money(result.allowance, result.pack.currency) })}</span>
         </div>
       {/if}
       <div class="card kpi">
         <span class="label">{t('tax.exemptTotal')}</span>
-        <span class="value num">{money(result.summary.exempt, result.pack.currency)}</span>
+        <span class="value num">{money(result.summary.exempt, base)}</span>
       </div>
       {#if Number(result.summary.unknown) !== 0 || result.rows.some((r) => r.treatment === 'venue_unknown')}
         <div class="card kpi warn">
           <span class="label">{t('tax.undecided')}</span>
-          <span class="value num">{money(result.summary.unknown, result.pack.currency)}</span>
+          <span class="value num">{money(result.summary.unknown, base)}</span>
           <span class="hint">{t('tax.undecidedHint')}</span>
         </div>
       {/if}
       {#if result.rows.some((r) => r.treatment === 'not_estimated')}
         <div class="card kpi warn">
           <span class="label">{t('tax.notEstimatedTotal')}</span>
-          <span class="value num">{money(result.summary.not_estimated, result.pack.currency)}</span>
+          <span class="value num">{money(result.summary.not_estimated, base)}</span>
           <span class="hint">{t('tax.notEstimatedHint')}</span>
         </div>
       {/if}

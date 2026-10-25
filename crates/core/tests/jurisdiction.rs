@@ -79,10 +79,26 @@ fn physical_metal_follows_the_metals_rule_and_holding_period() {
         ..sale(gain)
     };
     let de = pack("de");
-    assert_eq!(de.classify(&bar((2025, 6, 1), "500")), Treatment::Exempt, "a year and more");
-    assert_eq!(de.classify(&bar((2025, 6, 2), "500")), Treatment::NotEstimated, "under a year");
+    assert_eq!(de.classify(&bar((2025, 5, 31), "500")), Treatment::Exempt, "more than a year");
+    assert_eq!(de.classify(&bar((2025, 6, 1), "500")), Treatment::NotEstimated, "exactly a year");
+    
     assert_eq!(pack("bg").classify(&bar((2026, 5, 1), "500")), Treatment::Exempt);
     assert_eq!(pack("it").classify(&bar((2026, 5, 1), "500")), Treatment::Taxable);
     let s = de.summarize(&[bar((2026, 1, 1), "300"), bar((2020, 1, 1), "900"), sale("100")]);
     assert_eq!((s.not_estimated, s.exempt, s.taxable_gains), (dec("300"), dec("900"), dec("100")));
+}
+
+#[test]
+fn us_short_term_gains_are_left_out_and_canada_taxes_half() {
+    use investor_core::jurisdiction::Treatment;
+    let held = |from: (i32, u32, u32), gain: &str| Realization { held_from: NaiveDate::from_ymd_opt(from.0, from.1, from.2), ..sale(gain) };
+    let us = pack("us");
+    assert_eq!(us.classify(&held((2025, 5, 31), "1000")), Treatment::Taxable);
+    assert_eq!(us.classify(&held((2025, 6, 1), "1000")), Treatment::NotEstimated, "a year or less is short-term");
+    let s = us.summarize(&[held((2024, 1, 1), "1000"), held((2026, 1, 1), "400")]);
+    assert_eq!((s.tax_due, s.not_estimated), (dec("150.00"), dec("400")));
+
+    let ca = pack("ca");
+    assert_eq!(ca.summarize(&[sale("1000")]).tax_due, dec("150.00"));
+    assert_eq!(ca.sale_estimate(dec("1000")), dec("150.00"));
 }

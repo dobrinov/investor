@@ -364,7 +364,12 @@ export interface GainRow extends Realization {
 
 export interface Gains {
   pack: { id: string; version: string; country: string; authority: string; website?: string; tax_year: number; currency: string; verified: boolean; notes?: string }
+  /** On the whole gain: the pack's rate times the share that is taxed. */
   rate: Decimal
+  /** The share of the gain that is taxed, when not all of it. */
+  inclusion: Decimal | null
+  /** The pack's own rate, on the taxed share. */
+  marginal: Decimal
   /** The year's tax is worked out by band, so `rate` is only the first band. */
   banded: boolean
   /** Net gains up to this much a year are tax-free, in the pack's currency. */

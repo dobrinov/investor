@@ -58,7 +58,12 @@ struct Snapshot<'a> {
 #[derive(Serialize)]
 struct Gains {
     pack: investor_core::jurisdiction::PackInfo,
+    /// On the whole gain: the pack's rate times the share that is taxed.
     rate: String,
+    /// The share of the gain that is taxed, when not all of it.
+    inclusion: Option<String>,
+    /// The pack's own rate, on the taxed share.
+    marginal: String,
     /// The year's tax is worked out by band, so `rate` is only the first band.
     banded: bool,
     /// Net gains up to this much a year are tax-free, in the pack's currency.
@@ -160,7 +165,9 @@ impl Session {
             .collect();
         let summary = pack.summarize(&rows.iter().map(|r| r.realization.clone()).collect::<Vec<_>>());
         json(&Gains {
-            rate: pack.capital_gains.rate.to_string(),
+            rate: (pack.capital_gains.rate * pack.inclusion()).normalize().to_string(),
+            inclusion: pack.capital_gains.inclusion_rate.map(|r| r.to_string()),
+            marginal: pack.capital_gains.rate.to_string(),
             banded: !pack.capital_gains.bands.is_empty(),
             allowance: pack.capital_gains.annual_exempt_amount.map(|a| a.to_string()),
             form: pack.capital_gains.form.clone(),

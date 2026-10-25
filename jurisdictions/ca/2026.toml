@@ -1,0 +1,31 @@
+# Canada (federal and provincial), tax year 2026 (return due 30 April 2027).
+# DRAFT: not reviewed by a tax professional. Check against canada.ca.
+
+[pack]
+id = "ca-cra"
+version = "2026.1"
+country = "CA"
+authority = "Canada Revenue Agency (CRA)"
+website = "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12700-capital-gains.html"
+tax_year = 2026
+currency = "CAD"
+verified = false
+notes = "Draft rules. Half of the net capital gain is taxable (the planned rise to two thirds was cancelled) and is taxed at your combined federal and provincial marginal rate; 30% is assumed, so the estimate is 15% of the net gain. Canada works out cost as the average cost of identical shares (adjusted cost base), not first in, first out, so the gain can differ when you bought at several prices. The superficial loss rule (buying back within 30 days of a loss) is not modelled. TFSAs and RRSPs are tax-free and not modelled. Foreign property costing over CAD 100,000 must be reported on Form T1135. Amounts must be in Canadian dollars at the Bank of Canada rate."
+
+[capital_gains]
+rate = "0.30"
+form = "Schedule 3 (T1)"
+inclusion_rate = "0.5"
+
+[dividends]
+rate = "0.30"
+form = "T1 line 12100 (T5 slips); foreign dividends with a foreign tax credit"
+foreign_tax_credit = true
+
+[physical_metals]
+# Coins and bars. UNVERIFIED.
+treatment = "capital_gains"
+note = "Gold and silver held as an investment give a capital gain, half of which is taxed. Frequent buying and selling can make it business income instead."
+
+[deadlines]
+annual_return = "2027-04-30"

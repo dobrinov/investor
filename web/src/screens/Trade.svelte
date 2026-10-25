@@ -313,6 +313,7 @@
               {#if Number(o.gain) < 0}{t('trade.taxLoss')}
               {:else if o.tax.treatment === 'exempt'}{t('trade.taxExempt', { form: o.tax.form })}
               {:else if o.tax.treatment === 'taxable'}{t('trade.taxTaxable', { estimate: money(o.tax.estimate, base), rate: percent(Number(o.tax.rate)), form: o.tax.form })}
+              {:else if o.tax.treatment === 'not_estimated'}{t('trade.taxNotEstimated', { form: o.tax.form })}
               {:else}{t('trade.taxUnknown')}{/if}
             </p>
             {#if !o.tax.verified}<p class="muted small">{t('trade.taxUnverified')}</p>{/if}

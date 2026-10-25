@@ -58,6 +58,13 @@ pub struct CapitalGains {
     /// for a single sale.
     #[serde(default)]
     pub bands: Vec<RateBand>,
+    /// Units held less than this many months give a short-term gain, taxed
+    /// with income at a rate the pack cannot know, so not estimated.
+    #[serde(default)]
+    pub short_term_months: Option<u32>,
+    /// The share of the net gain that is taxed, e.g. 0.5 in Canada.
+    #[serde(default)]
+    pub inclusion_rate: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -141,15 +148,32 @@ impl JurisdictionPack {
         }
     }
 
+    /// The share of a gain that is taxed: all of it unless the pack says.
+    pub fn inclusion(&self) -> Decimal {
+        self.capital_gains.inclusion_rate.unwrap_or(Decimal::ONE)
+    }
+
+    /// Tax on one sale's gain at the flat rate, before the year's netting.
+    pub fn sale_estimate(&self, gain: Decimal) -> Decimal {
+        (gain.max(Decimal::ZERO) * self.inclusion() * self.capital_gains.rate).round_dp(2)
+    }
+
     /// How one sale is taxed: by venue for securities, by the metals rule
     /// and holding period for coins and bars.
     pub fn classify(&self, sale: &Realization) -> Treatment {
+        let held_for = |months: u32| match sale.held_from {
+            Some(from) => from.checked_add_months(chrono::Months::new(months)).is_some_and(|d| d < sale.date),
+            None => true,
+        };
         if !sale.physical {
-            return self.treatment(sale.venue.as_ref());
+            return match (self.treatment(sale.venue.as_ref()), self.capital_gains.short_term_months) {
+                (Treatment::Taxable, Some(months)) if !held_for(months) => Treatment::NotEstimated,
+                (treatment, _) => treatment,
+            };
         }
         let Some(rule) = &self.physical_metals else { return Treatment::NotEstimated };
         let held_long = match (rule.exempt_after_months, sale.held_from) {
-            (Some(months), Some(from)) => from.checked_add_months(chrono::Months::new(months)).is_some_and(|d| d <= sale.date),
+            (Some(months), Some(from)) => from.checked_add_months(chrono::Months::new(months)).is_some_and(|d| d < sale.date),
             _ => false,
         };
         match rule.treatment {
@@ -181,6 +205,7 @@ impl JurisdictionPack {
     /// Tax on a year's net taxable gain: by band when the pack has bands,
     /// otherwise at the flat rate.
     pub fn tax_on(&self, gain: Decimal) -> Decimal {
+        let gain = gain * self.inclusion();
         if self.capital_gains.bands.is_empty() {
             return gain * self.capital_gains.rate;
         }

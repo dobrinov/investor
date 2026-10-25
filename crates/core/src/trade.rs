@@ -2,7 +2,7 @@
 //! first, then recorded through the same path as imported statements, so
 //! FIFO lots, fees and exchange rates are handled the same way.
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ use crate::ledger::{self, Instrument, JournalEntry, Ledger, Source, Venue};
 use crate::prices::{self, PriceBook};
 use crate::jurisdiction::{JurisdictionPack, Treatment};
 use crate::plan::{Plan, to_f64};
+use crate::reports;
 use crate::whatif::{self, Band, WhatIfInput};
 use crate::{Currency, Error, Money, Result};
 
@@ -284,9 +285,20 @@ pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeIn
     let preview = preview(ledger, prices, input)?;
     let tax = match (preview.gain, pack) {
         (Some(gain), Some(pack)) => {
-            let treatment = pack.treatment(preview.entry.venue.as_ref());
-            let rate = pack.capital_gains.rate;
-            let estimate = if treatment == Treatment::Taxable { (gain.max(Decimal::ZERO) * rate).round_dp(2) } else { Decimal::ZERO };
+            // Classify each purchase the sale draws on, so a holding period counts.
+            let (mut after, mut after_prices) = (ledger.clone(), prices.clone());
+            let entry = record(&mut after, &mut after_prices, input)?;
+            let parts: Vec<_> = reports::realized_gains(&after, entry.date.year()).into_iter().filter(|r| r.entry_id == entry.id).collect();
+            let treatments: Vec<Treatment> = parts.iter().map(|r| pack.classify(r)).collect();
+            let treatment = if treatments.contains(&Treatment::Taxable) {
+                Treatment::Taxable
+            } else {
+                treatments.first().copied().unwrap_or_else(|| pack.treatment(preview.entry.venue.as_ref()))
+            };
+            let taxable: Decimal = parts.iter().zip(&treatments).filter(|(_, t)| **t == Treatment::Taxable).map(|(r, _)| r.gain).sum();
+            let estimate = if parts.is_empty() { pack.sale_estimate(gain) } else { pack.sale_estimate(taxable) };
+            // The rate on the whole gain, e.g. 15% when half is taxed at 30%.
+            let rate = pack.capital_gains.rate * pack.inclusion();
             Some(TradeTax { treatment, rate, form: pack.capital_gains.form.clone(), estimate, verified: pack.pack.verified })
         }
         _ => None,

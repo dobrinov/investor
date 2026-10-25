@@ -75,8 +75,8 @@ and Revolut statements, prices, overview, general ledger, goals with plan vs.
 actual, projections with what-if moves and retirement, planning and recording
 trades, bank accounts, physical gold and silver, private holdings, and
 capital-gains reporting (physical metals by holding period) with
-draft tax packs for Austria, Bulgaria, France, Germany, Ireland, Italy,
-Poland, Portugal, Romania, Spain and the UK. Works on phones. Open
+draft tax packs for Austria, Bulgaria, Canada, France, Germany, Ireland,
+Italy, Poland, Portugal, Romania, Spain, the UK and the US. Works on phones. Open
 `/app/#example` for a made-up portfolio with ETFs, shares, bonds, gold (an ETC,
 a coin and a bar),
 crypto, a savings account and a private stake. English and Bulgarian. Claude Code can read the file through
