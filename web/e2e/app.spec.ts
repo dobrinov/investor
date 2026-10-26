@@ -225,3 +225,12 @@ test('your CFO can use Claude Code with your own sign-in', async ({ page }) => {
   expect(asked[0].system).toContain('virtual CFO')
   expect(asked[0].prompt).toContain('"high_interest_debt"')
 })
+
+test('crypto has its own tab and slice of net worth', async ({ page }) => {
+  await page.goto('/app/#example')
+  await expect(page.getByRole('img', { name: /Crypto/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /BTC/ })).toHaveCount(0)
+  await page.getByRole('tab', { name: /Crypto/ }).click()
+  await expect(page.getByRole('row', { name: /BTC/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /VWCE/ })).toHaveCount(0)
+})

@@ -924,4 +924,6 @@ export const el: Record<Key, string> = {
   'assistant.kind.claude_code': "Claude Code",
   'assistant.kindHint.claude_code': "Χρησιμοποιεί τη σύνδεσή σας στο Claude Code, χωρίς κλειδί. Συμβουλεύει αλλά δεν καταγράφει αλλαγές.",
   'assistant.privacy.claude_code': "Τα μηνύματά σας και τα στοιχεία που χρειάζονται πηγαίνουν στην Anthropic μέσω του Claude Code.",
+  'overview.part.crypto': "Κρύπτο",
+  'overview.tab.crypto': "Κρύπτο",
 }

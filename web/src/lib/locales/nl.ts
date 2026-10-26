@@ -924,4 +924,6 @@ export const nl: Record<Key, string> = {
   'assistant.kind.claude_code': "Claude Code",
   'assistant.kindHint.claude_code': "Gebruikt je Claude Code-aanmelding, geen sleutel nodig. Adviseert, maar kan niets vastleggen.",
   'assistant.privacy.claude_code': "Je berichten en de nodige cijfers gaan via Claude Code naar Anthropic.",
+  'overview.part.crypto': "Crypto",
+  'overview.tab.crypto': "Crypto",
 }

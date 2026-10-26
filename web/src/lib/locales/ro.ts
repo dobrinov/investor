@@ -924,4 +924,6 @@ export const ro: Record<Key, string> = {
   'assistant.kind.claude_code': "Claude Code",
   'assistant.kindHint.claude_code': "Folosește autentificarea ta în Claude Code, fără cheie. Te sfătuiește, dar nu poate înregistra modificări.",
   'assistant.privacy.claude_code': "Mesajele tale și cifrele necesare ajung la Anthropic prin Claude Code.",
+  'overview.part.crypto': "Cripto",
+  'overview.tab.crypto': "Cripto",
 }

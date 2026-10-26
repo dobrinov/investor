@@ -3,6 +3,13 @@
 What changed in each release of Investor, newest first. Downloads are on
 [GitHub](https://github.com/dobrinov/investor/releases).
 
+## 0.7.0 — 2026-10-26
+
+- Your CFO and the assistant can use Claude Code with your own sign-in: no API key, and it only reads what it is sent.
+- Any password is allowed; a meter shows how strong it is, roughly how long it would take to guess, and one tip.
+- Crypto has its own tab and its own slice of net worth, apart from stocks and funds.
+- The website has a section on Your CFO.
+
 ## 0.6.0 — 2026-10-26
 
 - Your CFO: a model on your computer reads your whole financial picture and gives you a short briefing — what to do first, why, and what it is worth — then answers follow-up questions.

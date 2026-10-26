@@ -922,6 +922,8 @@ export const en = {
   'assistant.kind.claude_code': "Claude Code",
   'assistant.kindHint.claude_code': "Uses your Claude Code sign-in, no key needed. It advises but cannot record changes.",
   'assistant.privacy.claude_code': "Your messages and the figures they need go to Anthropic through Claude Code.",
+  'overview.part.crypto': "Crypto",
+  'overview.tab.crypto': "Crypto",
 } as const
 
 export type Key = keyof typeof en

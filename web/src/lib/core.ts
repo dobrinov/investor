@@ -225,6 +225,8 @@ export interface Valuation {
   value?: Decimal
   gain?: Decimal
   missing_fx: boolean
+  /** A coin such as BTC rather than a security. */
+  crypto: boolean
 }
 
 export type Payout = 'employment_income' | 'capital_gains' | 'unknown'

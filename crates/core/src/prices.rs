@@ -104,6 +104,8 @@ pub struct Valuation {
     pub gain: Option<Decimal>,
     /// A price exists but its currency has no exchange rate yet.
     pub missing_fx: bool,
+    /// A coin such as BTC rather than a security.
+    pub crypto: bool,
 }
 
 pub fn valuations(ledger: &Ledger, prices: &PriceBook) -> Vec<Valuation> {
@@ -120,7 +122,8 @@ pub fn valuations(ledger: &Ledger, prices: &PriceBook) -> Vec<Valuation> {
                 .and_then(|q| prices.to_base(&q.price, &ledger.base_currency))
                 .map(|price| (price * units).round_dp(2));
             let missing_fx = quote.is_some() && value.is_none();
-            Some(Valuation { gain: value.map(|v| v - cost), broker, symbol, units, cost, quote, value, missing_fx })
+            let crypto = crate::reports::is_crypto(ledger, &symbol);
+            Some(Valuation { gain: value.map(|v| v - cost), broker, symbol, units, cost, quote, value, missing_fx, crypto })
         })
         .collect()
 }

@@ -42,7 +42,11 @@
   const names = $derived(new Map(s.instruments.map((i) => [i.symbol, i])))
   const recent = $derived(s.entries.slice(0, 6))
   // Coins and bars have their own card; they still count in the totals above.
-  const securities = $derived(s.valuations.filter((v) => v.broker !== 'PHYSICAL'))
+  const traded = $derived(s.valuations.filter((v) => v.broker !== 'PHYSICAL'))
+  // Coins such as BTC get their own tab and slice of net worth.
+  const securities = $derived(traded.filter((v) => !v.crypto))
+  const coins = $derived(traded.filter((v) => v.crypto))
+  const cryptoValue = $derived(coins.reduce((sum, v) => sum + Number(v.value ?? v.cost), 0))
 
   // Currencies that need a rate to show values in the base currency.
   const fxNeeded = $derived(
@@ -63,7 +67,8 @@
   const growth = $derived(worth - putIn)
   const parts = $derived(
     [
-      { key: 'securities', amount: value - metals, color: 'var(--part-securities)' },
+      { key: 'securities', amount: value - metals - cryptoValue, color: 'var(--part-securities)' },
+      { key: 'crypto', amount: cryptoValue, color: 'var(--part-crypto)' },
       { key: 'cash', amount: cash, color: 'var(--part-cash)' },
       { key: 'private', amount: privately, color: 'var(--part-private)' },
       { key: 'metals', amount: metals, color: 'var(--part-metals)' },
@@ -73,7 +78,7 @@
 
   // Things that need the person, gathered in one place.
   const attention = $derived([
-    ...securities.flatMap((v) => {
+    ...traded.flatMap((v) => {
       if (!v.quote) return [{ id: `p:${v.broker}:${v.symbol}`, text: t('overview.attn.noPrice', { symbol: v.symbol }), action: t('overview.updatePrice'), run: () => fixPrice(v) }]
       const days = ageDays(v.quote.date)
       return days > STALE_DAYS ? [{ id: `p:${v.broker}:${v.symbol}`, text: t('overview.attn.stale', { symbol: v.symbol, days }), action: t('overview.updatePrice'), run: () => fixPrice(v) }] : []
@@ -88,7 +93,7 @@
   ])
 
   function fixPrice(v: Valuation): void {
-    tab = 'securities'
+    tab = v.crypto ? 'crypto' : 'securities'
     editPrice(v)
     void tick().then(() => document.getElementById('holdings-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
@@ -104,10 +109,12 @@
   }
 
   // What you own, one kind at a time.
-  type Kind = 'securities' | 'banks' | 'metals' | 'private' | 'debts'
+  type Kind = 'securities' | 'crypto' | 'banks' | 'metals' | 'private' | 'debts'
   let tab = $state<Kind>('securities')
+  const shown = $derived(tab === 'crypto' ? coins : securities)
   const kinds = $derived<{ id: Kind; count: number }[]>([
     { id: 'securities', count: securities.length },
+    ...(coins.length ? [{ id: 'crypto' as Kind, count: coins.length }] : []),
     { id: 'banks', count: s.banks.length },
     { id: 'metals', count: new Set(s.valuations.filter((v) => v.broker === 'PHYSICAL').map((v) => v.symbol)).size },
     { id: 'private', count: s.private.length },
@@ -226,9 +233,9 @@
   </div>
 
   <div role="tabpanel" id="panel-{tab}" aria-labelledby="tab-{tab}" class="panel">
-  {#if tab === 'securities'}
+  {#if tab === 'securities' || tab === 'crypto'}
   <section class="card" aria-labelledby="holdings-title">
-    <h2 id="holdings-title">{t('overview.holdings')}</h2>
+    <h2 id="holdings-title">{tab === 'crypto' ? t('overview.tab.crypto') : t('overview.holdings')}</h2>
     <p class="muted small">{t('overview.pricesNote')}</p>
     <div class="table-wrap">
       <table>
@@ -240,7 +247,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each securities as v (v.broker + v.symbol)}
+          {#each shown as v (v.broker + v.symbol)}
             {@const key = `${v.broker}:${v.symbol}`}
             <tr>
               <td><strong class="num">{v.symbol}</strong><span class="muted sub-line">{[names.get(v.symbol)?.name, v.broker].filter(Boolean).join(' · ')}</span></td>
@@ -281,7 +288,7 @@
 
     <!-- On a phone the table becomes rows: what you hold, its value and gain. -->
     <ul class="holding-list">
-      {#each securities as v (v.broker + v.symbol)}
+      {#each shown as v (v.broker + v.symbol)}
         <li>
           <button class="holding" aria-expanded={editing === `${v.broker}:${v.symbol}`} onclick={() => (editing === `${v.broker}:${v.symbol}` ? (editing = null) : editPrice(v))}>
             <span class="what">

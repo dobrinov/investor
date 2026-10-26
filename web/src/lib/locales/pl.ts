@@ -924,4 +924,6 @@ export const pl: Record<Key, string> = {
   'assistant.kind.claude_code': "Claude Code",
   'assistant.kindHint.claude_code': "Korzysta z twojego logowania do Claude Code, bez klucza. Doradza, ale nie zapisuje zmian.",
   'assistant.privacy.claude_code': "Twoje wiadomości i potrzebne liczby trafiają do Anthropic przez Claude Code.",
+  'overview.part.crypto': "Krypto",
+  'overview.tab.crypto': "Krypto",
 }
