@@ -7,6 +7,9 @@ name: Desktop app
 # (scripts/apple-signing-secrets.sh sets them): APPLE_CERTIFICATE,
 # APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_TEAM_ID,
 # APPLE_ID, APPLE_PASSWORD. Without them the builds are unsigned.
+#
+# TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD sign the
+# updates; the matching public key is in desktop/tauri.conf.json.
 on:
   push:
     tags: ['v*']
@@ -81,6 +84,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update files the app checks for (latest.json).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
           tauriScript: npx --yes @tauri-apps/cli@2.12.4
