@@ -873,6 +873,7 @@ export const en = {
   'error.debt.negative': "Amounts owed cannot be negative.",
   'desc.debtNow': "{name}: owed now {amount}",
   'desc.debtOpening': "{name}: owed {amount}",
+  'tax.crypto': "Crypto",
 } as const
 
 export type Key = keyof typeof en

@@ -175,6 +175,9 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     b.deposit(20, "Revolut", "4000")?;
     b.trade(20, Buy, "Revolut", "BTC", "Bitcoin", "0.05", "38000", "EUR", None, None)?;
     b.trade(19, Buy, "Revolut", "ETH", "Ether", "0.8", "2300", "EUR", None, None)?;
+    // This year: some Bitcoin sold at a gain, some Ether at a loss.
+    b.trade(2, Sell, "Revolut", "BTC", "Bitcoin", "0.01", "84000", "EUR", None, None)?;
+    b.trade(1, Sell, "Revolut", "ETH", "Ether", "0.3", "2100", "EUR", None, None)?;
 
     // A savings account and a private stake.
     let savings = NewAccount {
@@ -277,7 +280,7 @@ mod tests {
             assert!(symbols.contains(&s.to_string()), "{s} missing");
         }
         assert!(reports::cash(&v.ledger).iter().all(|c| c.amount >= Decimal::ZERO), "no cash goes negative");
-        assert_eq!(reports::realized_gains(&v.ledger, 2026).len(), 2);
+        assert_eq!(reports::realized_gains(&v.ledger, 2026).len(), 4);
         assert_eq!((v.banks.len(), v.debts.len(), v.private.len(), v.plan.goals.len()), (2, 1, 1, 2));
         let currencies: std::collections::BTreeSet<String> = reports::cash(&v.ledger).into_iter().map(|c| c.currency.to_string()).collect();
         assert_eq!(currencies.into_iter().collect::<Vec<_>>(), ["CHF", "DKK", "EUR", "GBP", "USD"]);

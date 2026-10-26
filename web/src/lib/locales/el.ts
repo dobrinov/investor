@@ -875,4 +875,5 @@ export const el: Record<Key, string> = {
   'error.debt.negative': "Τα οφειλόμενα ποσά δεν μπορούν να είναι αρνητικά.",
   'desc.debtNow': "{name}: υπόλοιπο τώρα {amount}",
   'desc.debtOpening': "{name}: οφειλή {amount}",
+  'tax.crypto': "Κρύπτο",
 }

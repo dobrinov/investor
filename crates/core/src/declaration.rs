@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::jurisdiction::{JurisdictionPack, Treatment};
 use crate::ledger::{self, Ledger};
 use crate::lots::Lots;
+use crate::reports::is_crypto;
 use crate::{metal, reports};
 
 /// How to file, as a pack describes it.
@@ -113,14 +114,7 @@ fn money(amount: Decimal) -> Value {
 pub fn declaration(ledger: &Ledger, pack: &JurisdictionPack, year: i32, language: &str) -> Declaration {
     let filing = pack.declaration.clone().unwrap_or_default();
     let sales = reports::realized_gains_by(ledger, year, pack.capital_gains.cost_basis);
-    // Coins are not traded on a stock exchange, so their venue never makes them exempt.
-    let treated: Vec<_> = sales
-        .iter()
-        .map(|r| match pack.classify(r) {
-            Treatment::VenueUnknown if is_crypto(ledger, &r.symbol) => (r, Treatment::Taxable),
-            t => (r, t),
-        })
-        .collect();
+    let treated: Vec<_> = sales.iter().map(|r| (r, pack.classify(r))).collect();
     let undecided = treated.iter().filter(|(_, t)| *t == Treatment::VenueUnknown).count();
     let sections = filing
         .sections
@@ -206,15 +200,6 @@ pub fn declaration(ledger: &Ledger, pack: &JurisdictionPack, year: i32, language
         .collect();
     let steps = filing.steps.get(language).or_else(|| filing.steps.get("en")).cloned().unwrap_or_default();
     Declaration { year, portal: filing.portal, steps, sections, undecided }
-}
-
-/// Coins such as BTC: no ISIN and a well-known crypto ticker. The books do
-/// not record what kind of asset something is, so this is a best guess.
-fn is_crypto(ledger: &Ledger, symbol: &str) -> bool {
-    const COINS: &[&str] = &[
-        "BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LTC", "AVAX", "MATIC", "POL", "LINK", "TRX", "XLM", "BNB", "SHIB", "USDT", "USDC", "BCH", "ATOM", "UNI", "ALGO", "XTZ", "NEAR", "ETC",
-    ];
-    isin(ledger, symbol).is_none() && COINS.contains(&symbol.to_ascii_uppercase().as_str())
 }
 
 fn in_year(ledger: &Ledger, year: i32) -> impl Iterator<Item = &ledger::JournalEntry> {

@@ -875,4 +875,5 @@ export const it: Record<Key, string> = {
   'error.debt.negative': "Gli importi dovuti non possono essere negativi.",
   'desc.debtNow': "{name}: residuo ora {amount}",
   'desc.debtOpening': "{name}: dovuto {amount}",
+  'tax.crypto': "Cripto",
 }

@@ -96,7 +96,7 @@
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.venue?.code ?? '—'}</td>
+                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.crypto ? t('tax.crypto') : r.venue?.code ?? '—'}</td>
               </tr>
             {:else}
               <tr><td colspan="6" class="muted">{t('tax.noSales')}</td></tr>
@@ -246,7 +246,7 @@
                 <td class="right num">{money(r.proceeds)}</td>
                 <td class="right num">{money(r.cost)}</td>
                 <td class="right num">{money(r.gain)}</td>
-                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
+                <td class="num">{r.private ? t('tax.privateStake') : r.physical ? t('tax.physical') : r.crypto ? t('tax.crypto') : r.venue ? r.venue.code + (r.venue.assumed ? '*' : '') : '—'}</td>
                 <td><span class="pill" class:warn={r.treatment !== 'exempt'} class:plain={r.treatment === 'taxable'}>{labels[r.treatment]()}</span></td>
               </tr>
             {:else}

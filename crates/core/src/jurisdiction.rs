@@ -216,8 +216,9 @@ impl JurisdictionPack {
             None => true,
         };
         if !sale.physical {
-            // A private stake is not sold on a market, so no venue exemption applies.
-            let by_venue = if sale.private { Treatment::Taxable } else { self.treatment(sale.venue.as_ref()) };
+            // A private stake or a coin is not sold on a stock exchange, so no
+            // venue exemption applies.
+            let by_venue = if sale.private || sale.crypto { Treatment::Taxable } else { self.treatment(sale.venue.as_ref()) };
             return match (by_venue, self.capital_gains.short_term_months) {
                 (Treatment::Taxable, Some(months)) if !held_for(months) => Treatment::NotEstimated,
                 (treatment, _) => treatment,

@@ -875,4 +875,5 @@ export const bg: Record<Key, string> = {
   'error.debt.negative': "Дължимите суми не може да са отрицателни.",
   'desc.debtNow': "{name}: остатък сега {amount}",
   'desc.debtOpening': "{name}: дължимо {amount}",
+  'tax.crypto': "Крипто",
 }

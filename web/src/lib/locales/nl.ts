@@ -875,4 +875,5 @@ export const nl: Record<Key, string> = {
   'error.debt.negative': "Schuldbedragen kunnen niet negatief zijn.",
   'desc.debtNow': "{name}: nu nog schuldig {amount}",
   'desc.debtOpening': "{name}: schuldig {amount}",
+  'tax.crypto': "Crypto",
 }

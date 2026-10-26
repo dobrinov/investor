@@ -77,6 +77,18 @@ pub struct Realization {
     /// The payout of a private holding, such as a stake in a company.
     #[serde(default)]
     pub private: bool,
+    /// A coin such as BTC rather than a security.
+    #[serde(default)]
+    pub crypto: bool,
+}
+
+/// Coins such as BTC: no ISIN and a well-known crypto ticker. The books do
+/// not record what kind of asset something is, so this is a best guess.
+pub fn is_crypto(ledger: &Ledger, symbol: &str) -> bool {
+    const COINS: &[&str] = &[
+        "BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LTC", "AVAX", "MATIC", "POL", "LINK", "TRX", "XLM", "BNB", "SHIB", "USDT", "USDC", "BCH", "ATOM", "UNI", "ALGO", "XTZ", "NEAR", "ETC",
+    ];
+    ledger.instruments.get(symbol).and_then(|i| i.isin.as_ref()).is_none() && COINS.contains(&symbol.to_ascii_uppercase().as_str())
 }
 
 pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
@@ -133,6 +145,7 @@ pub fn realized_gains_by(ledger: &Ledger, year: i32, basis: CostBasis) -> Vec<Re
                 physical: false,
                 held_from: first_paid.get(stake.account.as_str()).copied(),
                 private: true,
+                crypto: false,
             });
             continue;
         }
@@ -152,7 +165,9 @@ pub fn realized_gains_by(ledger: &Ledger, year: i32, basis: CostBasis) -> Vec<Re
             physical: metal::is_physical(&sold.account),
             held_from: disposal.as_ref().and_then(|d| d.lots.first()).map(|l| l.opened),
             private: false,
+            crypto: false,
         };
+        let sale = Realization { crypto: is_crypto(ledger, &sale.symbol), ..sale };
         match (basis, disposal) {
             (CostBasis::Average, _) => {
                 let cost = average_cost.unwrap_or(sale.cost);

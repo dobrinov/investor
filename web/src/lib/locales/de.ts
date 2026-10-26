@@ -875,4 +875,5 @@ export const de: Record<Key, string> = {
   'error.debt.negative': "Geschuldete Beträge können nicht negativ sein.",
   'desc.debtNow': "{name}: Restschuld jetzt {amount}",
   'desc.debtOpening': "{name}: geschuldet {amount}",
+  'tax.crypto': "Krypto",
 }

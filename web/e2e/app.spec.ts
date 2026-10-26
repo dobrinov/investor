@@ -122,3 +122,11 @@ test('a debt comes off net worth and shows when it will be paid off', async ({ p
   await expect(row).toContainText('€8,400.00')
   await expect(row).toContainText(/\d+ y \d+ m/)
 })
+
+test('crypto sales get their own part of the declaration', async ({ page }) => {
+  await page.goto('/app/#example/tax')
+  const crypto = page.locator('.declaration .form-part', { hasText: 'code 5082' })
+  await expect(crypto.getByRole('row')).toHaveCount(2)
+  await expect(page.getByRole('row', { name: /BTC/ }).getByText('Crypto')).toBeVisible()
+  await expect(page.getByRole('row', { name: /BTC/ }).getByText('Taxable')).toBeVisible()
+})

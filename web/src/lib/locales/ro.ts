@@ -875,4 +875,5 @@ export const ro: Record<Key, string> = {
   'error.debt.negative': "Sumele datorate nu pot fi negative.",
   'desc.debtNow': "{name}: rest de plată acum {amount}",
   'desc.debtOpening': "{name}: datorat {amount}",
+  'tax.crypto': "Cripto",
 }

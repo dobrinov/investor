@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use chrono::NaiveDate;
-use investor_core::jurisdiction::JurisdictionPack;
+use investor_core::jurisdiction::{JurisdictionPack, Treatment};
 use investor_core::reports::Realization;
 use rust_decimal::Decimal;
 
@@ -32,7 +32,16 @@ fn sale(gain: &str) -> Realization {
         physical: false,
         held_from: None,
         private: false,
+        crypto: false,
     }
+}
+
+#[test]
+fn a_crypto_sale_is_taxed_whatever_the_venue() {
+    let pack = pack("bg");
+    let coin = Realization { crypto: true, ..sale("100") };
+    assert_eq!(pack.classify(&sale("100")), Treatment::VenueUnknown);
+    assert_eq!(pack.classify(&coin), Treatment::Taxable);
 }
 
 #[test]

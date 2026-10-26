@@ -875,4 +875,5 @@ export const pl: Record<Key, string> = {
   'error.debt.negative': "Kwoty do spłaty nie mogą być ujemne.",
   'desc.debtNow': "{name}: do spłaty teraz {amount}",
   'desc.debtOpening': "{name}: do spłaty {amount}",
+  'tax.crypto': "Krypto",
 }

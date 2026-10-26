@@ -414,6 +414,8 @@ export interface Realization {
   held_from?: string | null
   /** The payout of a private holding. */
   private: boolean
+  /** A coin such as BTC rather than a security. */
+  crypto?: boolean
 }
 
 export interface GainRow extends Realization {

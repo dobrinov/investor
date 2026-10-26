@@ -875,4 +875,5 @@ export const uk: Record<Key, string> = {
   'error.debt.negative': "Суми боргу не можуть бути відʼємними.",
   'desc.debtNow': "{name}: залишок зараз {amount}",
   'desc.debtOpening': "{name}: борг {amount}",
+  'tax.crypto': "Крипто",
 }
