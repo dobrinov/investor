@@ -88,60 +88,23 @@
   <p class="muted">{t('proj.subtitle')}</p>
 </header>
 
-<section class="card start" aria-labelledby="start-title">
-  <h2 id="start-title">{t('proj.start')}</h2>
-  <div class="kpis">
-    <div class="kpi"><span class="label">{t('proj.invested')}</span><span class="value num">{money(invested)}</span><span class="hint">{t('proj.investedHint')}</span></div>
-    <div class="kpi"><span class="label">{t('proj.cash')}</span><span class="value num">{money(cash)}</span><span class="hint">{t('proj.cashHint')}</span></div>
-    <div class="kpi">
-      <span class="label">{t('proj.planMonthly')}</span>
-      <span class="value num">{t('proj.perMonth', { amount: money(result.monthly) })}</span>
-      <span class="hint">{t('proj.planMonthlyHint')}</span>
-    </div>
-  </div>
-  {#if profile?.monthly_investing == null}
-    <p class="notice">{t('proj.noMonthly')}<button class="link" onclick={() => (app.view = 'goals')}>{t('proj.editProfile')}</button></p>
-  {/if}
-  <div class="goals-out">
-    <span class="with-help">
-      <label class="choice"><input type="checkbox" bind:checked={spendGoals} />{t('proj.spendGoals')}</label>
-      <Help about={t('proj.spendGoals')} why={t('proj.spendGoalsWhy')} without={t('proj.spendGoalsWithout')} />
-    </span>
-    {#if result.spending.length}
-      <ul>
-        {#each result.spending as g (g.goal)}
-          <li class="muted">{t('proj.goalOut', { name: g.name, amount: money(g.amount), year: g.year })}</li>
-        {/each}
-      </ul>
-    {:else if spendGoals}
-      <p class="muted small">{t('proj.noGoals')}</p>
-    {/if}
-  </div>
-</section>
-
-<section class="card controls" aria-label={t('proj.assumptions')}>
-  <div class="field">
-    <span id="market-label">{t('proj.market')}</span>
-    <div role="radiogroup" aria-labelledby="market-label" class="segmented">
-      {#each markets as m (m)}
-        <button role="radio" aria-checked={market === m} class:on={market === m} onclick={() => (market = m)}>
-          {t(`market.${m}`)}
-        </button>
-      {/each}
-    </div>
-  </div>
-  <label class="field">{t('proj.years')}<input type="number" min="1" max="60" bind:value={years} /></label>
-  <p class="muted note">{t(`market.${market}Hint`)}</p>
-</section>
-
-<section class="card whatif" aria-labelledby="whatif-title">
-  <h2 id="whatif-title">{t('proj.whatIf')}</h2>
-  <p class="muted small">{t('proj.whatIfText')}</p>
-  <WhatIfMoves plan={s.plan} {base} onsave={saveMoves} />
-</section>
-
 <section class="card result">
   <h2>{t('proj.growthTitle', { years: end.year })}</h2>
+  <div class="controls" role="group" aria-label={t('proj.assumptions')}>
+    <div class="field">
+      <span id="market-label">{t('proj.market')}</span>
+      <div role="radiogroup" aria-labelledby="market-label" class="segmented">
+        {#each markets as m (m)}
+          <button role="radio" aria-checked={market === m} class:on={market === m} onclick={() => (market = m)}>
+            {t(`market.${m}`)}
+          </button>
+        {/each}
+      </div>
+    </div>
+    <label class="field">{t('proj.years')}<input type="number" min="1" max="60" bind:value={years} /></label>
+    <p class="muted note">{t(`market.${market}Hint`)}</p>
+  </div>
+
   {#each result.cash_short as c (c.id)}
     <p class="notice">{t('proj.cashShort', { name: moveName(c.id), wanted: money(c.wanted), available: money(c.available) })}</p>
   {/each}
@@ -215,6 +178,43 @@
         {/each}
       </tbody>
     </table>
+  </div>
+</section>
+
+<section class="card whatif" aria-labelledby="whatif-title">
+  <h2 id="whatif-title">{t('proj.whatIf')}</h2>
+  <p class="muted small">{t('proj.whatIfText')}</p>
+  <WhatIfMoves plan={s.plan} {base} onsave={saveMoves} />
+</section>
+
+<section class="card start" aria-labelledby="start-title">
+  <h2 id="start-title">{t('proj.start')}</h2>
+  <div class="kpis">
+    <div class="kpi"><span class="label">{t('proj.invested')}</span><span class="value num">{money(invested)}</span><span class="hint">{t('proj.investedHint')}</span></div>
+    <div class="kpi"><span class="label">{t('proj.cash')}</span><span class="value num">{money(cash)}</span><span class="hint">{t('proj.cashHint')}</span></div>
+    <div class="kpi">
+      <span class="label">{t('proj.planMonthly')}</span>
+      <span class="value num">{t('proj.perMonth', { amount: money(result.monthly) })}</span>
+      <span class="hint">{t('proj.planMonthlyHint')}</span>
+    </div>
+  </div>
+  {#if profile?.monthly_investing == null}
+    <p class="notice">{t('proj.noMonthly')}<button class="link" onclick={() => (app.view = 'goals')}>{t('proj.editProfile')}</button></p>
+  {/if}
+  <div class="goals-out">
+    <span class="with-help">
+      <label class="choice"><input type="checkbox" bind:checked={spendGoals} />{t('proj.spendGoals')}</label>
+      <Help about={t('proj.spendGoals')} why={t('proj.spendGoalsWhy')} without={t('proj.spendGoalsWithout')} />
+    </span>
+    {#if result.spending.length}
+      <ul>
+        {#each result.spending as g (g.goal)}
+          <li class="muted">{t('proj.goalOut', { name: g.name, amount: money(g.amount), year: g.year })}</li>
+        {/each}
+      </ul>
+    {:else if spendGoals}
+      <p class="muted small">{t('proj.noGoals')}</p>
+    {/if}
   </div>
 </section>
 
@@ -311,6 +311,9 @@
     flex-wrap: wrap;
     gap: 16px;
     align-items: flex-end;
+    margin: 4px 0 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line-soft);
   }
   .controls .field {
     width: auto;

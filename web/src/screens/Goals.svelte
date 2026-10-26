@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RowMenu from '../components/RowMenu.svelte'
   import Help from '../components/Help.svelte'
   import PlanVsActual from '../components/PlanVsActual.svelte'
   import type { Goal, Plan, Profile } from '../lib/core'
@@ -114,6 +115,74 @@
   <p class="muted">{t('goals.subtitle')}</p>
 </header>
 
+<section class="goals" aria-label={t('goals.list')}>
+  {#each s.plan.goals as goal (goal.id)}
+    {@const st = statuses.get(goal.id)}
+    <article class="card goal">
+      <div class="head">
+        <h2>{goal.name}</h2>
+        {#if st}<span class="pill" class:warn={!st.on_track}>{st.on_track ? t('goals.onTrack') : t('goals.behind')}</span>{/if}
+        <RowMenu
+          label={t('common.moreFor', { name: goal.name })}
+          items={[
+            { label: t('common.edit'), run: () => (draft = { ...goal }) },
+            { label: t('common.remove'), run: () => remove(goal), danger: true },
+          ]}
+        />
+      </div>
+      <p class="muted when">
+        {goal.kind === 'emergency_fund' ? t('goals.emergencyWhen', { months: goal.target }) : t('goals.savingsWhen', { year: goal.year ?? '—' })}
+      </p>
+      {#if st?.missing}
+        <p class="notice">{t('goals.needsSpending')}</p>
+      {:else if st}
+        <div class="bar" role="img" aria-label={t('goals.progress', { pct: Math.round((st.have / Math.max(1, st.target)) * 100) })}>
+          <span style:width="{Math.min(100, (st.have / Math.max(1, st.target)) * 100)}%" class:warn={!st.on_track}></span>
+        </div>
+        <p class="num amounts">{money(st.have, base)} / {money(st.target, base)}</p>
+        {#if goal.kind === 'savings'}
+          <dl class="facts small">
+            <div><dt>{t('goals.chance')}</dt><dd class="num">{percent(st.chance)}</dd></div>
+            <div><dt>{t('goals.needed')}</dt><dd class="num">{money(st.needed_monthly ?? 0, base)}</dd></div>
+            <div><dt>{t('goals.putIn')}</dt><dd class="num">{money(goal.monthly, base)}</dd></div>
+          </dl>
+        {/if}
+      {/if}
+    </article>
+  {:else}
+    <p class="muted">{t('goals.none')}</p>
+  {/each}
+</section>
+
+{#if draft}
+  <section class="card">
+    <h2>{draft.name || t('goals.newGoal')}</h2>
+    <form class="grid fields" onsubmit={(e) => (e.preventDefault(), saveGoal())}>
+      <label class="field">{t('goals.name')}<input bind:value={draft.name} required /></label>
+      {#if draft.kind === 'emergency_fund'}
+        <label class="field">{t('goals.months')}<input type="number" min="1" max="24" bind:value={draft.target} required /></label>
+      {:else}
+        <label class="field">{t('goals.target', { currency: base })}<input inputmode="decimal" bind:value={draft.target} required /></label>
+        <label class="field">{t('goals.byYear')}<input type="number" min={thisYear} max={thisYear + 60} bind:value={draft.year} required /></label>
+        <label class="field">{t('goals.monthly', { currency: base })}<input inputmode="decimal" bind:value={draft.monthly} required /></label>
+      {/if}
+      <div class="actions">
+        <button class="btn">{t('common.save')}</button>
+        <button type="button" class="btn ghost" onclick={() => (draft = null)}>{t('common.cancel')}</button>
+      </div>
+    </form>
+  </section>
+{:else}
+  <div class="row">
+    <button class="btn" onclick={() => newGoal('savings')}>{t('goals.addSavings')}</button>
+    {#if !s.plan.goals.some((g) => g.kind === 'emergency_fund')}
+      <button class="btn ghost" onclick={() => newGoal('emergency_fund')}>{t('goals.addEmergency')}</button>
+    {/if}
+  </div>
+{/if}
+
+<PlanVsActual plan={s.plan} {base} {cash} planned={statuses} />
+
 <section class="card">
   <div class="head">
     <h2>{t('goals.profile')}</h2>
@@ -162,71 +231,6 @@
     </dl>
   {/if}
 </section>
-
-<PlanVsActual plan={s.plan} {base} {cash} planned={statuses} />
-
-<section class="goals" aria-label={t('goals.list')}>
-  {#each s.plan.goals as goal (goal.id)}
-    {@const st = statuses.get(goal.id)}
-    <article class="card goal">
-      <div class="head">
-        <h2>{goal.name}</h2>
-        {#if st}<span class="pill" class:warn={!st.on_track}>{st.on_track ? t('goals.onTrack') : t('goals.behind')}</span>{/if}
-      </div>
-      <p class="muted when">
-        {goal.kind === 'emergency_fund' ? t('goals.emergencyWhen', { months: goal.target }) : t('goals.savingsWhen', { year: goal.year ?? '—' })}
-      </p>
-      {#if st?.missing}
-        <p class="notice">{t('goals.needsSpending')}</p>
-      {:else if st}
-        <div class="bar" role="img" aria-label={t('goals.progress', { pct: Math.round((st.have / Math.max(1, st.target)) * 100) })}>
-          <span style:width="{Math.min(100, (st.have / Math.max(1, st.target)) * 100)}%" class:warn={!st.on_track}></span>
-        </div>
-        <p class="num amounts">{money(st.have, base)} / {money(st.target, base)}</p>
-        {#if goal.kind === 'savings'}
-          <dl class="facts small">
-            <div><dt>{t('goals.chance')}</dt><dd class="num">{percent(st.chance)}</dd></div>
-            <div><dt>{t('goals.needed')}</dt><dd class="num">{money(st.needed_monthly ?? 0, base)}</dd></div>
-            <div><dt>{t('goals.putIn')}</dt><dd class="num">{money(goal.monthly, base)}</dd></div>
-          </dl>
-        {/if}
-      {/if}
-      <div class="row">
-        <button class="btn ghost" onclick={() => (draft = { ...goal })}>{t('common.edit')}</button>
-        <button class="btn ghost" onclick={() => remove(goal)}>{t('common.remove')}</button>
-      </div>
-    </article>
-  {:else}
-    <p class="muted">{t('goals.none')}</p>
-  {/each}
-</section>
-
-{#if draft}
-  <section class="card">
-    <h2>{draft.name || t('goals.newGoal')}</h2>
-    <form class="grid fields" onsubmit={(e) => (e.preventDefault(), saveGoal())}>
-      <label class="field">{t('goals.name')}<input bind:value={draft.name} required /></label>
-      {#if draft.kind === 'emergency_fund'}
-        <label class="field">{t('goals.months')}<input type="number" min="1" max="24" bind:value={draft.target} required /></label>
-      {:else}
-        <label class="field">{t('goals.target', { currency: base })}<input inputmode="decimal" bind:value={draft.target} required /></label>
-        <label class="field">{t('goals.byYear')}<input type="number" min={thisYear} max={thisYear + 60} bind:value={draft.year} required /></label>
-        <label class="field">{t('goals.monthly', { currency: base })}<input inputmode="decimal" bind:value={draft.monthly} required /></label>
-      {/if}
-      <div class="actions">
-        <button class="btn">{t('common.save')}</button>
-        <button type="button" class="btn ghost" onclick={() => (draft = null)}>{t('common.cancel')}</button>
-      </div>
-    </form>
-  </section>
-{:else}
-  <div class="row">
-    <button class="btn" onclick={() => newGoal('savings')}>{t('goals.addSavings')}</button>
-    {#if !s.plan.goals.some((g) => g.kind === 'emergency_fund')}
-      <button class="btn ghost" onclick={() => newGoal('emergency_fund')}>{t('goals.addEmergency')}</button>
-    {/if}
-  </div>
-{/if}
 
 <p class="muted small">{t('goals.method')}</p>
 
@@ -311,6 +315,9 @@
   }
   .goal .head {
     margin-bottom: 0;
+  }
+  .goal .head h2 {
+    flex: 1;
   }
   .when {
     font-size: 13px;
