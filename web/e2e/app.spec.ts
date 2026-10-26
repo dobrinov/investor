@@ -101,3 +101,14 @@ test('entries, tax notes and the example read in the chosen language', async ({ 
   await page.getByRole('navigation', { name: 'Основна навигация' }).or(page.locator('aside nav')).first().getByRole('button', { name: 'Данъци и отчитане' }).click()
   await expect(page.getByText(/Работен вариант\. Капиталови печалби/)).toBeVisible()
 })
+
+test('every description the app writes has a translation', async ({ page }) => {
+  // Fails when the core's wording changes and the patterns in describe.ts no longer match.
+  await page.addInitScript(() => localStorage.setItem('investor.language', 'bg'))
+  await page.goto('/app/#example')
+  await page.locator('aside nav').getByRole('button', { name: 'Главна книга' }).click()
+  const lines = await page.locator('main strong').allTextContents()
+  expect(lines.length).toBeGreaterThan(10)
+  const english = lines.filter((l) => /^(Buy|Sell|Deposit|Withdrawal|Dividend|Withholding|Fee|Interest|Convert|Bought|Sold|Opening balance)\b|: (opening balance|balance now|paid)\b/.test(l))
+  expect(english).toEqual([])
+})

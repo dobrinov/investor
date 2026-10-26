@@ -386,7 +386,7 @@ fn realized_gains(v: &Vault, args: &Value, env: &Env) -> Result<Value> {
         "summary": pack.summarize(&gains),
         "employment_income": employment,
         "employment_rule": pack.employment_income,
-        "pack": { "authority": pack.pack.authority, "verified": pack.pack.verified, "rate": pack.capital_gains.rate, "inclusion_rate": pack.capital_gains.inclusion_rate, "form": pack.capital_gains.form, "notes": pack.pack.notes, "deadlines": pack.deadlines, "currency": pack.pack.currency },
+        "pack": { "authority": pack.pack.authority, "verified": pack.pack.verified, "rate": pack.capital_gains.rate, "inclusion_rate": pack.capital_gains.inclusion_rate, "form": pack.capital_gains.form, "notes": pack.pack.notes.as_ref().map(|n| n.get(&v.settings.language)), "deadlines": pack.deadlines, "currency": pack.pack.currency },
     }))
 }
 

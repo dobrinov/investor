@@ -44,8 +44,12 @@ const patterns = KEYS.map((key) => {
       const name = /^\{(\w+)\}$/.exec(part)?.[1]
       if (!name) return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       names.push(name)
-      // A ticker never starts with a digit; counts are plain numbers.
-      return name === 'symbol' ? '([^\\d\\s]\\S*)' : ['units', 'held', 'left'].includes(name) ? '(-?[\\d.]+)' : '(.+?)'
+      // Tight shapes, so only the app's own wording matches, not text
+      // someone typed: a ticker, a number, or an amount with its currency.
+      if (name === 'symbol') return '([A-Z0-9][A-Z0-9.\\-]*)'
+      if (['units', 'held', 'left'].includes(name)) return '(-?[\\d.]+)'
+      if (['amount', 'sold', 'bought'].includes(name)) return '(-?[\\d.]+ [A-Z]{3})'
+      return '(.+?)'
     })
     .join('')
   return { key, names, re: new RegExp(`^${source}$`) }

@@ -185,7 +185,7 @@
                               <button class="copy" onclick={() => copy(cell.text)} title={t('decl.copy')} aria-label="{t('decl.copy')} {cell.text}">
                                 {copied === cell.text ? t('decl.copied') : cell.text}
                               </button>
-                            {:else}{describe(cell.text)}{/if}
+                            {:else if section.columns[c]?.[1] === 'description'}{describe(cell.text)}{:else}{cell.text}{/if}
                           </td>
                         {/each}
                       </tr>

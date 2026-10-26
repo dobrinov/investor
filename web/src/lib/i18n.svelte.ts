@@ -53,11 +53,9 @@ export function translates(key: string): key is Key {
 }
 
 export function t(key: Key, params?: Record<string, string | number>): string {
-  let text = dictionaries[i18n.lang]?.[key] ?? en[key]
-  for (const [name, value] of Object.entries(params ?? {})) {
-    text = text.replaceAll(`{${name}}`, String(value))
-  }
-  return text
+  const text = dictionaries[i18n.lang]?.[key] ?? en[key]
+  // One pass, so a value that itself contains "{name}" is left as it is.
+  return params ? text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole)) : text
 }
 
 /** Text a tax pack gives in one language or several, by language code. */

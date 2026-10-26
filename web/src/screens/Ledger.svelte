@@ -8,11 +8,17 @@
   let tab = $state<'journal' | 'trial'>('journal')
   let query = $state('')
 
+  // Each description in the chosen language, worked out once per change.
+  const described = $derived(new Map(s.entries.map((e) => [e.id, describe(e.description)])))
   const entries = $derived.by(() => {
     const q = query.trim().toLowerCase()
     if (!q) return s.entries
     return s.entries.filter(
-      (e) => e.description.toLowerCase().includes(q) || describe(e.description).toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.postings.some((p) => p.account.toLowerCase().includes(q)),
+      (e) =>
+        e.description.toLowerCase().includes(q) ||
+        described.get(e.id)!.toLowerCase().includes(q) ||
+        e.id.toLowerCase().includes(q) ||
+        e.postings.some((p) => p.account.toLowerCase().includes(q)),
     )
   })
   const totals = $derived(
@@ -38,7 +44,7 @@
   {#each entries as e (e.id)}
     <article class="card entry">
       <div class="entry-head">
-        <span><span class="muted num">{e.id} · {date(e.date)}</span> · <strong>{describe(e.description)}</strong></span>
+        <span><span class="muted num">{e.id} · {date(e.date)}</span> · <strong>{described.get(e.id) ?? e.description}</strong></span>
         <span class="tags">
           {#if e.venue}<span class="pill" class:warn={e.venue.assumed}>{t('ledger.venue', { code: e.venue.code })}</span>{/if}
           {#if e.source}<span class="pill plain">{t('ledger.source', { file: e.source.file, line: e.source.line })}</span>{/if}
