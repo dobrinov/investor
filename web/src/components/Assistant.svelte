@@ -353,7 +353,7 @@
     background: var(--muted);
   }
   .live-dot.live {
-    background: #1d6b3a;
+    background: var(--gain);
   }
   .magic.on {
     transform: rotate(20deg);

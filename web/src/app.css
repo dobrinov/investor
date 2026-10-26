@@ -23,6 +23,12 @@
   --side-active: #243246;
   --side-text: #c9d1db;
   --side-accent: #7fa8e8;
+  --gain: #1d6b3a;
+  /* What net worth is made of, told apart by lightness too. */
+  --part-securities: #1f5fbf;
+  --part-cash: #7fa8e8;
+  --part-private: #2a9ba3;
+  --part-metals: #c08a1e;
   --sans: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   color-scheme: light;
@@ -52,6 +58,11 @@
     --side: #070b10;
     --side-2: #141b24;
     --side-active: #1c2c46;
+    --gain: #74d18f;
+    --part-securities: #7fa8e8;
+    --part-cash: #34558a;
+    --part-private: #2a9ba3;
+    --part-metals: #d6a23a;
     color-scheme: dark;
   }
 }

@@ -57,10 +57,10 @@
   const growth = $derived(worth - putIn)
   const parts = $derived(
     [
-      { key: 'securities', amount: value - metals, color: 'var(--accent)' },
-      { key: 'cash', amount: cash, color: 'var(--side-accent)' },
-      { key: 'private', amount: privately, color: '#2a9ba3' },
-      { key: 'metals', amount: metals, color: '#c08a1e' },
+      { key: 'securities', amount: value - metals, color: 'var(--part-securities)' },
+      { key: 'cash', amount: cash, color: 'var(--part-cash)' },
+      { key: 'private', amount: privately, color: 'var(--part-private)' },
+      { key: 'metals', amount: metals, color: 'var(--part-metals)' },
     ].filter((p) => p.amount > 0),
   )
   const percent = (part: number, whole: number) => (whole ? `${((part / whole) * 100).toFixed(1)}%` : '')
@@ -422,7 +422,7 @@
   .change {
     font-size: 15px;
     font-weight: 500;
-    color: var(--gain, #1d6b3a);
+    color: var(--gain);
   }
   .split {
     flex: 2 1 420px;
