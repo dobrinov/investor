@@ -109,6 +109,16 @@ test('every description the app writes has a translation', async ({ page }) => {
   await page.locator('aside nav').getByRole('button', { name: 'Главна книга' }).click()
   const lines = await page.locator('main strong').allTextContents()
   expect(lines.length).toBeGreaterThan(10)
-  const english = lines.filter((l) => /^(Buy|Sell|Deposit|Withdrawal|Dividend|Withholding|Fee|Interest|Convert|Bought|Sold|Opening balance)\b|: (opening balance|balance now|paid)\b/.test(l))
+  const english = lines.filter((l) => /^(Buy|Sell|Deposit|Withdrawal|Dividend|Withholding|Fee|Interest|Convert|Bought|Sold|Opening balance)\b|: (opening balance|balance now|paid|owed)\b/.test(l))
   expect(english).toEqual([])
+})
+
+test('a debt comes off net worth and shows when it will be paid off', async ({ page }) => {
+  await page.goto('/app/#example')
+  await expect(page.getByRole('term').filter({ hasText: 'Debt' })).toBeVisible()
+  await page.getByRole('tab', { name: /Debt/ }).click()
+  const row = page.getByRole('row', { name: /Car loan/ })
+  await expect(row).toContainText('6.9%')
+  await expect(row).toContainText('€8,400.00')
+  await expect(row).toContainText(/\d+ y \d+ m/)
 })

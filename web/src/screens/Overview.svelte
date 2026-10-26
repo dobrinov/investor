@@ -1,6 +1,7 @@
 <script lang="ts">
   import { describe } from '../lib/describe'
   import BankAccounts from '../components/BankAccounts.svelte'
+  import Debts from '../components/Debts.svelte'
   import PhysicalMetals from '../components/PhysicalMetals.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
   import RowMenu from '../components/RowMenu.svelte'
@@ -11,6 +12,8 @@
   import { app } from '../lib/state.svelte'
 
   const STALE_DAYS = 7
+  // A loan dearer than this costs more than investing is likely to earn.
+  const HIGH_RATE = 0.06
 
   const s = $derived(app.snapshot!)
   const base = $derived(s.settings.base_currency)
@@ -53,7 +56,9 @@
 
   // Net worth and what it is made of.
   const metals = $derived(s.valuations.filter((v) => v.broker === 'PHYSICAL').reduce((sum, v) => sum + Number(v.value ?? v.cost), 0))
-  const worth = $derived(value + cash + privately)
+  // What is owed, in the base currency; it comes off net worth.
+  const owed = $derived(s.debts.reduce((sum, d) => sum + Number(d.value ?? 0), 0))
+  const worth = $derived(value + cash + privately - owed)
   const putIn = $derived(contributed + opening)
   const growth = $derived(worth - putIn)
   const parts = $derived(
@@ -73,6 +78,12 @@
       const days = ageDays(v.quote.date)
       return days > STALE_DAYS ? [{ id: `p:${v.broker}:${v.symbol}`, text: t('overview.attn.stale', { symbol: v.symbol, days }), action: t('overview.updatePrice'), run: () => fixPrice(v) }] : []
     }),
+    ...s.debts
+      .filter((d) => Number(d.owed) > 0 && d.monthly && d.months_left === undefined)
+      .map((d) => ({ id: `debt-never:${d.id}`, text: t('overview.attn.debtNever', { name: d.name }), action: t('overview.attn.showDebt'), run: () => showDebt() })),
+    ...s.debts
+      .filter((d) => Number(d.owed) > 0 && Number(d.rate ?? 0) >= HIGH_RATE)
+      .map((d) => ({ id: `debt-rate:${d.id}`, text: t('overview.attn.debtRate', { name: d.name, rate: `${+(Number(d.rate) * 100).toFixed(2)}%` }), action: t('overview.attn.showDebt'), run: () => showDebt() })),
     ...fxNeeded.filter((c) => !fxRates.has(c)).map((c) => ({ id: `fx:${c}`, text: t('overview.attn.noRate', { currency: c }), action: t('overview.attn.addRate'), run: () => fixRate(c) })),
   ])
 
@@ -82,19 +93,25 @@
     void tick().then(() => document.getElementById('holdings-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
+  function showDebt(): void {
+    tab = 'debts'
+    void tick().then(() => document.getElementById('debt-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   function fixRate(currency: string): void {
     editFx(currency)
     void tick().then(() => document.getElementById('cash-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   // What you own, one kind at a time.
-  type Kind = 'securities' | 'banks' | 'metals' | 'private'
+  type Kind = 'securities' | 'banks' | 'metals' | 'private' | 'debts'
   let tab = $state<Kind>('securities')
   const kinds = $derived<{ id: Kind; count: number }[]>([
     { id: 'securities', count: securities.length },
     { id: 'banks', count: s.banks.length },
     { id: 'metals', count: new Set(s.valuations.filter((v) => v.broker === 'PHYSICAL').map((v) => v.symbol)).size },
     { id: 'private', count: s.private.length },
+    { id: 'debts', count: s.debts.length },
   ])
 
   // Inline editors
@@ -155,6 +172,7 @@
   <BankAccounts />
   <PhysicalMetals />
   <PrivateHoldings />
+  <Debts />
 {:else}
   <section class="card hero" aria-labelledby="worth-title">
     <div class="worth">
@@ -178,6 +196,7 @@
       <dl class="facts">
         <div><dt>{t('overview.unrealised')}</dt><dd class="num" class:loss={unrealised < 0}>{unrealised >= 0 ? '+' : ''}{money(unrealised, base)}</dd></div>
         <div><dt>{t('overview.putIn')}</dt><dd class="num">{money(putIn, base)}</dd></div>
+        {#if owed > 0}<div><dt>{t('overview.owed')}</dt><dd class="num">−{money(owed, base)}</dd></div>{/if}
         <div><dt>{t('overview.realised')}</dt><dd class="num">{money(realised, base)}</dd></div>
         <div><dt>{t('overview.dividendsLabel')}</dt><dd class="num">{money(dividends, base)}</dd></div>
       </dl>
@@ -297,8 +316,10 @@
     <BankAccounts />
   {:else if tab === 'metals'}
     <PhysicalMetals />
-  {:else}
+  {:else if tab === 'private'}
     <PrivateHoldings />
+  {:else}
+    <Debts />
   {/if}
   </div>
 

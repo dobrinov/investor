@@ -4,6 +4,7 @@
 use std::fmt::Display;
 
 use investor_core::bank::{self, BalanceInput, BankBalance, NewAccount};
+use investor_core::debt::{self, DebtBalance, NewDebt, Terms};
 use investor_core::import::{self, BrokerConfig};
 use investor_core::jurisdiction::JurisdictionPack;
 use investor_core::ledger::{Instrument, JournalEntry};
@@ -63,6 +64,8 @@ struct Snapshot<'a> {
     private: Vec<PrivateValuation>,
     /// Bank accounts whose balance is typed in; their cash is also in `cash`.
     banks: Vec<BankBalance>,
+    /// Debts with what is still owed; they come off net worth.
+    debts: Vec<DebtBalance>,
     /// Coins and bars; they are also in `valuations`, at the `PHYSICAL` location.
     metals: Vec<MetalHolding>,
     /// Latest rate per currency: units of the base currency for one unit.
@@ -175,6 +178,7 @@ impl Session {
             valuations: prices::valuations(ledger, &self.vault.prices),
             private: private::valuations(&self.vault),
             banks: bank::balances(&self.vault),
+            debts: debt::balances(&self.vault),
             metals: metal::holdings(&self.vault),
             fx: self.vault.prices.fx.iter().filter_map(|(c, q)| Some((c, q.last()?))).collect(),
             cash: reports::cash(ledger),
@@ -317,6 +321,35 @@ impl Session {
     #[wasm_bindgen(js_name = removeBank)]
     pub fn remove_bank(&mut self, id: &str) -> Result<(), JsError> {
         bank::remove(&mut self.vault, id).map_err(core_error)
+    }
+
+    /// Adds a debt with what is owed. `input` is JSON; returns the opening
+    /// entry as JSON, or `null` when nothing is owed.
+    #[wasm_bindgen(js_name = addDebt)]
+    pub fn add_debt(&mut self, input: &str) -> Result<String, JsError> {
+        let input: NewDebt = serde_json::from_str(input).map_err(bad_input)?;
+        json(&debt::add(&mut self.vault, &input).map_err(core_error)?)
+    }
+
+    /// Records what is still owed on a debt. `input` is JSON; returns the
+    /// entry for the difference as JSON, or `null` when nothing changed.
+    #[wasm_bindgen(js_name = setDebtOwed)]
+    pub fn set_debt_owed(&mut self, id: &str, input: &str) -> Result<String, JsError> {
+        let input: BalanceInput = serde_json::from_str(input).map_err(bad_input)?;
+        json(&debt::set_owed(&mut self.vault, id, &input).map_err(core_error)?)
+    }
+
+    /// Changes a debt's name, kind, rate or monthly payment. `terms` is JSON.
+    #[wasm_bindgen(js_name = editDebt)]
+    pub fn edit_debt(&mut self, id: &str, terms: &str) -> Result<(), JsError> {
+        let terms: Terms = serde_json::from_str(terms).map_err(bad_input)?;
+        debt::edit(&mut self.vault, id, &terms).map_err(core_error)
+    }
+
+    /// Removes a debt and its entries.
+    #[wasm_bindgen(js_name = removeDebt)]
+    pub fn remove_debt(&mut self, id: &str) -> Result<(), JsError> {
+        debt::remove(&mut self.vault, id).map_err(core_error)
     }
 
     /// The bundled tax packs, as JSON `{"BG/2026": "<toml>", ...}`, for the assistant.

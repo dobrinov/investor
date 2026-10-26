@@ -1,4 +1,4 @@
-import type { BalanceInput, Entry, MetalInput, MetalPrice, PayoutInput, Plan, PrivateInput, Snapshot, TradeInput } from './core'
+import type { BalanceInput, DebtTerms, Entry, MetalInput, MetalPrice, PayoutInput, Plan, PrivateInput, Snapshot, TradeInput } from './core'
 import type { SectionId } from './guide/types'
 import { modifiedAt, saveFile, saveFileAs, type FileRef, type SaveResult } from './files'
 import { t, useLanguage } from './i18n.svelte'
@@ -163,6 +163,26 @@ class AppState {
 
   async removeBank(id: string): Promise<void> {
     this.book?.removeBank(id)
+    await this.changed()
+  }
+
+  async addDebt(input: BalanceInput & DebtTerms & { currency: string }): Promise<void> {
+    this.book?.addDebt(input)
+    await this.changed()
+  }
+
+  async setDebtOwed(id: string, input: BalanceInput): Promise<void> {
+    this.book?.setDebtOwed(id, input)
+    await this.changed()
+  }
+
+  async editDebt(id: string, terms: DebtTerms): Promise<void> {
+    this.book?.editDebt(id, terms)
+    await this.changed()
+  }
+
+  async removeDebt(id: string): Promise<void> {
+    this.book?.removeDebt(id)
     await this.changed()
   }
 

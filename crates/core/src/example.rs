@@ -10,6 +10,7 @@ use chrono::{Datelike, Months, NaiveDate};
 use rust_decimal::Decimal;
 
 use crate::bank::{self, BalanceInput, NewAccount};
+use crate::debt;
 use crate::import::FeeKind;
 use crate::ledger::{self, JournalEntry, Posting};
 use crate::metal::{self, Metal, MetalInput, MetalPrice};
@@ -122,28 +123,28 @@ impl Book {
 }
 
 /// The example's own names in `language`: savings account, startup stake,
-/// its condition, where it was paid from, a gold bar, and the two goals.
-fn words(language: &str) -> [&'static str; 7] {
+/// its condition, where it was paid from, a gold bar, the two goals and a car loan.
+fn words(language: &str) -> [&'static str; 8] {
     match language {
-        "bg" => ["Спестовна сметка", "Дял в стартъп (ангелски кръг)", "При продажба на компанията", "Банка", "Кюлче", "Авариен фонд", "Първоначална вноска за жилище"],
-        "de" => ["Sparkonto", "Startup-Beteiligung (Angel-Runde)", "Beim Verkauf des Unternehmens", "Bank", "Barren", "Notgroschen", "Eigenkapital fürs Eigenheim"],
-        "el" => ["Λογαριασμός ταμιευτηρίου", "Μερίδιο σε startup (angel γύρος)", "Όταν πουληθεί η εταιρεία", "Τράπεζα", "Ράβδος", "Ταμείο έκτακτης ανάγκης", "Προκαταβολή για σπίτι"],
-        "es" => ["Cuenta de ahorro", "Participación en startup (ronda ángel)", "Cuando se venda la empresa", "Banco", "Lingote", "Fondo de emergencia", "Entrada para la casa"],
-        "fr" => ["Livret d’épargne", "Part de startup (tour business angels)", "À la vente de l’entreprise", "Banque", "Lingot", "Épargne de précaution", "Apport pour la maison"],
-        "it" => ["Conto deposito", "Quota in startup (round angel)", "Alla vendita della società", "Banca", "Lingotto", "Fondo di emergenza", "Anticipo per la casa"],
-        "nl" => ["Spaarrekening", "Belang in start-up (angelronde)", "Bij verkoop van het bedrijf", "Bank", "Baar", "Buffer", "Eigen inbreng voor een huis"],
-        "pl" => ["Konto oszczędnościowe", "Udział w startupie (runda anielska)", "Przy sprzedaży firmy", "Bank", "Sztabka", "Fundusz awaryjny", "Wkład własny na mieszkanie"],
-        "pt" => ["Conta poupança", "Participação em startup (ronda angel)", "Quando a empresa for vendida", "Banco", "Barra", "Fundo de emergência", "Entrada para a casa"],
-        "ro" => ["Cont de economii", "Participație la startup (rundă angel)", "La vânzarea companiei", "Bancă", "Lingou", "Fond de urgență", "Avans pentru casă"],
-        "uk" => ["Ощадний рахунок", "Частка в стартапі (ангельський раунд)", "Під час продажу компанії", "Банк", "Злиток", "Резервний фонд", "Перший внесок за житло"],
-        _ => ["Savings account", "Startup stake (angel round)", "When the company is sold", "Bank", "Bar", "Emergency fund", "House deposit"],
+        "bg" => ["Спестовна сметка", "Дял в стартъп (ангелски кръг)", "При продажба на компанията", "Банка", "Кюлче", "Авариен фонд", "Първоначална вноска за жилище", "Кредит за кола"],
+        "de" => ["Sparkonto", "Startup-Beteiligung (Angel-Runde)", "Beim Verkauf des Unternehmens", "Bank", "Barren", "Notgroschen", "Eigenkapital fürs Eigenheim", "Autokredit"],
+        "el" => ["Λογαριασμός ταμιευτηρίου", "Μερίδιο σε startup (angel γύρος)", "Όταν πουληθεί η εταιρεία", "Τράπεζα", "Ράβδος", "Ταμείο έκτακτης ανάγκης", "Προκαταβολή για σπίτι", "Δάνειο αυτοκινήτου"],
+        "es" => ["Cuenta de ahorro", "Participación en startup (ronda ángel)", "Cuando se venda la empresa", "Banco", "Lingote", "Fondo de emergencia", "Entrada para la casa", "Préstamo del coche"],
+        "fr" => ["Livret d’épargne", "Part de startup (tour business angels)", "À la vente de l’entreprise", "Banque", "Lingot", "Épargne de précaution", "Apport pour la maison", "Crédit auto"],
+        "it" => ["Conto deposito", "Quota in startup (round angel)", "Alla vendita della società", "Banca", "Lingotto", "Fondo di emergenza", "Anticipo per la casa", "Prestito auto"],
+        "nl" => ["Spaarrekening", "Belang in start-up (angelronde)", "Bij verkoop van het bedrijf", "Bank", "Baar", "Buffer", "Eigen inbreng voor een huis", "Autolening"],
+        "pl" => ["Konto oszczędnościowe", "Udział w startupie (runda anielska)", "Przy sprzedaży firmy", "Bank", "Sztabka", "Fundusz awaryjny", "Wkład własny na mieszkanie", "Kredyt samochodowy"],
+        "pt" => ["Conta poupança", "Participação em startup (ronda angel)", "Quando a empresa for vendida", "Banco", "Barra", "Fundo de emergência", "Entrada para a casa", "Crédito automóvel"],
+        "ro" => ["Cont de economii", "Participație la startup (rundă angel)", "La vânzarea companiei", "Bancă", "Lingou", "Fond de urgență", "Avans pentru casă", "Credit auto"],
+        "uk" => ["Ощадний рахунок", "Частка в стартапі (ангельський раунд)", "Під час продажу компанії", "Банк", "Злиток", "Резервний фонд", "Перший внесок за житло", "Автокредит"],
+        _ => ["Savings account", "Startup stake (angel round)", "When the company is sold", "Bank", "Bar", "Emergency fund", "House deposit", "Car loan"],
     }
 }
 
 /// A complete example book as of `today`, in `language`.
 pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     let settings = Settings { base_currency: cur("EUR"), language: language.into(), tax_residency: "BG".into() };
-    let [savings, stake, condition, bank, bar, emergency, house] = words(language);
+    let [savings, stake, condition, bank, bar, emergency, house, car] = words(language);
     let mut b = Book { vault: Vault::new(settings), today, next: 0 };
     use Side::{Buy, Sell};
 
@@ -189,6 +190,15 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
         balance: BalanceInput { entry_id: "example-wise".into(), date: b.ago(1), balance: d("2500"), fx_rate: Some(d("1.15")) },
     };
     bank::add(&mut b.vault, &pounds)?;
+    // A car loan, paid down each month.
+    let loan = debt::NewDebt {
+        terms: debt::Terms { name: car.into(), kind: debt::DebtKind::Car, rate: Some(d("0.069")), monthly: Some(d("310")) },
+        currency: cur("EUR"),
+        owed: BalanceInput { entry_id: "example-car".into(), date: b.ago(10), balance: d("11000"), fx_rate: None },
+    };
+    debt::add(&mut b.vault, &loan)?;
+    let now = BalanceInput { entry_id: "example-car-now".into(), date: b.ago(1), balance: d("8400"), fx_rate: None };
+    debt::set_owed(&mut b.vault, &ledger::slug(car), &now)?;
     let stake = PrivateInput {
         entry_id: "example-private".into(),
         name: stake.into(),
@@ -268,7 +278,7 @@ mod tests {
         }
         assert!(reports::cash(&v.ledger).iter().all(|c| c.amount >= Decimal::ZERO), "no cash goes negative");
         assert_eq!(reports::realized_gains(&v.ledger, 2026).len(), 2);
-        assert_eq!((v.banks.len(), v.private.len(), v.plan.goals.len()), (2, 1, 2));
+        assert_eq!((v.banks.len(), v.debts.len(), v.private.len(), v.plan.goals.len()), (2, 1, 1, 2));
         let currencies: std::collections::BTreeSet<String> = reports::cash(&v.ledger).into_iter().map(|c| c.currency.to_string()).collect();
         assert_eq!(currencies.into_iter().collect::<Vec<_>>(), ["CHF", "DKK", "EUR", "GBP", "USD"]);
         assert!(prices::valuations(&v.ledger, &v.prices).iter().all(|x| x.value.is_some()), "every holding has a value in EUR");

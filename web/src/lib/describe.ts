@@ -11,6 +11,8 @@ const KEYS = [
   'desc.privatePaidOut',
   'desc.privatePaidFrom',
   'desc.privatePaid',
+  'desc.debtNow',
+  'desc.debtOpening',
   'desc.bankOpening',
   'desc.bankNow',
   'desc.metalBought',

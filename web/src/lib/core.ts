@@ -300,6 +300,32 @@ export interface BankAccount {
   updated: string | null
 }
 
+export type DebtKind = 'mortgage' | 'car' | 'personal' | 'student' | 'credit_card' | 'family' | 'other'
+
+export interface DebtTerms {
+  name: string
+  kind: DebtKind
+  /** Yearly, as a fraction: 0.069 is 6.9%. */
+  rate: Decimal | null
+  monthly: Decimal | null
+}
+
+export interface Debt {
+  id: string
+  name: string
+  kind: DebtKind
+  currency: string
+  rate?: Decimal
+  monthly?: Decimal
+  /** Still owed, in `currency`. */
+  owed: Decimal
+  /** Still owed in the base currency at the latest rate, when there is one. */
+  value?: Decimal
+  updated: string | null
+  /** Months until paid off; missing when the payment does not cover the interest or is unknown. */
+  months_left?: number
+}
+
 export interface BalanceInput {
   /** Chosen when the form opens, so saving twice books once. */
   entry_id: string
@@ -352,6 +378,8 @@ export interface Snapshot {
   private: PrivateHolding[]
   /** Their cash is also in `cash`. */
   banks: BankAccount[]
+  /** What is still owed; it comes off net worth. */
+  debts: Debt[]
   /** Coins and bars; also in `valuations` at the PHYSICAL location. */
   metals: MetalHolding[]
   fx: [string, FxQuote][]
@@ -632,6 +660,22 @@ export class Book {
 
   removeBank(id: string): void {
     this.session.removeBank(id)
+  }
+
+  addDebt(input: BalanceInput & DebtTerms & { currency: string }): Entry | null {
+    return JSON.parse(this.session.addDebt(JSON.stringify(input)))
+  }
+
+  setDebtOwed(id: string, input: BalanceInput): Entry | null {
+    return JSON.parse(this.session.setDebtOwed(id, JSON.stringify(input)))
+  }
+
+  editDebt(id: string, terms: DebtTerms): void {
+    this.session.editDebt(id, JSON.stringify(terms))
+  }
+
+  removeDebt(id: string): void {
+    this.session.removeDebt(id)
   }
 
   buyMetal(input: MetalInput): Entry {

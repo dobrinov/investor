@@ -9,6 +9,7 @@ use rust_decimal::Decimal;
 use serde_json::{Value, json};
 
 use crate::bank::{self, BalanceInput, NewAccount};
+use crate::debt;
 use crate::jurisdiction::JurisdictionPack;
 use crate::metal::{self, Metal, MetalInput, MetalPrice};
 use crate::plan::{self, Goal, Market, Plan, Profile, to_f64};
@@ -39,10 +40,12 @@ fund costs) and come from simulated markets: give ranges, not promises. Tax figu
 unverified: say so. Before suggesting a purchase or sale, run preview_trade and project to show its effects. You are not a \
 licensed adviser: explain trade-offs instead of giving orders, and answer in the person's language.";
 
-const WRITES: [&str; 15] = [
+const WRITES: [&str; 17] = [
     "record_trade",
     "add_bank_account",
     "update_bank_balance",
+    "add_debt",
+    "update_debt",
     "set_price",
     "set_fx_rate",
     "record_metal",
@@ -124,6 +127,8 @@ pub fn tools(writes: bool) -> Value {
             json!({ "name": "record_trade", "description": "Records a purchase or sale in the books, exactly like the app's Plan a trade screen. Same fields as preview_trade; preview it first and record only what the person agreed to.", "input_schema": schema(trade_properties(), &["side", "broker", "symbol"]) }),
             json!({ "name": "add_bank_account", "description": "Adds a bank account kept by hand with its balance; the money counts as cash.", "input_schema": schema(json!({ "name": { "type": "string" }, "currency": { "type": "string" }, "balance": { "type": "string" }, "date": date, "fx_rate": fx }), &["name", "currency", "balance"]) }),
             json!({ "name": "update_bank_balance", "description": "Sets a bank account's whole balance on a date; the books record the difference as money added or taken out.", "input_schema": schema(json!({ "account": { "type": "string", "description": "The account's name or id (see portfolio)" }, "balance": { "type": "string" }, "date": date, "fx_rate": fx }), &["account", "balance"]) }),
+            json!({ "name": "add_debt", "description": "Adds a debt kept by hand, such as a mortgage, car loan or credit card, with what is owed now. It comes off net worth.", "input_schema": schema(json!({ "name": { "type": "string" }, "kind": { "type": "string", "enum": ["mortgage", "car", "personal", "student", "credit_card", "family", "other"] }, "currency": { "type": "string" }, "owed": { "type": "string", "description": "What is still owed, positive" }, "rate": { "type": "string", "description": "Yearly interest rate as a fraction, e.g. 0.069" }, "monthly": { "type": "string", "description": "Regular monthly payment" }, "date": date, "fx_rate": fx }), &["name", "kind", "currency", "owed"]) }),
+            json!({ "name": "update_debt", "description": "Sets what is still owed on a debt on a date; paying it down counts as money put in. Can also change its rate or monthly payment.", "input_schema": schema(json!({ "debt": { "type": "string", "description": "The debt's name or id (see portfolio)" }, "owed": { "type": "string" }, "rate": { "type": "string" }, "monthly": { "type": "string" }, "date": date, "fx_rate": fx }), &["debt"]) }),
             json!({ "name": "set_price", "description": "Sets the price of a holding on a date, e.g. from the person's broker.", "input_schema": schema(json!({ "symbol": { "type": "string" }, "price": { "type": "string" }, "currency": { "type": "string" }, "date": date }), &["symbol", "price", "currency"]) }),
             json!({ "name": "set_fx_rate", "description": "Sets an exchange rate: how much of the base currency one unit of `currency` buys.", "input_schema": schema(json!({ "currency": { "type": "string" }, "rate": { "type": "string" }, "date": date }), &["currency", "rate"]) }),
             json!({ "name": "record_metal", "description": "Records buying or selling physical gold, silver, platinum or palladium (coins and bars). `amount` is everything paid or received, premium and fees included.", "input_schema": schema(json!({ "side": { "type": "string", "enum": ["buy", "sell"] }, "metal": { "type": "string", "enum": ["gold", "silver", "platinum", "palladium"] }, "weight": { "type": "string", "description": "Fine (pure) metal" }, "unit": { "type": "string", "enum": ["oz", "g"], "description": "Troy ounces or grams; default oz" }, "amount": { "type": "string" }, "currency": { "type": "string" }, "date": date, "fx_rate": fx, "description": { "type": "string", "description": "e.g. 2 x Krugerrand 1 oz" } }), &["side", "metal", "weight", "amount", "currency"]) }),
@@ -162,6 +167,8 @@ pub fn call(v: &mut Vault, name: &str, args: &Value, env: &Env) -> Result<Value>
         "record_trade" => record_trade(v, args, env),
         "add_bank_account" => add_bank_account(v, args, env),
         "update_bank_balance" => update_bank_balance(v, args, env),
+        "add_debt" => add_debt(v, args, env),
+        "update_debt" => update_debt(v, args, env),
         "set_price" => set_price(v, args, env),
         "set_fx_rate" => set_fx_rate(v, args, env),
         "record_metal" => record_metal(v, args, env),
@@ -232,6 +239,7 @@ fn portfolio(v: &Vault) -> Value {
     let (cash, invested) = whatif::starting_point(&v.ledger, &v.prices);
     let unrealised: Decimal = values.iter().filter_map(|x| x.gain).sum();
     let private_total = to_f64(private::total(v));
+    let owed: f64 = debt::balances(v).iter().filter_map(|d| d.value).map(to_f64).sum();
     json!({
         "base_currency": v.settings.base_currency,
         "tax_residency": v.settings.tax_residency,
@@ -239,10 +247,11 @@ fn portfolio(v: &Vault) -> Value {
         "holdings": values.iter().filter(|x| x.broker != metal::PHYSICAL).collect::<Vec<_>>(),
         "coins_and_bars": metal::holdings(v),
         "bank_accounts": bank::balances(v),
+        "debts": debt::balances(v),
         "private": private::valuations(v),
         "cash": reports::cash(&v.ledger),
-        "totals": { "invested": round(invested), "cash": round(cash), "private": round(private_total), "net_worth": round(invested + cash + private_total), "unrealised_gain": unrealised },
-        "note": "Coins and bars are counted in grams of fine metal and are part of `invested`. Bank accounts are part of `cash`. Holdings without a price are counted at cost. Private holdings have no market price: they count at the value set by hand, else at cost, and are left out of projections.",
+        "totals": { "invested": round(invested), "cash": round(cash), "private": round(private_total), "debts": round(owed), "net_worth": round(invested + cash + private_total - owed), "unrealised_gain": unrealised },
+        "note": "Coins and bars are counted in grams of fine metal and are part of `invested`. Bank accounts are part of `cash`. Holdings without a price are counted at cost. Private holdings have no market price: they count at the value set by hand, else at cost, and are left out of projections. Debts are what is still owed and come off net worth; a debt at a higher rate than investing can expect to earn is usually worth paying down first.",
     })
 }
 
@@ -427,6 +436,39 @@ fn update_bank_balance(v: &mut Vault, args: &Value, env: &Env) -> Result<Value> 
     let input = BalanceInput { entry_id: format!("assistant-{}", env.stamp), date: date(args, env)?, balance: amount(args, "balance")?, fx_rate: decimal(args, "fx_rate")? };
     let entry = bank::set_balance(v, &id, &input)?;
     Ok(json!({ "booked": entry.map(|e| e.description), "account": bank::balances(v).into_iter().find(|b| b.account.id == id) }))
+}
+
+fn debt_kind(args: &Value) -> Result<debt::DebtKind> {
+    serde_json::from_value(args["kind"].clone()).map_err(|_| bad("kind must be one of mortgage, car, personal, student, credit_card, family, other"))
+}
+
+fn add_debt(v: &mut Vault, args: &Value, env: &Env) -> Result<Value> {
+    let input = debt::NewDebt {
+        terms: debt::Terms { name: required(args, "name")?.to_owned(), kind: debt_kind(args)?, rate: decimal(args, "rate")?, monthly: decimal(args, "monthly")? },
+        currency: currency(args, "currency")?,
+        owed: BalanceInput { entry_id: format!("assistant-{}", env.stamp), date: date(args, env)?, balance: amount(args, "owed")?, fx_rate: decimal(args, "fx_rate")? },
+    };
+    debt::add(v, &input)?;
+    Ok(json!({ "added": input.terms.name, "debts": debt::balances(v) }))
+}
+
+fn update_debt(v: &mut Vault, args: &Value, env: &Env) -> Result<Value> {
+    let name = required(args, "debt")?;
+    let slug = crate::ledger::slug(name);
+    let current = v.debts.iter().find(|d| d.id == name || d.name.eq_ignore_ascii_case(name) || d.id == slug).cloned().ok_or_else(|| Error::user("debt.unknown").arg("id", name))?;
+    let (rate, monthly) = (decimal(args, "rate")?, decimal(args, "monthly")?);
+    if rate.is_some() || monthly.is_some() {
+        let terms = debt::Terms { name: current.name.clone(), kind: current.kind, rate: rate.or(current.rate), monthly: monthly.or(current.monthly) };
+        debt::edit(v, &current.id, &terms)?;
+    }
+    let booked = match args.get("owed").filter(|o| !o.is_null()) {
+        Some(_) => {
+            let input = BalanceInput { entry_id: format!("assistant-{}", env.stamp), date: date(args, env)?, balance: amount(args, "owed")?, fx_rate: decimal(args, "fx_rate")? };
+            debt::set_owed(v, &current.id, &input)?.map(|e| e.description)
+        }
+        None => None,
+    };
+    Ok(json!({ "booked": booked, "debt": debt::balances(v).into_iter().find(|d| d.debt.id == current.id) }))
 }
 
 fn set_price(v: &mut Vault, args: &Value, env: &Env) -> Result<Value> {
@@ -615,7 +657,7 @@ mod tests {
     fn every_tool_is_listed_and_reads_are_separate() {
         let all = tools(true);
         let names: Vec<&str> = all.as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        assert_eq!(names.len(), 23);
+        assert_eq!(names.len(), 25);
         assert!(WRITES.iter().all(|w| names.contains(w)));
         assert_eq!(tools(false).as_array().unwrap().len(), 8);
     }

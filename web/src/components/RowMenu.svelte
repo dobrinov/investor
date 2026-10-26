@@ -18,12 +18,17 @@
   // Fixed to the window, so a table that scrolls sideways cannot clip it.
   let place = $state('')
 
+  function position(): void {
+    if (!root) return
+    const r = root.getBoundingClientRect()
+    const below = window.innerHeight - r.bottom > 220
+    place = `right: ${Math.max(8, window.innerWidth - r.right)}px; ${below ? `top: ${r.bottom + 4}px` : `bottom: ${window.innerHeight - r.top + 4}px`}`
+  }
+
   async function toggle(): Promise<void> {
     open = !open
     if (open) {
-      const r = root!.getBoundingClientRect()
-      const below = window.innerHeight - r.bottom > 220
-      place = `right: ${Math.max(8, window.innerWidth - r.right)}px; ${below ? `top: ${r.bottom + 4}px` : `bottom: ${window.innerHeight - r.top + 4}px`}`
+      position()
       await tick()
       menu?.querySelector<HTMLButtonElement>('button')?.focus()
     }
@@ -51,14 +56,14 @@
     const away = (e: PointerEvent) => {
       if (!root?.contains(e.target as Node)) open = false
     }
-    const close = () => (open = false)
+    // The menu follows its button when the page scrolls or resizes.
     window.addEventListener('pointerdown', away)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
+    window.addEventListener('scroll', position, true)
+    window.addEventListener('resize', position)
     return () => {
       window.removeEventListener('pointerdown', away)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
+      window.removeEventListener('scroll', position, true)
+      window.removeEventListener('resize', position)
     }
   })
 </script>

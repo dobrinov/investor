@@ -107,7 +107,9 @@ marketing page is one level up). Locally: `cd web && pnpm dev`, then open
 `/app/`. It can open/create/restore an encrypted `.invest` file, import IBKR
 and Revolut statements, prices, overview, general ledger, goals with plan vs.
 actual, projections with what-if moves and retirement, planning and recording
-trades, bank accounts, physical gold and silver, private holdings and their
+trades, bank accounts, debts (mortgages, loans, credit cards: they come off
+net worth, with the payoff date and a warning when a loan costs more than
+investing earns), physical gold and silver, private holdings and their
 payouts (as employment income or a capital gain), and
 capital-gains reporting (physical metals by holding period) with
 draft tax packs for Austria, Bulgaria, Canada, France, Germany, Ireland,
