@@ -38,9 +38,9 @@ How to export statements and add brokers: [docs/importing.md](docs/importing.md)
 - **Desktop app** for Windows, macOS and Linux: download it from
   [the latest release](https://github.com/dobrinov/investor/releases/latest)
   (`.msi`/`-setup.exe`, `.dmg`, `.AppImage`/`.deb`/`.rpm`). It opens and saves
-  `.invest` files in place and never connects to the internet. The builds are
-  not signed yet: on macOS right-click the app and choose Open; on Windows
-  choose More info, then Run anyway.
+  `.invest` files in place and never connects to the internet. The macOS app is
+  signed and notarized by Apple. The Windows app is not signed yet, so choose
+  More info, then Run anyway, on the first start.
 - **From the browser**: open the app in Chrome or Edge and choose Install, or
   in Safari on a Mac choose File, then Add to Dock. It works offline after the
   first visit.

@@ -94,6 +94,8 @@ jobs:
             - **macOS** (Apple silicon and Intel): the `.dmg` file
             - **Linux**: the `.AppImage`, `.deb` or `.rpm` file
 
+            The macOS app and investor-mcp for macOS are signed and notarized by Apple.
+
             On Windows the app is not signed yet, so the first start shows a warning:
             choose More info, then Run anyway.
 
