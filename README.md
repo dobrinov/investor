@@ -63,6 +63,13 @@ your own key. Reads run at once; every change shows an approval card and
 then counts as an unsaved change. On the website the button explains that
 the assistant needs the desktop app.
 
+**Your CFO**, also in the desktop app, reads your whole financial picture
+(worked out by the app: net worth with debts, cash against the emergency
+fund, saving against the plan, concentration, costs, tax so far, goals and
+the signals worth acting on) and gives you a short briefing of what to do
+first, then answers follow-up questions. It uses a model on your computer
+by default; you can see exactly what it is sent.
+
 **From your own AI tool** (Claude Code, Cursor, VS Code or any other MCP
 client): in the desktop app, open the assistant, choose **Your AI tool** and
 turn it on. Copy the command it shows into Claude Code, or the address into

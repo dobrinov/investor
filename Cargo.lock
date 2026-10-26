@@ -481,7 +481,7 @@ dependencies = [
 
 [[package]]
 name = "investor-cli"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -493,7 +493,7 @@ dependencies = [
 
 [[package]]
 name = "investor-core"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -511,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "investor-mcp"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -523,7 +523,7 @@ dependencies = [
 
 [[package]]
 name = "investor-wasm"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "investor-core",
  "serde",

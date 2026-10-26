@@ -275,8 +275,10 @@ pub fn monthly_flows(ledger: &Ledger) -> Vec<MonthFlow> {
     for entry in &ledger.entries {
         let key = entry.date.format("%Y-%m").to_string();
         let flow = months.entry(key.clone()).or_insert_with(|| MonthFlow { month: key, ..Default::default() });
+        // Paying down a debt is money put in, but not towards investing.
+        let debt = entry.postings.iter().any(|p| p.account.starts_with("Liabilities:"));
         for p in &entry.postings {
-            if p.account == ledger::CONTRIBUTIONS {
+            if p.account == ledger::CONTRIBUTIONS && !debt {
                 // Contributions are credited when money comes in.
                 if p.base.is_sign_negative() {
                     flow.deposited -= p.base;

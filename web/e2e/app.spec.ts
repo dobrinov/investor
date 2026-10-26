@@ -130,3 +130,54 @@ test('crypto sales get their own part of the declaration', async ({ page }) => {
   await expect(page.getByRole('row', { name: /BTC/ }).getByText('Crypto')).toBeVisible()
   await expect(page.getByRole('row', { name: /BTC/ }).getByText('Taxable')).toBeVisible()
 })
+
+test('on the website the CFO explains it needs the desktop app', async ({ page }) => {
+  await page.goto('/app/#example')
+  await page.locator('aside nav').getByRole('button', { name: 'Your CFO' }).click()
+  await expect(page.getByRole('link', { name: 'Download the desktop app' })).toBeVisible()
+})
+
+test('your CFO reads the whole picture, briefs you and answers follow-ups', async ({ page }) => {
+  // Stands in for the desktop app with a model on this computer.
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>
+    const sent: string[] = []
+    w.__sent = sent
+    const briefing = {
+      headline: 'You are in good shape, but the car loan costs more than your investments earn.',
+      summary: 'Net worth is healthy and the emergency fund is covered.',
+      actions: [
+        { title: 'Pay down the car loan', why: 'It costs 6.9% a year.', impact: 'A sure 6.9% return', priority: 'now' },
+        { title: 'Invest idle cash', why: 'Cash above the emergency fund loses value.', impact: 'Growth over time', priority: 'soon' },
+      ],
+      watch: ['A large share in one fund'],
+      questions: ['Do I want to keep the car loan?'],
+    }
+    w.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request?: { method: string; url: string; body?: { messages: { content: string }[] } } }) => {
+        if (cmd === 'bridge_next') return await new Promise((r) => setTimeout(() => r(null), 2000))
+        if (cmd !== 'model_request') return null
+        const req = args.request!
+        if (req.method === 'GET') return { status: 200, body: req.url.includes('11434') ? JSON.stringify({ models: [{ name: 'fake:latest' }] }) : '{}' }
+        const text = req.body!.messages.map((m) => m.content).join('\n')
+        sent.push(text)
+        const content = text.includes('Write a short briefing') ? '```json\n' + JSON.stringify(briefing) + '\n```' : 'Paying it down first is a sure return; keep the emergency fund intact.'
+        return { status: 200, body: JSON.stringify({ choices: [{ message: { content } }] }) }
+      },
+    }
+  })
+  await page.goto('/app/#example')
+  await page.locator('aside nav').getByRole('button', { name: 'Your CFO' }).click()
+  await page.getByRole('button', { name: 'Find models on this computer' }).click()
+  await page.getByRole('button', { name: /Use fake:latest/ }).click()
+  await expect(page.getByText('Nothing leaves this computer.')).toBeVisible()
+  await page.getByRole('button', { name: 'Get a briefing' }).click()
+  await expect(page.getByRole('heading', { name: /car loan costs more/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Pay down the car loan' })).toBeVisible()
+  const sent = () => page.evaluate(() => (window as unknown as { __sent: string[] }).__sent)
+  // The model gets the app's own figures, including the signals.
+  expect((await sent())[0]).toContain('"high_interest_debt"')
+  await page.getByRole('button', { name: 'Ask about this' }).first().click()
+  await expect(page.getByText('Paying it down first is a sure return')).toBeVisible()
+  expect((await sent())[1]).toContain('virtual CFO')
+})

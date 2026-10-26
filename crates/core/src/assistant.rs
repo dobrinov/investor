@@ -119,6 +119,7 @@ pub fn tools(writes: bool) -> Value {
         }),
         json!({ "name": "preview_trade", "description": "What a purchase or sale would change, without recording it: cash at the broker, fees, FIFO gain and tax treatment for a sale, holdings before and after, and all money in 20 years with and without it. Give either units or amount.", "input_schema": schema(trade_properties(), &["side", "broker", "symbol"]) }),
         json!({ "name": "realized_gains", "description": "Sales in a year with their gain, the tax pack's treatment and summary for the person's tax residency, and employment income from payouts of private holdings.", "input_schema": schema(json!({ "year": { "type": "integer" } }), &["year"]) }),
+        json!({ "name": "financial_picture", "description": "The whole financial picture in one call, as a CFO would want it: balance sheet with debts, cash against the emergency fund, the last 12 months against the plan, concentration and currency exposure, this year's income, costs and estimated tax, goals, and `signals`: facts worth acting on, most serious first. Start here for advice or a review.", "input_schema": schema(json!({}), &[]) }),
         json!({ "name": "declaration", "description": "What to type into the person's tax return for a year: each section of the forms (appendix, code, the form's own column names) filled from the books, the steps to file, and how many sales still need their venue decided. Follow it when helping someone file.", "input_schema": schema(json!({ "year": { "type": "integer" } }), &["year"]) }),
         json!({ "name": "journal", "description": "Recent journal entries (newest first): trades, deposits, dividends, fees and taxes, with their postings.", "input_schema": schema(json!({ "limit": { "type": "integer", "description": "Default 30" }, "symbol": { "type": "string" } }), &[]) }),
     ];
@@ -158,6 +159,10 @@ pub fn call(v: &mut Vault, name: &str, args: &Value, env: &Env) -> Result<Value>
         "project" => project(v, args, env),
         "preview_trade" => preview_trade(v, args, env),
         "realized_gains" => realized_gains(v, args, env),
+        "financial_picture" => {
+            let pack = (env.pack)(&v.settings.tax_residency, env.today.year());
+            Ok(crate::cfo::picture(v, env.today, pack.as_ref()))
+        }
         "declaration" => {
             let year = args["year"].as_i64().ok_or_else(|| bad("year is required"))? as i32;
             let pack = (env.pack)(&v.settings.tax_residency, year).ok_or_else(|| bad(format!("no tax pack for {} {year}", v.settings.tax_residency)))?;
@@ -657,9 +662,9 @@ mod tests {
     fn every_tool_is_listed_and_reads_are_separate() {
         let all = tools(true);
         let names: Vec<&str> = all.as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
-        assert_eq!(names.len(), 25);
+        assert_eq!(names.len(), 26);
         assert!(WRITES.iter().all(|w| names.contains(w)));
-        assert_eq!(tools(false).as_array().unwrap().len(), 8);
+        assert_eq!(tools(false).as_array().unwrap().len(), 9);
     }
 
     #[test]

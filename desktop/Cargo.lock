@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "investor-desktop"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "percent-encoding",
  "serde",

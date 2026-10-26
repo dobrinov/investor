@@ -3,6 +3,13 @@
 What changed in each release of Investor, newest first. Downloads are on
 [GitHub](https://github.com/dobrinov/investor/releases).
 
+## 0.6.0 — 2026-10-26
+
+- Your CFO: a model on your computer reads your whole financial picture and gives you a short briefing — what to do first, why, and what it is worth — then answers follow-up questions.
+- The picture it reads is worked out by the app: net worth with debts, cash against your emergency fund, saving against your plan, concentration, costs, tax so far and goals, plus the signals worth acting on. You can see exactly what it is sent.
+- The assistant can read the same financial picture.
+- Paying down a loan no longer counts as money put in for investing.
+
 ## 0.5.1 — 2026-10-26
 
 - The example portfolio sells some Bitcoin and Ether, so the crypto part of the tax return has figures to look at.

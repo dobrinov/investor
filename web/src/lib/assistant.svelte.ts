@@ -123,9 +123,9 @@ async function anthropic(s: ModelSettings, system: string, items: Item[], tools:
     max_tokens: 16000,
     system,
     messages,
-    tools: tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })),
     output_config: { effort: 'medium' },
   }
+  if (tools.length) body.tools = tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema }))
   if (fallback) body.fallbacks = 'default'
   const reply = (await request('POST', `${s.url.replace(/\/$/, '')}/v1/messages`, headers, body)) as {
     content: { type: string; text?: string; id?: string; name?: string; input?: Record<string, unknown> }[]
@@ -148,11 +148,10 @@ async function openaiCompatible(s: ModelSettings, system: string, items: Item[],
   }
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (s.apiKey) headers.authorization = `Bearer ${s.apiKey}`
-  const reply = (await request('POST', `${s.url.replace(/\/$/, '')}/chat/completions`, headers, {
-    model: s.model,
-    messages,
-    tools: tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } })),
-  })) as { choices: { message: { content?: string | null; tool_calls?: { id?: string; function: { name: string; arguments: string | object } }[] } }[] }
+  const body: Record<string, unknown> = { model: s.model, messages }
+  // Some local servers reject an empty tool list.
+  if (tools.length) body.tools = tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }))
+  const reply = (await request('POST', `${s.url.replace(/\/$/, '')}/chat/completions`, headers, body)) as { choices: { message: { content?: string | null; tool_calls?: { id?: string; function: { name: string; arguments: string | object } }[] } }[] }
   const message = reply.choices?.[0]?.message ?? {}
   const calls = (message.tool_calls ?? []).map((c, i) => {
     let args: Record<string, unknown> = {}
@@ -165,6 +164,12 @@ async function openaiCompatible(s: ModelSettings, system: string, items: Item[],
   })
   const raw = { role: 'assistant', content: message.content ?? '', ...(calls.length ? { tool_calls: calls.map((c) => ({ id: c.id, type: 'function', function: { name: c.name, arguments: JSON.stringify(c.args) } })) } : {}) }
   return { text: message.content ?? '', calls, raw }
+}
+
+/** One answer to one message, without tools, e.g. for a briefing. */
+export async function complete(settings: ModelSettings, system: string, text: string): Promise<string> {
+  const turn = await (settings.kind === 'anthropic' ? anthropic : openaiCompatible)(settings, system, [{ role: 'user', text }], [])
+  return turn.text
 }
 
 // --- Skills -----------------------------------------------------------------
@@ -202,7 +207,11 @@ export class Conversation {
   private items: Item[] = []
   private skill: Skill | null = null
 
-  constructor(private readonly settings: ModelSettings) {}
+  /** `persona` adds a role and context to the system prompt, e.g. the CFO's. */
+  constructor(
+    private readonly settings: ModelSettings,
+    private readonly persona?: () => string,
+  ) {}
 
   /** Approves or declines the change that is waiting. */
   decide(approved: boolean): void {
@@ -232,8 +241,9 @@ export class Conversation {
       `Today is ${new Date().toISOString().slice(0, 10)}. Answer in ${language}. Keep answers short and use the person's own figures.`,
       'Tools that change the file ask the person to approve first; if they decline, accept it and do not try again unless they ask.',
     ]
+    if (this.persona) parts.push(this.persona())
     // Local models often have a small context window: let them call portfolio themselves.
-    if (this.settings.kind !== 'local') {
+    else if (this.settings.kind !== 'local') {
       try {
         parts.push(`The person's portfolio now (the portfolio tool's result):\n${JSON.stringify(app.book?.assistantCall('portfolio', {}, new Date().toISOString().slice(0, 10)))}`)
       } catch {

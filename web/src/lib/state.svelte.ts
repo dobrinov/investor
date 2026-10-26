@@ -6,7 +6,7 @@ import { Book, changesBook } from './core'
 import { packs } from './configs'
 import { forgetSessionKey, keepSessionKey, loadDraft, saveDraft, sessionKey } from './storage'
 
-const VIEWS = ['overview', 'trade', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
+const VIEWS = ['overview', 'cfo', 'trade', 'goals', 'projections', 'ledger', 'import', 'tax', 'settings', 'guide'] as const
 export type View = (typeof VIEWS)[number]
 
 class AppState {
