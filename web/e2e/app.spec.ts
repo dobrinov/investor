@@ -181,3 +181,17 @@ test('your CFO reads the whole picture, briefs you and answers follow-ups', asyn
   await expect(page.getByText('Paying it down first is a sure return')).toBeVisible()
   expect((await sent())[1]).toContain('virtual CFO')
 })
+
+test('any password is allowed, with advice on how strong it is', async ({ page }) => {
+  await page.goto('/app/')
+  await page.getByRole('button', { name: 'Create a new file' }).click()
+  const password = page.getByLabel('Password', { exact: true })
+  await password.fill('password')
+  await expect(page.getByText('Very weak')).toBeVisible()
+  await expect(page.getByText(/common password/)).toBeVisible()
+  await password.fill('river lamp quiet orbit')
+  await expect(page.getByText(/Strong|Very strong/).first()).toBeVisible()
+  await password.fill('abc')
+  await page.getByLabel('Repeat password').fill('abc')
+  await expect(page.getByText('Use at least 10 characters.')).toHaveCount(0)
+})

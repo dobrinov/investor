@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PasswordStrength from '../components/PasswordStrength.svelte'
   import { onMount } from 'svelte'
   import ExitLink from '../components/ExitLink.svelte'
   import Logo from '../components/Logo.svelte'
@@ -112,7 +113,6 @@
 
   const create = () =>
     run(async () => {
-      if (password.length < 10) throw new Error(t('create.tooShort'))
       if (password !== repeat) throw new Error(t('create.mismatch'))
       const book = await Book.create({ base_currency: baseCurrency, language: i18n.lang, tax_residency: residency }, password)
       const name = fileName.trim().replace(/(\.invest)?$/, '.invest')
@@ -206,6 +206,7 @@
           <label class="field">{t('common.password')}
             <input type="password" bind:value={password} autocomplete="new-password" required />
           </label>
+          <PasswordStrength {password} />
           <label class="field">{t('create.repeat')}
             <input type="password" bind:value={repeat} autocomplete="new-password" required />
           </label>

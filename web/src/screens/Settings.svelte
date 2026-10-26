@@ -3,6 +3,7 @@
   import { countries } from '../lib/configs'
   import { country } from '../lib/format'
   import LanguagePicker from '../components/LanguagePicker.svelte'
+  import PasswordStrength from '../components/PasswordStrength.svelte'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -18,7 +19,6 @@
   async function change(): Promise<void> {
     error = ''
     done = false
-    if (next.length < 10) return void (error = t('create.tooShort'))
     if (next !== repeat) return void (error = t('create.mismatch'))
     if (next === current) return void (error = t('settings.samePassword'))
     busy = true
@@ -60,6 +60,7 @@
   <form onsubmit={(e) => (e.preventDefault(), change())}>
     <label class="field">{t('settings.current')}<input type="password" bind:value={current} autocomplete="current-password" required /></label>
     <label class="field">{t('settings.new')}<input type="password" bind:value={next} autocomplete="new-password" required /></label>
+    <PasswordStrength password={next} />
     <label class="field">{t('create.repeat')}<input type="password" bind:value={repeat} autocomplete="new-password" required /></label>
     <div><button class="btn" disabled={busy}>{busy ? t('settings.changing') : t('settings.change')}</button></div>
   </form>

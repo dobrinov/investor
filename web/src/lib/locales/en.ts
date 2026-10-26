@@ -43,10 +43,9 @@ export const en = {
   'create.baseCurrency': 'Base currency',
   'create.residency': 'Tax residency',
   'create.repeat': 'Repeat password',
-  'create.passwordHint': 'At least 10 characters. A few random words work well. There is no password reset.',
+  'create.passwordHint': "A few random words work well. There is no password reset.",
   'create.creating': 'Creating…',
   'create.submit': 'Create',
-  'create.tooShort': 'Use at least 10 characters.',
   'create.mismatch': 'The passwords do not match.',
 
   'country.BG': 'Bulgaria',
@@ -908,6 +907,18 @@ export const en = {
   'cfo.disclaimer': "Your CFO is an AI model, not a licensed adviser. It can be wrong: check what matters before you act.",
   'cfo.askAbout': "{title}: tell me more. How would I do it, and what are the trade-offs?",
   'assistant.tool.financial_picture': "your financial picture",
+  'strength.veryWeak': "Very weak",
+  'strength.weak': "Weak",
+  'strength.fair': "Fair",
+  'strength.strong': "Strong",
+  'strength.veryStrong': "Very strong",
+  'strength.time': "could be guessed in about {time}",
+  'strength.never': "would take more than a thousand years to guess",
+  'strength.tip.common': "This is a common password: it is among the first ones tried.",
+  'strength.tip.repeat': "Avoid repeats and sequences such as aaa or 1234.",
+  'strength.tip.short': "Longer is stronger: add another word or a few characters.",
+  'strength.tip.words': "A few random words, like “river lamp quiet orbit”, are strong and easy to remember.",
+  'strength.tip.good': "Good. Keep it somewhere safe: there is no password reset.",
 } as const
 
 export type Key = keyof typeof en
