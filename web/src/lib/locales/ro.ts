@@ -352,7 +352,7 @@ export const ro: Record<Key, string> = {
   'bank.add': 'Adaugă un cont bancar',
   'bank.intro': 'Conturi de economii și conturi curente fără extras de importat. Scrie soldul ori de câte ori se schimbă: contează ca numerar, deci alimentează fondul de urgență și apare în averea netă și în proiecții.',
   'bank.name': 'Numele băncii sau al contului',
-  'bank.namePlaceholder': 'ex. UBB economii',
+  'bank.namePlaceholder': "ex. Cont de economii",
   'bank.balance': 'Sold',
   'bank.balanceIn': 'Sold în {currency}',
   'bank.on': 'La data',
@@ -541,7 +541,7 @@ export const ro: Record<Key, string> = {
   'help.retirementSpending.without': 'Se folosesc cheltuielile lunare actuale, dacă le-ai completat.',
   'help.pensionAge.why': 'De la această vârstă, pensia de stat reduce cât trebuie să îți plătească investițiile.',
   'help.pensionAge.without': 'Se presupune vârsta de 65 de ani.',
-  'help.pension.why': 'Reduce cât trebuie să îți plătească investițiile în fiecare lună. Institutul Național de Asigurări Sociale din Bulgaria (NOI) îți poate da o estimare.',
+  'help.pension.why': "Reduce cât trebuie să îți plătească investițiile în fiecare lună. Casa ta de pensii îți poate da o estimare.",
   'help.pension.without': 'Nu se ia în calcul nicio pensie — ipoteza prudentă, așa că planul poate arăta mai rău decât este.',
 
   'nav.trade': 'Planifică o tranzacție',

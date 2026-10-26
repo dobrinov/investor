@@ -80,7 +80,7 @@ export const en: Section[] = [
     title: "Bank accounts",
     blocks: [
       { p: "Savings and current accounts have no statement to import, so you type the balance in now and then. The money counts as cash: it fills your emergency fund and shows in your net worth and projections." },
-      { steps: ["On Overview, choose \"Add a bank account\" and give it a name, such as \"UBB savings\", with its currency and today's balance.", "Whenever the balance changes, choose \"Update balance\" and type the whole new balance. The books record only the difference, as money added or taken out.", "For an account in another currency, give the exchange rate for that day."] },
+      { steps: ["On Overview, choose \"Add a bank account\" and give it a name, such as \"Savings account\", with its currency and today's balance.", "Whenever the balance changes, choose \"Update balance\" and type the whole new balance. The books record only the difference, as money added or taken out.", "For an account in another currency, give the exchange rate for that day."] },
     ],
   },
   {

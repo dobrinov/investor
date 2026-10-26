@@ -352,7 +352,7 @@ export const fr: Record<Key, string> = {
   'bank.add': 'Ajouter un compte bancaire',
   'bank.intro': 'Comptes d’épargne et comptes courants sans relevé à importer. Saisissez le solde quand il change : il compte comme liquidités, alimente donc votre épargne de précaution et apparaît dans votre patrimoine net et vos projections.',
   'bank.name': 'Banque ou nom du compte',
-  'bank.namePlaceholder': 'p. ex. Livret UBB',
+  'bank.namePlaceholder': "p. ex. Livret d’épargne",
   'bank.balance': 'Solde',
   'bank.balanceIn': 'Solde en {currency}',
   'bank.on': 'Au',
@@ -541,7 +541,7 @@ export const fr: Record<Key, string> = {
   'help.retirementSpending.without': 'Vos dépenses mensuelles actuelles sont utilisées à la place, si vous les avez indiquées.',
   'help.pensionAge.why': 'À partir de cet âge, la retraite légale réduit ce que vos placements doivent vous verser.',
   'help.pensionAge.without': '65 ans par défaut.',
-  'help.pension.why': 'Réduit ce que vos placements doivent vous verser chaque mois. L’Institut national de sécurité sociale (NOI) peut vous fournir une estimation.',
+  'help.pension.why': "Réduit ce que vos placements doivent vous verser chaque mois. Votre caisse de retraite peut vous en donner une estimation.",
   'help.pension.without': 'Aucune retraite n’est comptée – l’hypothèse prudente, le plan peut donc paraître moins bon qu’il ne l’est.',
 
   'nav.trade': 'Préparer un ordre',

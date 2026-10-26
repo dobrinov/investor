@@ -541,7 +541,7 @@ export const pl: Record<Key, string> = {
   'help.retirementSpending.without': 'Używane są twoje obecne miesięczne wydatki, jeśli je podałeś.',
   'help.pensionAge.why': 'Od tego wieku emerytura państwowa zmniejsza to, co muszą ci wypłacać twoje inwestycje.',
   'help.pensionAge.without': 'Przyjmowane jest 65 lat.',
-  'help.pension.why': 'Zmniejsza to, co twoje inwestycje muszą ci wypłacać co miesiąc. Szacunek może podać bułgarski Narodowy Instytut Ubezpieczeń Społecznych (NOI).',
+  'help.pension.why': "Zmniejsza to, co twoje inwestycje muszą ci wypłacać co miesiąc. Szacunek może podać twój zakład emerytalny.",
   'help.pension.without': 'Emerytura nie jest liczona — to ostrożne założenie, więc plan może wyglądać gorzej, niż jest.',
 
   'nav.trade': 'Zaplanuj transakcję',

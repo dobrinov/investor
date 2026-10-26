@@ -47,7 +47,7 @@ export const fr: Section[] = [
     title: 'Comptes bancaires',
     blocks: [
       { p: 'Les comptes d’épargne et les comptes courants n’ont pas de relevé à importer : vous saisissez donc le solde de temps en temps. Cet argent compte comme liquidités : il alimente votre épargne de précaution et apparaît dans votre patrimoine net et vos projections.' },
-      { steps: ['Dans l’« Aperçu », choisissez « Ajouter un compte bancaire » et donnez-lui un nom, par exemple « Livret UBB », avec sa devise et le solde du jour.', 'Quand le solde change, choisissez « Mettre à jour le solde » et saisissez le nouveau solde complet. Les comptes n’enregistrent que la différence, comme un apport ou un retrait.', 'Pour un compte dans une autre devise, indiquez le taux de change du jour.'] },
+      { steps: ['Dans l’« Aperçu », choisissez « Ajouter un compte bancaire » et donnez-lui un nom, par exemple « Livret d’épargne », avec sa devise et le solde du jour.', 'Quand le solde change, choisissez « Mettre à jour le solde » et saisissez le nouveau solde complet. Les comptes n’enregistrent que la différence, comme un apport ou un retrait.', 'Pour un compte dans une autre devise, indiquez le taux de change du jour.'] },
     ],
   },
   {

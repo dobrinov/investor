@@ -352,7 +352,7 @@ export const pt: Record<Key, string> = {
   'bank.add': 'Adicionar conta bancária',
   'bank.intro': 'Contas poupança e contas à ordem sem extrato para importar. Escreva o saldo sempre que mudar: conta como liquidez, por isso preenche o fundo de emergência e aparece no património líquido e nas projeções.',
   'bank.name': 'Nome do banco ou da conta',
-  'bank.namePlaceholder': 'ex.: UBB poupança',
+  'bank.namePlaceholder': "ex.: Conta poupança",
   'bank.balance': 'Saldo',
   'bank.balanceIn': 'Saldo em {currency}',
   'bank.on': 'Em',
@@ -541,7 +541,7 @@ export const pt: Record<Key, string> = {
   'help.retirementSpending.without': 'São usadas as suas despesas mensais atuais, se as indicou.',
   'help.pensionAge.why': 'A partir desta idade, a pensão do Estado reduz o que os seus investimentos têm de lhe pagar.',
   'help.pensionAge.without': 'Assume-se 65 anos.',
-  'help.pension.why': 'Reduz o que os seus investimentos têm de lhe pagar todos os meses. O Instituto Nacional de Segurança Social búlgaro (NOI) pode dar-lhe uma estimativa.',
+  'help.pension.why': "Reduz o que os seus investimentos têm de lhe pagar todos os meses. A sua segurança social pode dar-lhe uma estimativa.",
   'help.pension.without': 'Não é contada nenhuma pensão — o pressuposto prudente, por isso o plano pode parecer pior do que é.',
 
   'nav.trade': 'Planear uma transação',

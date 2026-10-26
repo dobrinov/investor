@@ -47,7 +47,7 @@ export const it: Section[] = [
     title: 'Conti bancari',
     blocks: [
       { p: 'I conti deposito e i conti correnti non hanno un estratto conto da importare, quindi inserisci il saldo ogni tanto. Il denaro conta come liquidità: alimenta il fondo di emergenza e compare nel patrimonio netto e nelle proiezioni.' },
-      { steps: ['In Panoramica, scegli «Aggiungi un conto bancario» e dagli un nome, ad esempio «Risparmi UBB», con la valuta e il saldo di oggi.', 'Ogni volta che il saldo cambia, scegli «Aggiorna saldo» e scrivi il nuovo saldo intero. La contabilità registra solo la differenza, come denaro versato o prelevato.', 'Per un conto in un’altra valuta, indica il cambio di quel giorno.'] },
+      { steps: ['In Panoramica, scegli «Aggiungi un conto bancario» e dagli un nome, ad esempio «Conto deposito», con la valuta e il saldo di oggi.', 'Ogni volta che il saldo cambia, scegli «Aggiorna saldo» e scrivi il nuovo saldo intero. La contabilità registra solo la differenza, come denaro versato o prelevato.', 'Per un conto in un’altra valuta, indica il cambio di quel giorno.'] },
     ],
   },
   {

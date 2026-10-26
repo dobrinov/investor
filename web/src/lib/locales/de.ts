@@ -352,7 +352,7 @@ export const de: Record<Key, string> = {
   'bank.add': 'Bankkonto hinzufügen',
   'bank.intro': 'Spar- und Girokonten ohne importierbaren Auszug. Tragen Sie den Kontostand ein, wann immer er sich ändert: Er zählt als Guthaben, füllt also Ihren Notgroschen und erscheint in Nettovermögen und Prognosen.',
   'bank.name': 'Bank oder Kontoname',
-  'bank.namePlaceholder': 'z. B. UBB Sparkonto',
+  'bank.namePlaceholder': "z. B. Sparkonto",
   'bank.balance': 'Kontostand',
   'bank.balanceIn': 'Kontostand in {currency}',
   'bank.on': 'Am',
@@ -541,7 +541,7 @@ export const de: Record<Key, string> = {
   'help.retirementSpending.without': 'Stattdessen werden Ihre aktuellen Monatsausgaben verwendet, sofern angegeben.',
   'help.pensionAge.why': 'Ab diesem Alter verringert die gesetzliche Rente, was Ihre Anlagen Ihnen zahlen müssen.',
   'help.pensionAge.without': 'Es wird 65 angenommen.',
-  'help.pension.why': 'Verringert, was Ihre Anlagen Ihnen jeden Monat zahlen müssen. Das Nationale Sozialversicherungsinstitut (NOI) kann Ihnen eine Schätzung geben.',
+  'help.pension.why': "Verringert, was Ihre Anlagen Ihnen jeden Monat zahlen müssen. Ihre Rentenversicherung kann Ihnen eine Schätzung geben.",
   'help.pension.without': 'Es wird keine Rente berücksichtigt – die vorsichtige Annahme, der Plan sieht also womöglich schlechter aus, als er ist.',
 
   'nav.trade': 'Order planen',

@@ -47,7 +47,7 @@ export const de: Section[] = [
     title: 'Bankkonten',
     blocks: [
       { p: 'Für Spar- und Girokonten gibt es keinen Auszug zum Importieren, daher tragen Sie den Kontostand ab und zu selbst ein. Das Geld zählt als Guthaben: Es füllt Ihren Notgroschen und erscheint in Nettovermögen und Prognosen.' },
-      { steps: ['Wählen Sie in der „Übersicht“ „Bankkonto hinzufügen“ und geben Sie einen Namen ein, etwa „UBB Sparkonto“, dazu die Währung und den heutigen Kontostand.', 'Ändert sich der Kontostand, wählen Sie „Stand aktualisieren“ und geben den vollständigen neuen Stand ein. Die Bücher erfassen nur die Differenz, als Einzahlung oder Entnahme.', 'Bei einem Konto in einer anderen Währung geben Sie den Wechselkurs des Tages an.'] },
+      { steps: ['Wählen Sie in der „Übersicht“ „Bankkonto hinzufügen“ und geben Sie einen Namen ein, etwa „Sparkonto“, dazu die Währung und den heutigen Kontostand.', 'Ändert sich der Kontostand, wählen Sie „Stand aktualisieren“ und geben den vollständigen neuen Stand ein. Die Bücher erfassen nur die Differenz, als Einzahlung oder Entnahme.', 'Bei einem Konto in einer anderen Währung geben Sie den Wechselkurs des Tages an.'] },
     ],
   },
   {

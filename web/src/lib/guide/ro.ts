@@ -47,7 +47,7 @@ export const ro: Section[] = [
     title: 'Conturi bancare',
     blocks: [
       { p: 'Conturile de economii și conturile curente nu au extras de importat, așa că introduci soldul din când în când. Banii contează ca numerar: alimentează fondul de urgență și apar în averea netă și în proiecții.' },
-      { steps: ['În „Rezumat”, alege „Adaugă un cont bancar” și dă-i un nume, de exemplu „UBB economii”, împreună cu moneda și soldul de azi.', 'Ori de câte ori se schimbă soldul, alege „Actualizează soldul” și scrie noul sold complet. Evidența înregistrează doar diferența, ca bani depuși sau retrași.', 'Pentru un cont în altă monedă, introdu cursul de schimb din ziua respectivă.'] },
+      { steps: ['În „Rezumat”, alege „Adaugă un cont bancar” și dă-i un nume, de exemplu „Cont de economii”, împreună cu moneda și soldul de azi.', 'Ori de câte ori se schimbă soldul, alege „Actualizează soldul” și scrie noul sold complet. Evidența înregistrează doar diferența, ca bani depuși sau retrași.', 'Pentru un cont în altă monedă, introdu cursul de schimb din ziua respectivă.'] },
     ],
   },
   {

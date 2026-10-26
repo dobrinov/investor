@@ -47,7 +47,7 @@ export const pt: Section[] = [
     title: 'Contas bancárias',
     blocks: [
       { p: 'As contas poupança e as contas à ordem não têm extrato para importar, por isso escreve o saldo de vez em quando. O dinheiro conta como liquidez: preenche o fundo de emergência e aparece no património líquido e nas projeções.' },
-      { steps: ['No «Resumo», escolha «Adicionar conta bancária» e dê-lhe um nome, como «UBB poupança», com a moeda e o saldo de hoje.', 'Sempre que o saldo mudar, escolha «Atualizar saldo» e escreva o novo saldo completo. A contabilidade regista apenas a diferença, como dinheiro que entrou ou saiu.', 'Para uma conta noutra moeda, indique a taxa de câmbio desse dia.'] },
+      { steps: ['No «Resumo», escolha «Adicionar conta bancária» e dê-lhe um nome, como «Conta poupança», com a moeda e o saldo de hoje.', 'Sempre que o saldo mudar, escolha «Atualizar saldo» e escreva o novo saldo completo. A contabilidade regista apenas a diferença, como dinheiro que entrou ou saiu.', 'Para uma conta noutra moeda, indique a taxa de câmbio desse dia.'] },
     ],
   },
   {

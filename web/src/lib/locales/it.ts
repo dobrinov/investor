@@ -352,7 +352,7 @@ export const it: Record<Key, string> = {
   'bank.add': 'Aggiungi un conto bancario',
   'bank.intro': 'Conti deposito e conti correnti senza un estratto conto da importare. Scrivi il saldo quando cambia: conta come liquidità, quindi alimenta il fondo di emergenza e compare nel patrimonio netto e nelle proiezioni.',
   'bank.name': 'Banca o nome del conto',
-  'bank.namePlaceholder': 'es. Risparmi UBB',
+  'bank.namePlaceholder': "es. Conto deposito",
   'bank.balance': 'Saldo',
   'bank.balanceIn': 'Saldo in {currency}',
   'bank.on': 'Al',
@@ -541,7 +541,7 @@ export const it: Record<Key, string> = {
   'help.retirementSpending.without': 'Si usano le tue spese mensili attuali, se le hai indicate.',
   'help.pensionAge.why': 'Da questa età la pensione pubblica riduce quanto devono pagarti i tuoi investimenti.',
   'help.pensionAge.without': 'Si presuppongono 65 anni.',
-  'help.pension.why': 'Riduce quanto devono pagarti ogni mese i tuoi investimenti. L’Istituto nazionale di previdenza sociale bulgaro (NOI) può darti una stima.',
+  'help.pension.why': "Riduce quanto devono pagarti ogni mese i tuoi investimenti. Il tuo ente previdenziale può darti una stima.",
   'help.pension.without': 'Non si conta alcuna pensione: è l’ipotesi prudente, quindi il piano può sembrare peggiore di quanto sia.',
 
   'nav.trade': 'Pianifica un’operazione',

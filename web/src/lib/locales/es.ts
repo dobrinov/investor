@@ -352,7 +352,7 @@ export const es: Record<Key, string> = {
   'bank.add': 'Añadir una cuenta bancaria',
   'bank.intro': 'Cuentas de ahorro y cuentas corrientes sin extracto que importar. Escribe el saldo cuando cambie: cuenta como efectivo, así que llena tu fondo de emergencia y aparece en tu patrimonio neto y en las proyecciones.',
   'bank.name': 'Banco o nombre de la cuenta',
-  'bank.namePlaceholder': 'p. ej., Ahorro UBB',
+  'bank.namePlaceholder': "p. ej., Cuenta de ahorro",
   'bank.balance': 'Saldo',
   'bank.balanceIn': 'Saldo en {currency}',
   'bank.on': 'A fecha de',
@@ -541,7 +541,7 @@ export const es: Record<Key, string> = {
   'help.retirementSpending.without': 'Se usa tu gasto mensual actual, si lo indicaste.',
   'help.pensionAge.why': 'A partir de esta edad, la pensión pública reduce lo que te tienen que pagar tus inversiones.',
   'help.pensionAge.without': 'Se suponen 65 años.',
-  'help.pension.why': 'Reduce lo que te tienen que pagar tus inversiones cada mes. El Instituto Nacional de la Seguridad Social de Bulgaria (NOI) puede darte una estimación.',
+  'help.pension.why': "Reduce lo que te tienen que pagar tus inversiones cada mes. Tu organismo de pensiones puede darte una estimación.",
   'help.pension.without': 'No se cuenta ninguna pensión: es el supuesto prudente, así que el plan puede parecer peor de lo que es.',
 
   'nav.trade': 'Planificar operación',

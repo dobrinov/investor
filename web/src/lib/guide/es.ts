@@ -47,7 +47,7 @@ export const es: Section[] = [
     title: 'Cuentas bancarias',
     blocks: [
       { p: 'Las cuentas de ahorro y las cuentas corrientes no tienen extracto que importar, así que escribes el saldo de vez en cuando. El dinero cuenta como efectivo: llena tu fondo de emergencia y aparece en tu patrimonio neto y en las proyecciones.' },
-      { steps: ['En Resumen, elige «Añadir una cuenta bancaria» y ponle un nombre, como «Ahorro UBB», con su moneda y el saldo de hoy.', 'Cada vez que cambie el saldo, elige «Actualizar saldo» y escribe el saldo nuevo completo. La contabilidad solo registra la diferencia, como dinero aportado o retirado.', 'Para una cuenta en otra moneda, indica el tipo de cambio de ese día.'] },
+      { steps: ['En Resumen, elige «Añadir una cuenta bancaria» y ponle un nombre, como «Cuenta de ahorro», con su moneda y el saldo de hoy.', 'Cada vez que cambie el saldo, elige «Actualizar saldo» y escribe el saldo nuevo completo. La contabilidad solo registra la diferencia, como dinero aportado o retirado.', 'Para una cuenta en otra moneda, indica el tipo de cambio de ese día.'] },
     ],
   },
   {

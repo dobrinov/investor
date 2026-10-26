@@ -541,7 +541,7 @@ export const nl: Record<Key, string> = {
   'help.retirementSpending.without': 'Je huidige maanduitgaven worden gebruikt, als je die hebt ingevuld.',
   'help.pensionAge.why': 'Vanaf deze leeftijd verlaagt het staatspensioen wat je beleggingen jou moeten uitkeren.',
   'help.pensionAge.without': '65 wordt aangenomen.',
-  'help.pension.why': 'Verlaagt wat je beleggingen je elke maand moeten uitkeren. Het Bulgaarse Nationaal Instituut voor Sociale Zekerheid (NOI) kan je een schatting geven.',
+  'help.pension.why': "Verlaagt wat je beleggingen je elke maand moeten uitkeren. Je pensioenuitvoerder kan je een schatting geven.",
   'help.pension.without': 'Er wordt geen pensioen meegeteld — de voorzichtige aanname, dus het plan kan er slechter uitzien dan het is.',
 
   'nav.trade': 'Transactie plannen',
