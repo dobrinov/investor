@@ -165,35 +165,34 @@
       <section id="assistant" class="assistant" aria-labelledby="assistant-title">
         <p class="eyebrow">Optional AI assistant</p>
         <h2 id="assistant-title">Talk to your portfolio, with the AI you choose</h2>
-        <p class="lede-small">Ask questions in plain words, plan with your real figures, and have what you decide written into your file once you approve it. Use a model that runs on your own computer, so nothing leaves it, or Claude, ChatGPT and others with your own key. Investor works fully without any AI.</p>
+        <p class="lede-small">A model on your own computer, or Claude, ChatGPT and others with your own key. Investor works fully without one.</p>
         <div class="assistant-grid">
           <figure class="chat" aria-label="An example conversation with the assistant, using the example portfolio">
             <p class="msg me">I bought 20 more VWCE at 131.40 today, €1.25 in fees. Can you record it?</p>
-            <p class="msg ai">That is €2,628 plus €1.25 in fees. Cash at IBKR falls from €3,379 to €750, and your emergency fund stays covered: €19,420 against €15,000. In 20 years the middle outcome rises by about €2,589. Shall I record it?</p>
+            <p class="msg ai">That is €2,628 plus fees. Cash at IBKR falls to €750 and your emergency fund stays covered. Shall I record it?</p>
             <div class="card-approve">
               <strong>Record a trade</strong>
               <span>Buy 20 VWCE at IBKR · €131.40 · fee €1.25 · XETR</span>
               <span class="buttons"><span class="b primary">Approve</span><span class="b">Decline</span></span>
             </div>
-            <p class="msg ai">Recorded. It is an unsaved change until you save your file.</p>
-            <figcaption>Every change waits for your approval. The figures come from the app's own calculations, never from the model's memory.</figcaption>
+            <figcaption>Nothing changes until you approve it.</figcaption>
           </figure>
           <div class="ways">
             <article>
               <h3>In the desktop app</h3>
-              <p>Press the ✦ button in the corner and pick a model: one on your computer through <a href="https://ollama.com">Ollama</a> or <a href="https://lmstudio.ai">LM Studio</a>, or Anthropic or OpenAI with your own key. Ask anything, plan, and approve the changes you want. On the website the button explains why it needs the app.</p>
+              <p>Press ✦ and pick a model.</p>
             </article>
             <article>
               <h3>From your own AI tool</h3>
-              <p>The <code>investor-mcp</code> server opens your file to any assistant that speaks the Model Context Protocol, such as Claude Code, Claude Desktop, Cursor, VS Code or LM Studio. It reads with the app's numbers and records changes you agree to, keeping the last 20 versions so any change can be undone, or stays read-only if you prefer.</p>
+              <p>Any MCP client, through <code>investor-mcp</code>.</p>
             </article>
             <article>
               <h3>Ready-made skills</h3>
-              <p>A monthly check-up, rehearsing a trade, preparing your taxes, and checking you are on track to retire: routines the assistant follows step by step. In Claude Code: <code>/plugin install investor --marketplace dobrinov/investor</code>. The same skills are one tap away in the desktop app.</p>
+              <p>Monthly check-up, trade rehearsal, taxes, retirement.</p>
             </article>
           </div>
         </div>
-        <p class="note">An assistant is not a financial adviser. Tax figures come from draft rules. With a cloud model, your questions and the figures it looks up are sent to that provider; with a local model, nothing leaves your computer. <a href="https://github.com/dobrinov/investor#ask-an-ai-assistant">How to connect it</a></p>
+        <p class="note">Not a financial adviser. <a href="https://github.com/dobrinov/investor#ask-an-ai-assistant">How to connect it</a></p>
       </section>
     </main>
 
