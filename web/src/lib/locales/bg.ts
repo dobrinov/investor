@@ -926,4 +926,10 @@ export const bg: Record<Key, string> = {
   'assistant.privacy.claude_code': "Съобщенията ви и нужните числа отиват към Anthropic през Claude Code.",
   'overview.part.crypto': "Крипто",
   'overview.tab.crypto': "Крипто",
+  'settings.updatesTitle': "Обновления",
+  'settings.version': "Това е версия {version}.",
+  'settings.check': "Провери за обновления",
+  'settings.checking': "Проверявам…",
+  'settings.latest': "Имате най-новата версия.",
+  'settings.checkFailed': "Проверката не успя: {reason}",
 }

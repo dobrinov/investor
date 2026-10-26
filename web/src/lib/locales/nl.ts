@@ -926,4 +926,10 @@ export const nl: Record<Key, string> = {
   'assistant.privacy.claude_code': "Je berichten en de nodige cijfers gaan via Claude Code naar Anthropic.",
   'overview.part.crypto': "Crypto",
   'overview.tab.crypto': "Crypto",
+  'settings.updatesTitle': "Updates",
+  'settings.version': "Dit is versie {version}.",
+  'settings.check': "Zoeken naar updates",
+  'settings.checking': "Zoeken…",
+  'settings.latest': "Je hebt de nieuwste versie.",
+  'settings.checkFailed': "Controle mislukt: {reason}",
 }

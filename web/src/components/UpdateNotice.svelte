@@ -14,7 +14,10 @@
   let installing = $state(false)
   let error = $state('')
 
+  let last = 0
+
   async function check(): Promise<void> {
+    last = Date.now()
     try {
       const found = (await invoke!('update_check')) as { version: string } | null
       if (found && found.version !== version) {
@@ -42,7 +45,10 @@
     if (!desktop || import.meta.env.DEV) return
     const first = setTimeout(check, 5000)
     const later = setInterval(check, 6 * 60 * 60 * 1000)
-    return () => (clearTimeout(first), clearInterval(later))
+    // Coming back to an app left open for long checks again, at most hourly.
+    const back = () => Date.now() - last > 60 * 60 * 1000 && void check()
+    window.addEventListener('focus', back)
+    return () => (clearTimeout(first), clearInterval(later), window.removeEventListener('focus', back))
   })
 </script>
 

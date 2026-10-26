@@ -234,3 +234,21 @@ test('crypto has its own tab and slice of net worth', async ({ page }) => {
   await expect(page.getByRole('row', { name: /BTC/ })).toBeVisible()
   await expect(page.getByRole('row', { name: /VWCE/ })).toHaveCount(0)
 })
+
+test('Settings shows the version and checks for updates on demand', async ({ page }) => {
+  await page.addInitScript(() => {
+    ;(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string) => {
+        if (cmd === 'app_version') return '0.6.0'
+        if (cmd === 'update_check') return { version: '0.7.0' }
+        if (cmd === 'bridge_next') return await new Promise((r) => setTimeout(() => r(null), 2000))
+        return null
+      },
+    }
+  })
+  await page.goto('/app/#example/settings')
+  await expect(page.getByText('This is version 0.6.0.')).toBeVisible()
+  await page.getByRole('button', { name: 'Check for updates' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Investor 0.7.0 is available.' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Restart to update' }).first()).toBeVisible()
+})

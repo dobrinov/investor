@@ -926,4 +926,10 @@ export const el: Record<Key, string> = {
   'assistant.privacy.claude_code': "Τα μηνύματά σας και τα στοιχεία που χρειάζονται πηγαίνουν στην Anthropic μέσω του Claude Code.",
   'overview.part.crypto': "Κρύπτο",
   'overview.tab.crypto': "Κρύπτο",
+  'settings.updatesTitle': "Ενημερώσεις",
+  'settings.version': "Αυτή είναι η έκδοση {version}.",
+  'settings.check': "Έλεγχος για ενημερώσεις",
+  'settings.checking': "Έλεγχος…",
+  'settings.latest': "Έχετε την πιο πρόσφατη έκδοση.",
+  'settings.checkFailed': "Ο έλεγχος απέτυχε: {reason}",
 }

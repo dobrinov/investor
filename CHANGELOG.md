@@ -3,6 +3,11 @@
 What changed in each release of Investor, newest first. Downloads are on
 [GitHub](https://github.com/dobrinov/investor/releases).
 
+## 0.7.1 — 2026-10-26
+
+- Settings shows which version you have and can check for updates on demand, saying what happened if the check fails.
+- An app left open also checks for a new version when you come back to it, at most once an hour.
+
 ## 0.7.0 — 2026-10-26
 
 - Your CFO and the assistant can use Claude Code with your own sign-in: no API key, and it only reads what it is sent.

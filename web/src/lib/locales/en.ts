@@ -924,6 +924,12 @@ export const en = {
   'assistant.privacy.claude_code': "Your messages and the figures they need go to Anthropic through Claude Code.",
   'overview.part.crypto': "Crypto",
   'overview.tab.crypto': "Crypto",
+  'settings.updatesTitle': "Updates",
+  'settings.version': "This is version {version}.",
+  'settings.check': "Check for updates",
+  'settings.checking': "Checking…",
+  'settings.latest': "You have the latest version.",
+  'settings.checkFailed': "Could not check for updates: {reason}",
 } as const
 
 export type Key = keyof typeof en

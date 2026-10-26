@@ -223,6 +223,12 @@ async fn modified_invest(path: String) -> Result<u64, String> {
     Ok(modified.duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_millis() as u64)
 }
 
+/// This app's version, e.g. `0.7.0`.
+#[tauri::command]
+fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
 /// A newer version found by `update_check`, waiting to be installed.
 #[derive(Default)]
 struct Pending(Mutex<Option<Update>>);
@@ -275,6 +281,7 @@ fn main() {
             modified_invest,
             claude_code_path,
             claude_code_ask,
+            app_version,
             update_check,
             update_install,
             bridge::bridge_start,

@@ -4,6 +4,8 @@
   import { country } from '../lib/format'
   import LanguagePicker from '../components/LanguagePicker.svelte'
   import PasswordStrength from '../components/PasswordStrength.svelte'
+  import Updates from '../components/Updates.svelte'
+  import { desktop } from '../lib/files'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -53,6 +55,8 @@
   <h2 id="lang-title">{t('common.language')}</h2>
   <LanguagePicker light />
 </section>
+
+{#if desktop}<Updates />{/if}
 
 <section class="card" aria-labelledby="pw-title">
   <h2 id="pw-title">{t('settings.passwordTitle')}</h2>

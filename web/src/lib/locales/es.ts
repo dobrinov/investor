@@ -926,4 +926,10 @@ export const es: Record<Key, string> = {
   'assistant.privacy.claude_code': "Tus mensajes y las cifras que necesitan van a Anthropic a través de Claude Code.",
   'overview.part.crypto': "Cripto",
   'overview.tab.crypto': "Cripto",
+  'settings.updatesTitle': "Actualizaciones",
+  'settings.version': "Esta es la versión {version}.",
+  'settings.check': "Buscar actualizaciones",
+  'settings.checking': "Buscando…",
+  'settings.latest': "Tienes la última versión.",
+  'settings.checkFailed': "No se pudo comprobar: {reason}",
 }

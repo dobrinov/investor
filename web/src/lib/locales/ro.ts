@@ -926,4 +926,10 @@ export const ro: Record<Key, string> = {
   'assistant.privacy.claude_code': "Mesajele tale și cifrele necesare ajung la Anthropic prin Claude Code.",
   'overview.part.crypto': "Cripto",
   'overview.tab.crypto': "Cripto",
+  'settings.updatesTitle': "Actualizări",
+  'settings.version': "Aceasta este versiunea {version}.",
+  'settings.check': "Caută actualizări",
+  'settings.checking': "Caut…",
+  'settings.latest': "Ai cea mai nouă versiune.",
+  'settings.checkFailed': "Verificarea nu a reușit: {reason}",
 }
