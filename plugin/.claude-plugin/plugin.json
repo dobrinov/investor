@@ -1,6 +1,6 @@
 {
   "name": "investor",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Ask Claude about your Investor portfolio: a connection to your .invest file that reads it and records changes you agree to and skills for a monthly check-up, rehearsing a trade, tax season, retirement and adding a broker.",
   "author": { "name": "Deyan Dobrinov" },
   "homepage": "https://dobrinov.github.io/investor/",
