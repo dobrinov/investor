@@ -22,19 +22,21 @@ the result as a worksheet to take to an accountant, not a filing.
      short-term gain, or physical gold taxed as income). Explain why.
    - payouts of private holdings taxed as employment income: they are not in
      the capital gains; note the amount and the tax already withheld.
-4. Call `journal` (filter by symbol when useful) to collect the year's
-   dividends and the tax withheld abroad on them; say whether the pack
-   allows a foreign tax credit.
-5. Mention the form names and the deadline from the pack, and anything the
-   pack notes say it does not model (for example share matching in the UK or
-   average cost in Canada).
+4. Call `declaration` for that year. When the pack describes the forms, it
+   returns each part of the return (appendix, code, the form's own column
+   names) filled from the books, including dividends with the tax withheld
+   abroad, interest and the holdings at 31 December, plus the steps to file.
+   Without it, use `journal` to collect dividends and withholding.
+5. Mention the deadline and anything the pack notes say it does not model
+   (for example share matching in the UK).
 
 ## Answer
 
 This skill only reads. If a sale's venue was missing and the person tells
 you where it was, that is fixed in the app's General ledger, not here.
 
-A worksheet: one table of sales (date, instrument, proceeds, cost, gain,
-treatment), the totals, the estimated tax, dividends and withholding, then
-open questions. Amounts are in the file's currency; say so if the return
+A worksheet: for each part of the return, the figures to type in under the
+form's column names; then the sales behind them (date, instrument, proceeds,
+cost, gain, treatment), the estimated tax, the steps to file, and open
+questions. Amounts are in the file's currency; say so if the return
 needs another. Write in the person's language.

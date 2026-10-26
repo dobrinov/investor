@@ -803,6 +803,16 @@ export const en = {
   'assistant.tab.tool': "Your AI tool",
   'bridge.waitingApproval': "{count} changes waiting for your approval",
   'trade.gainTextAverage': "Sold for {proceeds}; at the average cost of all you hold, these units cost {cost}.",
+  'decl.title': "Your declaration for {year}",
+  'decl.lead': "What to type into your tax return, part by part. Amounts are in {currency}; select one to copy it.",
+  'decl.steps': "How to file",
+  'decl.portal': "Open the tax portal",
+  'decl.code': "code {code}",
+  'decl.optional': "Optional",
+  'decl.nothing': "Nothing to declare here for {year}.",
+  'decl.undecided': "{count} sales have no venue yet. Decide them in the list below before you file.",
+  'decl.copy': "Copy",
+  'decl.copied': "Copied",
 } as const
 
 export type Key = keyof typeof en

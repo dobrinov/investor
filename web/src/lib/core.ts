@@ -392,6 +392,24 @@ export interface GainRow extends Realization {
   treatment: Treatment
 }
 
+/** What to type into the tax return, section by section. */
+export interface Declaration {
+  year: number
+  portal: string | null
+  steps: string[]
+  undecided: number
+  sections: {
+    what: 'taxable_sales' | 'exempt_sales' | 'crypto_sales' | 'dividends' | 'interest' | 'holdings' | 'employment_income'
+    title: string
+    form: string
+    code: string | null
+    columns: [string, string][]
+    optional: boolean
+    note: string | null
+    rows: { text: string; amount: boolean }[][]
+  }[]
+}
+
 export interface Gains {
   pack: { id: string; version: string; country: string; authority: string; website?: string; tax_year: number; currency: string; verified: boolean; notes?: string }
   /** On the whole gain: the pack's rate times the share that is taxed. */
@@ -559,6 +577,10 @@ export class Book {
 
   gains(year: number, packToml: string): Gains {
     return JSON.parse(this.session.gains(year, packToml))
+  }
+
+  declaration(year: number, packToml: string, language: string): Declaration {
+    return JSON.parse(this.session.declaration(year, packToml, language))
   }
 
   sales(year: number): Realization[] {

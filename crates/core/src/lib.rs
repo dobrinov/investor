@@ -9,6 +9,7 @@ pub mod bank;
 pub mod example;
 mod error;
 pub mod import;
+pub mod declaration;
 pub mod jurisdiction;
 pub mod ledger;
 pub mod lots;

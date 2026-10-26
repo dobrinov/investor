@@ -64,6 +64,11 @@ impl Lots {
         });
     }
 
+    /// When the oldest units still held were bought.
+    pub fn first_opened(&self, account: &str) -> Option<NaiveDate> {
+        self.open.get(account)?.iter().map(|l| l.opened).min()
+    }
+
     pub fn held(&self, account: &str) -> Decimal {
         self.open.get(account).map_or(Decimal::ZERO, |q| q.iter().map(|l| l.units).sum())
     }

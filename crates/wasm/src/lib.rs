@@ -220,6 +220,13 @@ impl Session {
         })
     }
 
+    /// What to type into the return for a year, as JSON, with the filing
+    /// steps in `language`.
+    pub fn declaration(&self, year: i32, pack_toml: &str, language: &str) -> Result<String, JsError> {
+        let pack = JurisdictionPack::from_toml(pack_toml).map_err(core_error)?;
+        json(&investor_core::declaration::declaration(&self.vault.ledger, &pack, year, language))
+    }
+
     /// Deposits, withdrawals, buys and sells per month, as JSON.
     pub fn flows(&self) -> Result<String, JsError> {
         json(&reports::monthly_flows(&self.vault.ledger))

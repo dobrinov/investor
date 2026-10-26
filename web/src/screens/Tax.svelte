@@ -1,8 +1,8 @@
 <script lang="ts">
   import { packs } from '../lib/configs'
-  import type { Gains, Metal, Realization, Treatment } from '../lib/core'
+  import type { Declaration, Gains, Metal, Realization, Treatment } from '../lib/core'
   import { country, date, money } from '../lib/format'
-  import { t } from '../lib/i18n.svelte'
+  import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
   const s = $derived(app.snapshot!)
@@ -25,6 +25,23 @@
       return { error: e instanceof Error ? e.message : String(e) }
     }
   })
+
+  const filing = $derived.by((): Declaration | undefined => {
+    if (!pack || !app.book) return undefined
+    void app.snapshot
+    try {
+      return app.book.declaration(pack.year, pack.toml, i18n.lang)
+    } catch {
+      return undefined
+    }
+  })
+
+  let copied = $state('')
+  async function copy(text: string): Promise<void> {
+    await navigator.clipboard.writeText(text)
+    copied = text
+    setTimeout(() => (copied = ''), 1500)
+  }
 
   const unclassified = $derived.by((): Realization[] => {
     void app.snapshot
@@ -135,6 +152,54 @@
         </div>
       {/if}
     </section>
+
+    {#if filing?.sections.length}
+      <section class="card declaration" aria-labelledby="decl-title">
+        <h2 id="decl-title">{t('decl.title', { year: filing.year })}</h2>
+        <p class="muted">{t('decl.lead', { currency: result.pack.currency })}</p>
+        {#if filing.undecided}<p class="notice">{t('decl.undecided', { count: filing.undecided })}</p>{/if}
+        {#if filing.steps.length}
+          <h3>{t('decl.steps')}</h3>
+          <ol class="steps">
+            {#each filing.steps as step, i (i)}<li>{step}</li>{/each}
+          </ol>
+          {#if filing.portal}<a class="btn ghost" href={filing.portal} target="_blank" rel="noopener noreferrer">{t('decl.portal')}</a>{/if}
+        {/if}
+        {#each filing.sections as section, i (i)}
+          <article class="form-part">
+            <div class="part-head">
+              <h3>{section.form}{#if section.code}<span class="pill plain">{t('decl.code', { code: section.code })}</span>{/if}{#if section.optional}<span class="pill">{t('decl.optional')}</span>{/if}</h3>
+              <p class="muted small">{section.title}</p>
+            </div>
+            {#if section.rows.length}
+              <div class="table-wrap">
+                <table>
+                  <thead><tr>{#each section.columns as [label] (label)}<th class:right={section.rows[0][section.columns.findIndex(([l]) => l === label)]?.amount}>{label}</th>{/each}</tr></thead>
+                  <tbody>
+                    {#each section.rows as row, r (r)}
+                      <tr>
+                        {#each row as cell, c (c)}
+                          <td class:right={cell.amount} class:num={cell.amount}>
+                            {#if cell.amount}
+                              <button class="copy" onclick={() => copy(cell.text)} title={t('decl.copy')} aria-label="{t('decl.copy')} {cell.text}">
+                                {copied === cell.text ? t('decl.copied') : cell.text}
+                              </button>
+                            {:else}{cell.text}{/if}
+                          </td>
+                        {/each}
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            {:else}
+              <p class="muted small">{t('decl.nothing', { year: filing.year })}</p>
+            {/if}
+            {#if section.note}<p class="muted small">{section.note}</p>{/if}
+          </article>
+        {/each}
+      </section>
+    {/if}
 
     {#if result.employment.length}
       {@const rule = result.employment_rule}
@@ -250,5 +315,52 @@
     font-size: 14px;
     line-height: 1.55;
     max-width: 820px;
+  }
+  .declaration {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .declaration h2,
+  .declaration p,
+  .declaration h3 {
+    margin: 0;
+  }
+  .steps {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 6px;
+    line-height: 1.5;
+  }
+  .declaration > .btn {
+    align-self: flex-start;
+  }
+  .form-part {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .part-head h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+  }
+  .copy {
+    border: 1px dashed transparent;
+    border-radius: 6px;
+    padding: 4px 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: copy;
+  }
+  .copy:hover {
+    border-color: var(--line);
+    background: var(--accent-soft);
   }
 </style>

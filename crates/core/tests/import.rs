@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use investor_core::declaration::What;
 use investor_core::import::{fit, import_statement, BrokerConfig};
 use investor_core::jurisdiction::{JurisdictionPack, Treatment};
 use investor_core::ledger::{Ledger, Venue};
@@ -112,7 +113,19 @@ fn ibkr_flex_statement() {
     let pack = JurisdictionPack::from_toml(&repo("jurisdictions/bg/2026.toml")).unwrap();
     assert_eq!(pack.treatment(gains[0].venue.as_ref()), Treatment::Taxable);
     assert_eq!(pack.treatment(Some(&Venue { code: "BVME".into(), assumed: false })), Treatment::Exempt);
-    assert_eq!(pack.summarize(&gains).tax_due, dec("2.32"));
+    // 10% of 90% of the gain: the law allows 10% as fixed costs.
+    assert_eq!(pack.summarize(&gains).tax_due, dec("2.09"));
+
+    let filing = investor_core::declaration::declaration(&ledger, &pack, 2026, "bg");
+    let section = |what: What| filing.sections.iter().find(|s| s.section.what == what).unwrap();
+    let texts = |what: What| section(what).rows.iter().map(|r| r.iter().map(|c| c.text.as_str()).collect::<Vec<_>>()).collect::<Vec<_>>();
+    assert_eq!(texts(What::TaxableSales), vec![vec!["446.40", "423.20", "23.20", "0.00"]]);
+    assert!(texts(What::ExemptSales).is_empty());
+    let holdings = texts(What::Holdings);
+    // VUAA and EUNL at the end of the year, with ISIN and issuer country.
+    assert_eq!(holdings.len(), 2);
+    assert!(holdings.iter().any(|r| r[1..5] == ["IE00BFMXXD54", "IE", "4", "440.00"]), "{holdings:?}");
+    assert!(filing.steps[0].starts_with("Снабдете"));
 
     // Every entry balances and the books sum to zero.
     let total: Decimal = reports::trial_balance(&ledger).iter().map(|r| r.debit - r.credit).sum();

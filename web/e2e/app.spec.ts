@@ -81,3 +81,13 @@ test('your own AI tool can read the file and record a change you approve', async
   await expect.poll(async () => (await replies())[3]?.result?.content[0].text ?? '').toContain('"recorded": true')
   await expect(page.getByRole('row', { name: /VWCE/ }).getByRole('cell').nth(1)).toHaveText('55')
 })
+
+test('the tax screen says what to type into the return, with holdings at year end', async ({ page }) => {
+  await page.goto('/app/#example/tax')
+  const declaration = page.locator('.declaration')
+  await expect(declaration.getByRole('heading', { name: 'Your declaration for 2026' })).toBeVisible()
+  const holdings = declaration.locator('.form-part', { hasText: 'Приложение 8, Част I' }).filter({ hasNotText: 'Част III' })
+  await expect(holdings.getByRole('cell', { name: /Vanguard FTSE All-World/ })).toBeVisible()
+  await expect(holdings.getByText('Bitcoin')).toHaveCount(0)
+  await expect(declaration.locator('.form-part', { hasText: 'code 508' }).first().getByRole('button', { name: /Copy 1044.00/ })).toBeVisible()
+})

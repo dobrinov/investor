@@ -11,11 +11,15 @@ website = "https://nra.bg"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. Capital gains: 10% flat on net taxable result; sales on EU regulated markets treated as exempt."
+notes = "Draft rules. Capital gains: 10% on the net taxable result after the 10% of fixed costs the law allows (so 9% of the net gain); sales on EU regulated markets are exempt. Cost is the weighted average of each instrument. Amounts are converted at the BNB rate of each transaction day; this app uses the rates in your statements, so check them."
 
 [capital_gains]
 rate = "0.10"
 form = "Приложение 5 (Appendix 5)"
+# Only 90% of the net gain is taxed: the law allows 10% as fixed costs.
+inclusion_rate = "0.9"
+# Weighted average cost of each instrument.
+cost_basis = "average"
 exempt_on_eu_regulated_market = true
 # Venue codes as brokers write them: IBKR exchange codes and ISO 10383 MICs.
 # UNVERIFIED list: confirm each venue is an EU regulated market (not an MTF).
@@ -49,3 +53,88 @@ note = "Employment income is taxed at 10% flat. A Bulgarian employer withholds i
 
 [deadlines]
 annual_return = "2027-04-30"
+# Electronic filing and payment by this date takes 5% off the tax on sales
+# and interest (capped). UNVERIFIED.
+early_filing_discount = "2027-03-31"
+# BNB report СПБ-8 on what you hold abroad, when it is EUR 25,000 or more.
+bnb_report = "2027-03-31"
+
+# What goes where on the return. UNVERIFIED: column names follow published
+# guides to the 2025 form; check them against the form for 2026.
+[declaration]
+portal = "https://portal.nra.bg"
+
+[declaration.steps]
+en = [
+  "Get a personal identification code (ПИК) from the NRA, or use a qualified electronic signature (КЕП).",
+  "Sign in at portal.nra.bg and open the service for filing the annual tax return under art. 50 of the Personal Income Tax Act (ГДД по чл. 50 ЗДДФЛ).",
+  "Add the appendices listed below and type in the figures exactly as shown here. Amounts are in euro.",
+  "Check the tax the portal works out against the estimate on this screen, then submit.",
+  "Pay the tax in euro to the NRA by 30 April 2027. Filing online and paying by 31 March takes 5% off the tax on sales and interest.",
+  "If on 31 December what you hold abroad (shares, funds and cash at brokers) is worth EUR 25,000 or more, also file report СПБ-8 with the BNB by 31 March.",
+]
+bg = [
+  "Снабдете се с ПИК от НАП или с квалифициран електронен подпис (КЕП).",
+  "Влезте в portal.nra.bg и отворете услугата за подаване на годишна данъчна декларация по чл. 50 от ЗДДФЛ.",
+  "Добавете приложенията по-долу и въведете сумите точно както са показани тук. Сумите са в евро.",
+  "Сравнете данъка, който порталът изчислява, с оценката на този екран и подайте декларацията.",
+  "Платете данъка в евро на НАП до 30 април 2027 г. При подаване по електронен път и плащане до 31 март получавате 5% отстъпка от данъка върху продажбите и лихвите.",
+  "Ако към 31 декември притежаваното в чужбина (акции, фондове и пари при брокери) е 25 000 евро или повече, подайте и отчет СПБ-8 към БНБ до 31 март.",
+]
+
+[[declaration.sections]]
+what = "taxable_sales"
+title = "Облагаеми продажби на акции и фондове"
+form = "Приложение 5, Таблица 2"
+code = "508"
+columns = [["Кол. 3 Продажна цена", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"], ["Кол. 5 Печалба", "gains"], ["Кол. 6 Загуба", "losses"]]
+note = "One row with the totals for the year. Sales on markets outside the EU regulated markets, such as NASDAQ and NYSE."
+
+[[declaration.sections]]
+what = "crypto_sales"
+title = "Продажби на криптоактиви"
+form = "Приложение 5, Таблица 2"
+code = "5082"
+columns = [["Кол. 3 Продажна цена", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"], ["Кол. 5 Печалба", "gains"], ["Кол. 6 Загуба", "losses"]]
+note = "Crypto is declared on its own row. Coins are recognised by their ticker (BTC, ETH and the like), so check the split."
+
+[[declaration.sections]]
+what = "exempt_sales"
+title = "Освободени продажби на регулиран пазар в ЕС/ЕИП"
+form = "Приложение 13, Част II"
+code = "5081"
+columns = [["Кол. 3 Брутен размер", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"]]
+optional = true
+note = "Not taxed. Declaring it is optional but shows where the money came from."
+
+[[declaration.sections]]
+what = "dividends"
+title = "Дивиденти от чужбина"
+form = "Приложение 8, Част III"
+code = "8141"
+columns = [["Наименование на платеца", "name"], ["Държава", "country"], ["Брутен размер", "gross"], ["Платен данък в чужбина", "withheld"], ["Допустим данъчен кредит", "credit"], ["Дължим данък", "tax_due"]]
+note = "One row per paying company. 5% of the gross, less the tax kept back abroad (never below zero)."
+
+[[declaration.sections]]
+what = "interest"
+title = "Лихви"
+form = "Приложение 6"
+code = "603"
+rate = "0.10"
+columns = [["Размер на дохода", "amount"], ["Данък 10%", "tax_due"]]
+note = "Interest on cash at brokers. Interest on EU bank deposits and bonds can be exempt."
+
+[[declaration.sections]]
+what = "holdings"
+title = "Притежавани акции и дялове в чужбина към 31 декември"
+form = "Приложение 8, Част I"
+columns = [["Наименование", "name"], ["ISIN", "isin"], ["Държава", "country"], ["Брой", "units"], ["Цена на придобиване", "cost"], ["Притежавани от", "since"]]
+note = "Information only, no tax. Coins and bars and crypto are left out. Columns not confirmed: check them against the form."
+
+[[declaration.sections]]
+what = "employment_income"
+title = "Доходи от трудови правоотношения"
+form = "Приложение 1"
+columns = [["Дата", "date"], ["Описание", "description"], ["Доход", "income"], ["Удържан данък", "withheld"]]
+note = "Pay from work that is not salary, such as a co-investment paid out through payroll."
+

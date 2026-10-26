@@ -25,6 +25,9 @@ pub struct JurisdictionPack {
     pub employment_income: Option<EmploymentIncome>,
     #[serde(default)]
     pub deadlines: BTreeMap<String, String>,
+    /// What goes where on the return, and how to file it.
+    #[serde(default)]
+    pub declaration: Option<crate::declaration::Filing>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
