@@ -1,10 +1,13 @@
 //! Investor as a desktop app: the same web app in a native window, with
 //! native dialogs to open and save `.invest` files in place. The app's files
-//! ship inside the bundle; the only network traffic is to the AI model the
-//! person sets up in the assistant, and only when they use it.
+//! ship inside the bundle. The only network traffic is to the AI model the
+//! person sets up in the assistant, when they use it, and the check for a
+//! newer version of the app on GitHub.
 
 // No console window next to the app on Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod bridge;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -16,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{AppHandle, Manager, RunEvent, State};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_updater::{Update, UpdaterExt};
 
 /// A `.invest` file the app was asked to open when it started.
 #[derive(Default)]
@@ -139,6 +143,33 @@ async fn modified_invest(path: String) -> Result<u64, String> {
     Ok(modified.duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_millis() as u64)
 }
 
+/// A newer version found by `update_check`, waiting to be installed.
+#[derive(Default)]
+struct Pending(Mutex<Option<Update>>);
+
+#[derive(Serialize)]
+struct Available {
+    version: String,
+    notes: Option<String>,
+}
+
+/// Looks for a newer version of the app among the GitHub releases.
+#[tauri::command]
+async fn update_check(app: AppHandle, pending: State<'_, Pending>) -> Result<Option<Available>, String> {
+    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let available = update.as_ref().map(|u| Available { version: u.version.clone(), notes: u.body.clone() });
+    *pending.0.lock().map_err(|e| e.to_string())? = update;
+    Ok(available)
+}
+
+/// Downloads and installs the version `update_check` found, then restarts.
+#[tauri::command]
+async fn update_install(app: AppHandle, pending: State<'_, Pending>) -> Result<(), String> {
+    let update = pending.0.lock().map_err(|e| e.to_string())?.take().ok_or("no update is waiting")?;
+    update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    app.restart()
+}
+
 /// The file the app was opened with, once.
 #[tauri::command]
 fn launch_file(launch: State<'_, Launch>) -> Option<Picked> {
@@ -150,8 +181,25 @@ fn main() {
     let from_args = std::env::args_os().skip(1).map(PathBuf::from).find(|p| is_invest(p));
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Launch(Mutex::new(from_args)))
-        .invoke_handler(tauri::generate_handler![pick_invest, save_invest_as, read_invest, write_invest, launch_file, model_request, modified_invest])
+        .manage(Pending::default())
+        .manage(bridge::Bridge::default())
+        .invoke_handler(tauri::generate_handler![
+            pick_invest,
+            save_invest_as,
+            read_invest,
+            write_invest,
+            launch_file,
+            model_request,
+            modified_invest,
+            update_check,
+            update_install,
+            bridge::bridge_start,
+            bridge::bridge_stop,
+            bridge::bridge_next,
+            bridge::bridge_reply,
+        ])
         .build(tauri::generate_context!())
         .expect("the app starts");
     app.run(|handle, event| {

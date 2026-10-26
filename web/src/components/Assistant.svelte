@@ -2,8 +2,10 @@
   // The magic button in the bottom-right corner and the assistant it opens.
   // On the website it explains that the assistant needs the desktop app; in
   // the app it sets up a model, then chats with the person's books as
-  // context, asking before anything is written.
+  // context, asking before anything is written. It also lets the person's
+  // own AI tool use the open file, and shows that tool's changes to approve.
   import { tick } from 'svelte'
+  import { bridge } from '../lib/bridge.svelte'
   import { available, Conversation, DEFAULTS, findLocalModels, loadSettings, saveSettings, skills, type Bubble, type ModelKind, type ModelSettings, type Skill } from '../lib/assistant.svelte'
   import { t, translates } from '../lib/i18n.svelte'
 
@@ -14,6 +16,19 @@
   let conversation = $state<Conversation | null>(null)
   let draft = $state('')
   let list = $state<HTMLElement>()
+  let mode = $state<'chat' | 'connect'>('chat')
+  let copied = $state('')
+
+  async function copy(text: string): Promise<void> {
+    await navigator.clipboard.writeText(text)
+    copied = text
+    setTimeout(() => (copied = ''), 1500)
+  }
+
+  // A change from the person's own AI tool opens the panel to approve it.
+  $effect(() => {
+    if (bridge.approvals.length) open = true
+  })
 
   // Setup form
   let form = $state<ModelSettings>(saved ?? { kind: 'local', ...DEFAULTS.local })
@@ -95,7 +110,12 @@
   <aside id="assistant" class="panel" aria-label={t('assistant.title')}>
     <header>
       <h2>{t('assistant.title')}</h2>
-      {#if available && settings && !setup}
+      {#if available}
+        <button class="icon" class:on={mode === 'connect'} onclick={() => (mode = mode === 'connect' ? 'chat' : 'connect')} title={t('bridge.open')} aria-label={t('bridge.open')} aria-pressed={mode === 'connect'}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" /></svg>
+        </button>
+      {/if}
+      {#if available && settings && !setup && mode === 'chat'}
         <span class="model muted" title={settings.url}>{settings.model}</span>
         <button class="icon" onclick={() => ((setup = true), (form = { ...settings! }))} title={t('assistant.settings')} aria-label={t('assistant.settings')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4" /></svg>
@@ -109,6 +129,23 @@
       </button>
     </header>
 
+    {#if bridge.approvals.length}
+      {@const a = bridge.approvals[0]}
+      <div class="approve waiting outside">
+        <span class="small">{t('bridge.wants', { name: a.client || t('bridge.aTool') })}</span>
+        <strong>{toolName(a.name)}</strong>
+        <dl>
+          {#each Object.entries(a.args).filter(([, v]) => v !== null && v !== '' && v !== undefined) as [k, v] (k)}
+            <div><dt>{k.replaceAll('_', ' ')}</dt><dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd></div>
+          {/each}
+        </dl>
+        <p class="small">{t('assistant.approveHint')}</p>
+        <div class="actions">
+          <button class="btn" onclick={() => bridge.decide(true)}>{t('assistant.approve')}</button>
+          <button class="btn ghost" onclick={() => bridge.decide(false)}>{t('assistant.decline')}</button>
+        </div>
+      </div>
+    {/if}
     {#if !available}
       <div class="body intro">
         <p class="lead">{t('assistant.webLead')}</p>
@@ -120,6 +157,26 @@
         <p class="muted">{t('assistant.webWhy')}</p>
         <a class="btn" href="../#install" target="_top">{t('assistant.download')}</a>
         <p class="muted small">{t('assistant.webModels')}</p>
+      </div>
+    {:else if mode === 'connect'}
+      <div class="body connect">
+        <p>{t('bridge.lead')}</p>
+        {#if bridge.on}
+          <p class="status"><span class="dot" class:live={bridge.client}></span>{bridge.client ? t('bridge.connected', { name: bridge.client }) : t('bridge.waiting')}</p>
+          <p class="small">{t('bridge.claudeCode')}</p>
+          <div class="code"><code>{bridge.command}</code><button class="btn ghost" onclick={() => copy(bridge.command)}>{copied === bridge.command ? t('bridge.copied') : t('bridge.copy')}</button></div>
+          <p class="small">{t('bridge.other')}</p>
+          <div class="code"><code>{bridge.address}</code><button class="btn ghost" onclick={() => copy(bridge.address)}>{copied === bridge.address ? t('bridge.copied') : t('bridge.copy')}</button></div>
+          <div class="actions">
+            <button class="btn ghost" onclick={() => bridge.stop()}>{t('bridge.turnOff')}</button>
+            <button class="link" onclick={() => bridge.renew()}>{t('bridge.newAddress')}</button>
+          </div>
+        {:else}
+          <div class="actions"><button class="btn" onclick={() => bridge.start()}>{t('bridge.turnOn')}</button></div>
+        {/if}
+        {#if bridge.error}<p class="error">{t('bridge.failed', { reason: bridge.error })}</p>{/if}
+        <p class="muted small">{t('bridge.privacy')}</p>
+        <button class="link left" onclick={() => (mode = 'chat')}>{t('bridge.backToChat')}</button>
       </div>
     {:else if setup || !settings}
       <form class="body setup" onsubmit={(e) => (e.preventDefault(), saveSetup())}>
@@ -157,6 +214,7 @@
           {#if settings}<button type="button" class="btn ghost" onclick={() => (setup = false)}>{t('common.cancel')}</button>{/if}
           {#if settings}<button type="button" class="link" onclick={forget}>{t('assistant.forget')}</button>{/if}
         </div>
+        <button type="button" class="link left" onclick={() => (mode = 'connect')}>{t('bridge.open')}</button>
       </form>
     {:else if conversation}
       <div class="body chat" bind:this={list} aria-live="polite">
@@ -296,8 +354,49 @@
     color: var(--ink-2);
     cursor: pointer;
   }
-  .icon:hover {
+  .icon:hover,
+  .icon.on {
     background: var(--surface-2);
+  }
+  .outside {
+    margin: 12px 12px 0;
+  }
+  .connect p {
+    margin: 0;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.live {
+    background: var(--accent);
+  }
+  .code {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 8px 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .code code {
+    flex: 1;
+    min-width: 0;
+    font: 12px var(--mono, monospace);
+    overflow-wrap: anywhere;
+  }
+  .link.left {
+    align-self: flex-start;
+    padding: 0;
   }
   .body {
     flex: 1;

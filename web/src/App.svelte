@@ -1,6 +1,8 @@
 <script lang="ts">
   import { i18n } from './lib/i18n.svelte'
   import { app } from './lib/state.svelte'
+  import UpdateNotice from './components/UpdateNotice.svelte'
+  import { bridge } from './lib/bridge.svelte'
   import OpenScreen from './screens/OpenScreen.svelte'
   import Shell from './screens/Shell.svelte'
 
@@ -16,6 +18,9 @@
     })
     .finally(() => (resuming = false))
 
+  // The desktop app starts the connection for AI tools again if it was on.
+  bridge.resume()
+
   $effect(() => {
     document.documentElement.lang = i18n.lang
   })
@@ -28,3 +33,4 @@
 {:else}
   <OpenScreen />
 {/if}
+<UpdateNotice />

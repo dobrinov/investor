@@ -1,12 +1,18 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { bg } from '../lib/guide/bg'
   import { en } from '../lib/guide/en'
   import type { Section } from '../lib/guide/types'
   import { i18n, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
-  const guides: Record<string, Section[]> = { en, bg }
+  // Each language's guide loads when it is first shown.
+  const loaders = import.meta.glob<Record<string, Section[]>>(['../lib/guide/*.ts', '!../lib/guide/en.ts', '!../lib/guide/types.ts'])
+  const guides = $state<Record<string, Section[]>>({ en })
+  $effect(() => {
+    const lang = i18n.lang
+    const loader = loaders[`../lib/guide/${lang}.ts`]
+    if (!guides[lang] && loader) void loader().then((m) => (guides[lang] = m[lang]))
+  })
   const sections = $derived(guides[i18n.lang] ?? en)
 
   // Jump to the section another screen asked for.

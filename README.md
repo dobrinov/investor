@@ -63,27 +63,19 @@ your own key. Reads run at once; every change shows an approval card and
 then counts as an unsaved change. On the website the button explains that
 the assistant needs the desktop app.
 
-**From your own AI tool**, `investor-mcp` serves the same tools over the
-Model Context Protocol to Claude Code, Claude Desktop, Cursor, VS Code, LM
-Studio or any other MCP client: portfolio, plan and goals, projections with
-what-if moves, trade previews, realised gains with tax treatment and the
-journal, plus writes for trades, bank balances, prices, coins and bars,
-private holdings and payouts, the profile, goals and saved moves. Each write
-keeps the previous version in `<file>.history/` (the last 20) and
-`undo_last_change` restores them; `--read-only` turns writing off.
+**From your own AI tool** (Claude Code, Cursor, VS Code or any other MCP
+client): in the desktop app, open the assistant, choose **Your AI tool** and
+turn it on. Copy the command it shows into Claude Code, or the address into
+another tool's MCP settings. The tool works with the file open in the app,
+only while it is open and unlocked, and every change it wants to make waits
+for your approval in the app. The address carries a secret; make a new one
+if it leaks. With a cloud model, what the tool reads is sent to that provider.
 
-```sh
-cargo build --release -p investor-mcp
-# macOS: keep the password in the Keychain (prompted, never on the command line)
-./target/release/investor-mcp --file ~/Documents/portfolio.invest remember-password
-claude mcp add investor -- "$PWD/target/release/investor-mcp" --file ~/Documents/portfolio.invest
-```
-
-Other clients take the same command and arguments, e.g.
-`{"mcpServers": {"investor": {"command": "/path/to/investor-mcp", "args": ["--file", "/path/to/portfolio.invest"]}}}`.
-Elsewhere than macOS, set `INVESTOR_PASSWORD_COMMAND` to a command that
-prints the password (e.g. `pass show investor`). With a cloud model, what the
-assistant reads is sent to that provider.
+Without the desktop app, `investor-mcp` (attached to every release) serves the
+same tools from a saved file: `investor-mcp --file portfolio.invest`, with the
+password from the macOS Keychain (`investor-mcp --file … remember-password`),
+`INVESTOR_PASSWORD_COMMAND` or `INVESTOR_PASSWORD`. It keeps the last 20
+versions next to the file for undo; `--read-only` turns writing off.
 
 **Skills**: `plugin/skills/` holds routines for a portfolio check-up,
 rehearsing and recording a trade, tax season, retirement and what-if, and
@@ -122,9 +114,11 @@ draft tax packs for Austria, Bulgaria, Canada, France, Germany, Ireland,
 Italy, Poland, Portugal, Romania, Spain, the UK and the US. Works on phones. Open
 `/app/#example` for a made-up portfolio with ETFs, shares, bonds, gold (an ETC,
 a coin and a bar), shares in USD, CHF and DKK, a GBP account,
-crypto, a savings account and a private stake. English and Bulgarian. Claude Code can read the file through
-`investor-mcp`.
+crypto, a savings account and a private stake. In 12 languages: English,
+Bulgarian, German, Greek, Spanish, French, Italian, Dutch, Polish, Portuguese,
+Romanian and Ukrainian. The desktop app has an AI assistant, lets your own AI
+tool use the open file, and updates itself.
 
-Next: Claude proposing changes for approval, market data, more languages.
+Next: market data.
 
 Tax packs are drafts and have not been reviewed by a tax professional.

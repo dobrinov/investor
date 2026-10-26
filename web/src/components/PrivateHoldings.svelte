@@ -170,7 +170,8 @@
                 {/if}
               </td>
               <td><span class="pill" class:warn={!h.paid_out && h.payout === 'unknown'}>{t(`private.payout.${h.paid_out?.taxed_as ?? h.payout}`)}</span></td>
-              <td class="right nowrap">
+              <td class="right">
+                <div class="row-actions">
                 {#if h.paid_out}
                   <button class="btn ghost small-btn" onclick={() => undoPayout(h)}>{t('private.undoPayout')}</button>
                 {:else}
@@ -178,6 +179,7 @@
                   <button class="btn ghost small-btn" onclick={() => editValue(h)}>{t('private.setValue')}</button>
                 {/if}
                 <button class="btn ghost small-btn" onclick={() => remove(h)}>{t('common.remove')}</button>
+                </div>
               </td>
             </tr>
             {#if paying === h.id}
@@ -249,9 +251,6 @@
       padding: 0 12px;
       font-size: 14px;
     }
-    .nowrap {
-      white-space: normal;
-    }
   }
   .small {
     font-size: 13px;
@@ -260,9 +259,6 @@
   .block {
     display: block;
     font-size: 12px;
-  }
-  .nowrap {
-    white-space: nowrap;
   }
   .add {
     display: grid;
@@ -284,7 +280,15 @@
     font-weight: 400;
     color: var(--muted);
   }
+  /* Buttons wrap onto a second line rather than push past the card. */
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
   .small-btn {
+    white-space: nowrap;
     min-height: 36px;
     padding: 0 12px;
     font-size: 13px;

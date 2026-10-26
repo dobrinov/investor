@@ -5,7 +5,10 @@
   "identifier": "io.github.dobrinov.investor",
   "build": {
     "frontendDist": "../web/dist",
-    "beforeBuildCommand": { "script": "pnpm install --frozen-lockfile && pnpm build:desktop", "cwd": "../web" }
+    "beforeBuildCommand": {
+      "script": "pnpm install --frozen-lockfile && pnpm build:desktop",
+      "cwd": "../web"
+    }
   },
   "app": {
     "windows": [
@@ -20,7 +23,9 @@
         "dragDropEnabled": false
       }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
@@ -29,9 +34,32 @@
     "shortDescription": "Plan, track and rehearse your investing decisions",
     "longDescription": "Investor keeps your portfolio in one encrypted .invest file on your computer. Import broker statements, plan trades, set goals and see where your money could be in 20 years. No account, no server, no tracking.",
     "copyright": "Apache-2.0",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "fileAssociations": [
-      { "ext": ["invest"], "name": "Investor file", "description": "Encrypted Investor portfolio", "role": "Editor", "mimeType": "application/x-investor" }
-    ]
+      {
+        "ext": [
+          "invest"
+        ],
+        "name": "Investor file",
+        "description": "Encrypted Investor portfolio",
+        "role": "Editor",
+        "mimeType": "application/x-investor"
+      }
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEExNjQxMDJDNUE0QUJBNkIKUldScnVrcGFMQkJrb2MwWnF4Vm5WOGkvQ2N1Zzh0bjRIb1V0dHMrekpYZjg5QVVkeEtrM0NicnUK",
+      "endpoints": [
+        "https://github.com/dobrinov/investor/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

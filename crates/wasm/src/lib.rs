@@ -110,6 +110,12 @@ pub fn assistant_instructions() -> String {
     investor_core::assistant::INSTRUCTIONS.to_owned()
 }
 
+/// The assistant's tools, as JSON, without a file open.
+#[wasm_bindgen(js_name = assistantToolList)]
+pub fn assistant_tool_list(writes: bool) -> String {
+    investor_core::assistant::tools(writes).to_string()
+}
+
 /// Whether an assistant tool changes the book.
 #[wasm_bindgen(js_name = assistantWrites)]
 pub fn assistant_writes(name: &str) -> bool {

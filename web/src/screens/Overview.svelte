@@ -233,7 +233,7 @@
               {@const fx = fxRates.get(c)}
               <tr>
                 <td class="num">1 {c}</td>
-                <td class="num">{fx ? `${formatRate(fx.rate)} ${base}` : '—'} <span class="muted small-inline">{fx ? `${date(fx.date)} · ${t(`source.${fx.source}`)}` : ''}</span></td>
+                <td><span class="num">{fx ? `${formatRate(fx.rate)} ${base}` : '—'}</span> <span class="muted small-inline rate-meta">{fx ? `${date(fx.date)} · ${t(`source.${fx.source}`)}` : ''}</span></td>
                 <td class="right"><button class="btn ghost small-btn" onclick={() => editFx(c)}>{t('overview.updateRate')}</button></td>
               </tr>
               {#if editingFx === c}
@@ -327,12 +327,17 @@
     color: var(--warn);
   }
   .small-btn {
+    white-space: nowrap;
     min-height: 36px;
     padding: 0 12px;
     font-size: 13px;
   }
   .editor td {
     background: var(--surface-2);
+  }
+  /* The rate's date and source go under it, so the row fits a narrow card. */
+  .rate-meta {
+    display: block;
   }
   .editor form,
   .price-form {

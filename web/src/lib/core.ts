@@ -1,6 +1,6 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
-import init, { Session, assistantInstructions, assistantWrites, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
+import init, { Session, assistantInstructions, assistantToolList, assistantWrites, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
 import { i18n, t, translates } from './i18n.svelte'
 
 let ready: Promise<unknown> | undefined
@@ -502,6 +502,9 @@ export interface AssistantTool {
 
 /** Guidance for the assistant's model; the core must be loaded. */
 export const assistantGuidance = (): string => assistantInstructions()
+
+/** The assistant's tools, also before a file is open; the core must be loaded. */
+export const assistantTools = (writes: boolean): AssistantTool[] => JSON.parse(assistantToolList(writes))
 
 /** Whether an assistant tool changes the book; the core must be loaded. */
 export const changesBook = (name: string): boolean => assistantWrites(name)

@@ -34,16 +34,6 @@ rate = "0.00"
 form = "Annual return, schedule Y"
 foreign_tax_credit = true`
 
-export const CLAUDE_SETUP = `git clone https://github.com/dobrinov/investor
-cd investor
-cargo build --release -p investor-mcp
-
-# macOS: store the password in your Keychain (asked for, never shown)
-./target/release/investor-mcp --file ~/Documents/portfolio.invest remember-password
-
-# connect it to Claude Code
-claude mcp add investor -- "\$PWD/target/release/investor-mcp" --file ~/Documents/portfolio.invest`
-
 export const en: Section[] = [
   {
     id: 'start',
@@ -117,10 +107,8 @@ export const en: Section[] = [
     blocks: [
       { p: "An AI assistant can read your portfolio, answer questions with the app’s own figures, help you plan, and record what you decide once you approve it. It is optional: everything in Investor works without it." },
       { p: "In the desktop app, press the ✦ button in the bottom-right corner and choose a model: one on your computer through Ollama or LM Studio (nothing leaves your computer), or Anthropic or OpenAI with your own API key. Every change it wants to make shows a card to approve, and becomes an unsaved change you save as usual. On the website the button explains why it needs the desktop app: your portfolio should not pass through a web page on its way to a model." },
-      { p: "You can also use your own AI tool. investor-mcp opens your saved file to any assistant that speaks the Model Context Protocol, such as Claude Code, Claude Desktop, Cursor, VS Code or LM Studio. You need Rust to build it once (rustup.rs). For Claude Code:" },
-      { code: CLAUDE_SETUP },
-      { p: "Not on a Mac? Instead of remember-password, set INVESTOR_PASSWORD_COMMAND to a command that prints the password, for example from your password manager. Other tools take the same command and --file argument in their MCP settings. In Claude Code, /plugin install investor --marketplace dobrinov/investor adds ready-made skills: a monthly check-up, rehearsing a trade, tax season and retirement." },
-      { list: ["investor-mcp reads the saved file: save here first. If it changes the file while the app has it open, the app warns you before saving over those changes.", "Every change it makes keeps the previous version in a folder next to your file (the last 20), and it can undo them one by one. Start it with --read-only if it should never write.", "The password never goes into the chat. With a cloud model, your questions and the figures it looks up are sent to that provider."] },
+      { p: "You can also use your own AI tool, such as Claude Code, Cursor or VS Code. In the desktop app, open the assistant, press the plug button at the top and choose Turn on. Copy the command it shows into Claude Code, or the address into another tool's MCP settings. That is all: no install, no password to store." },
+      { list: ["It works while the app is open and your file is unlocked. Lock the file or close the app and your tool can no longer read it.", "Every change your tool wants to make shows a card here to approve, and becomes an unsaved change you save as usual.", "The address contains a secret. Make a new address if you shared it by mistake. With a cloud model, what your tool reads is sent to that provider.", "In Claude Code, /plugin install investor --marketplace dobrinov/investor adds ready-made skills: a monthly check-up, rehearsing a trade, tax season and retirement."] },
       { p: "Things to ask:" },
       { list: ["“What do I hold, and how much is in cash?”", "“Compare investing €10,000 at once with spreading it over 12 months, over 20 years.”", "“I sold 2 VUAA on Xetra at 131.20 today. Record it and tell me the tax.”", "“Am I on track for my goals? What would it take to retire at 60?”"] },
     ],
