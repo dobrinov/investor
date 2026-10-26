@@ -802,6 +802,7 @@ export const en = {
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Your AI tool",
   'bridge.waitingApproval': "{count} changes waiting for your approval",
+  'trade.gainTextAverage': "Sold for {proceeds}; at the average cost of all you hold, these units cost {cost}.",
 } as const
 
 export type Key = keyof typeof en

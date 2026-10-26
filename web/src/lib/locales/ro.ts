@@ -804,4 +804,5 @@ export const ro: Record<Key, string> = {
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Instrumentul tău AI",
   'bridge.waitingApproval': "{count} modificări așteaptă aprobarea ta",
+  'trade.gainTextAverage': "Vândut cu {proceeds}; la costul mediu al tuturor unităților deținute, acestea au costat {cost}.",
 }

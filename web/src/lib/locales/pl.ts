@@ -804,4 +804,5 @@ export const pl: Record<Key, string> = {
   'assistant.tab.chat': "Czat",
   'assistant.tab.tool': "Twoje narzędzie AI",
   'bridge.waitingApproval': "Zmiany czekające na zgodę: {count}",
+  'trade.gainTextAverage': "Sprzedano za {proceeds}; według średniego kosztu wszystkich posiadanych jednostek kosztowały {cost}.",
 }

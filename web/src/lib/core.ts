@@ -453,7 +453,7 @@ export interface TradeOutlook {
   cash_after: Decimal
   /** Money to deposit for the trade, in the base currency; the projection counts it. */
   deposit: Decimal
-  tax: { treatment: Treatment; rate: Decimal; form: string; estimate: Decimal; verified: boolean } | null
+  tax: { treatment: Treatment; rate: Decimal; form: string; estimate: Decimal; verified: boolean; average_cost: boolean } | null
   /** Each year of the projection, without and with the trade. */
   before: Band[]
   after: Band[]

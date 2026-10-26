@@ -322,7 +322,7 @@
         <section class="card">
           <h3>{t('trade.gainTitle')}</h3>
           <p class="big num" class:up={Number(o.gain) >= 0} class:bad={Number(o.gain) < 0}>{Number(o.gain) >= 0 ? '+' : ''}{money(o.gain, base)}</p>
-          <p class="muted small">{t('trade.gainText', { proceeds: money(o.value, base), cost: money(o.cost, base) })}</p>
+          <p class="muted small">{t(o.tax?.average_cost ? 'trade.gainTextAverage' : 'trade.gainText', { proceeds: money(o.value, base), cost: money(o.cost, base) })}</p>
           <h3 class="gap">{t('trade.taxTitle')}</h3>
           {#if o.tax}
             <span class="pill" class:warn={o.tax.treatment !== 'exempt'}>{t(`trade.treatment.${o.tax.treatment}`)}</span>

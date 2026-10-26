@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::import::{BrokerConfig, Event, EventKind, FeeCharge, FeeKind, Fx, FxRateMode, post_events};
 use crate::ledger::{self, Instrument, JournalEntry, Ledger, Source, Venue};
 use crate::prices::{self, PriceBook};
-use crate::jurisdiction::{JurisdictionPack, Treatment};
+use crate::jurisdiction::{CostBasis, JurisdictionPack, Treatment};
 use crate::plan::{Plan, to_f64};
 use crate::reports;
 use crate::whatif::{self, Band, WhatIfInput};
@@ -283,18 +283,25 @@ pub struct TradeTax {
     /// Tax on this gain alone, before netting the year's other gains and losses.
     pub estimate: Decimal,
     pub verified: bool,
+    /// The gain uses the average cost of all units held, not the oldest first.
+    pub average_cost: bool,
 }
 
 /// Previews a trade and adds tax and the projection under the plan.
 /// `settings` sets the projection; its holdings and retirement are ignored.
 pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeInput, pack: Option<&JurisdictionPack>, settings: &WhatIfInput) -> Result<TradeOutlook> {
-    let preview = preview(ledger, prices, input)?;
+    let mut preview = preview(ledger, prices, input)?;
     let tax = match (preview.gain, pack) {
         (Some(gain), Some(pack)) => {
             // Classify each purchase the sale draws on, so a holding period counts.
             let (mut after, mut after_prices) = (ledger.clone(), prices.clone());
             let entry = record(&mut after, &mut after_prices, input)?;
             let parts: Vec<_> = reports::realized_gains_by(&after, entry.date.year(), pack.capital_gains.cost_basis).into_iter().filter(|r| r.entry_id == entry.id).collect();
+            // Where tax uses an average cost, show the gain that is taxed.
+            if pack.capital_gains.cost_basis == CostBasis::Average && !parts.is_empty() {
+                preview.cost = Some(parts.iter().map(|r| r.cost).sum());
+                preview.gain = Some(parts.iter().map(|r| r.gain).sum());
+            }
             let treatments: Vec<Treatment> = parts.iter().map(|r| pack.classify(r)).collect();
             let treatment = if treatments.contains(&Treatment::Taxable) {
                 Treatment::Taxable
@@ -305,7 +312,7 @@ pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeIn
             let estimate = if parts.is_empty() { pack.sale_estimate(gain) } else { pack.sale_estimate(taxable) };
             // The rate on the whole gain, e.g. 15% when half is taxed at 30%.
             let rate = pack.capital_gains.rate * pack.inclusion();
-            Some(TradeTax { treatment, rate, form: pack.capital_gains.form.clone(), estimate, verified: pack.pack.verified })
+            Some(TradeTax { treatment, rate, form: pack.capital_gains.form.clone(), estimate, verified: pack.pack.verified, average_cost: pack.capital_gains.cost_basis == CostBasis::Average })
         }
         _ => None,
     };
