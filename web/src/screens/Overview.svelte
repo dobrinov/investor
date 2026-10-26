@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { describe } from '../lib/describe'
   import BankAccounts from '../components/BankAccounts.svelte'
   import PhysicalMetals from '../components/PhysicalMetals.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
@@ -351,7 +352,7 @@
       </div>
       <ul class="recent">
         {#each recent as e (e.id)}
-          <li><span class="muted num">{date(e.date)}</span><span>{e.description}</span></li>
+          <li><span class="muted num">{date(e.date)}</span><span>{describe(e.description)}</span></li>
         {/each}
       </ul>
     </section>

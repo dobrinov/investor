@@ -1,7 +1,7 @@
 // Typed wrapper around the Rust core compiled to WebAssembly.
 // Amounts arrive as exact decimal strings; convert only for display.
 import init, { Session, assistantInstructions, assistantToolList, assistantWrites, brokerFit as fit, project as runProjection } from './core-wasm/core.js'
-import { i18n, t, translates } from './i18n.svelte'
+import { i18n, t, translates, type Local } from './i18n.svelte'
 
 let ready: Promise<unknown> | undefined
 
@@ -405,13 +405,13 @@ export interface Declaration {
     code: string | null
     columns: [string, string][]
     optional: boolean
-    note: string | null
+    note: Local | null
     rows: { text: string; amount: boolean }[][]
   }[]
 }
 
 export interface Gains {
-  pack: { id: string; version: string; country: string; authority: string; website?: string; tax_year: number; currency: string; verified: boolean; notes?: string }
+  pack: { id: string; version: string; country: string; authority: string; website?: string; tax_year: number; currency: string; verified: boolean; notes?: Local }
   /** On the whole gain: the pack's rate times the share that is taxed. */
   rate: Decimal
   /** The share of the gain that is taxed, when not all of it. */
@@ -424,11 +424,11 @@ export interface Gains {
   allowance: Decimal | null
   form: string
   /** How the pack taxes coins and bars, when it says. */
-  metals: { treatment: 'exempt' | 'capital_gains' | 'other'; exempt_after_months?: number; note?: string } | null
+  metals: { treatment: 'exempt' | 'capital_gains' | 'other'; exempt_after_months?: number; note?: Local } | null
   rows: GainRow[]
   /** Pay from work that is not salary, such as a co-investment paid out through payroll. */
   employment: { date: string; entry_id: string; description: string; income: Decimal; withheld: Decimal }[]
-  employment_rule: { rate?: Decimal; form: string; note?: string } | null
+  employment_rule: { rate?: Decimal; form: string; note?: Local } | null
   summary: { taxable_gains: Decimal; taxable_losses: Decimal; tax_due: Decimal; exempt: Decimal; unknown: Decimal; not_estimated: Decimal; allowance_used: Decimal }
 }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { describe } from '../lib/describe'
   import { date, money, units } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
@@ -11,7 +12,7 @@
     const q = query.trim().toLowerCase()
     if (!q) return s.entries
     return s.entries.filter(
-      (e) => e.description.toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.postings.some((p) => p.account.toLowerCase().includes(q)),
+      (e) => e.description.toLowerCase().includes(q) || describe(e.description).toLowerCase().includes(q) || e.id.toLowerCase().includes(q) || e.postings.some((p) => p.account.toLowerCase().includes(q)),
     )
   })
   const totals = $derived(
@@ -37,7 +38,7 @@
   {#each entries as e (e.id)}
     <article class="card entry">
       <div class="entry-head">
-        <span><span class="muted num">{e.id} · {date(e.date)}</span> · <strong>{e.description}</strong></span>
+        <span><span class="muted num">{e.id} · {date(e.date)}</span> · <strong>{describe(e.description)}</strong></span>
         <span class="tags">
           {#if e.venue}<span class="pill" class:warn={e.venue.assumed}>{t('ledger.venue', { code: e.venue.code })}</span>{/if}
           {#if e.source}<span class="pill plain">{t('ledger.source', { file: e.source.file, line: e.source.line })}</span>{/if}
@@ -65,7 +66,7 @@
         </table>
       </div>
       {#each e.notes ?? [] as note, i (i)}
-        <p class="note">{note}</p>
+        <p class="note">{describe(note)}</p>
       {/each}
     </article>
   {:else}

@@ -10,7 +10,7 @@ website = "https://www.podatki.gov.pl"
 tax_year = 2026
 currency = "PLN"
 verified = false
-notes = "Draft rules. 19% flat tax on gains (PIT-38) and dividends. Amounts must be converted at the NBP rate of the working day before each trade; this uses the rates in your books. IKE and IKZE accounts are exempt and not modelled."
+notes = { en = "Draft rules. 19% flat tax on gains (PIT-38) and dividends. Amounts must be converted at the NBP rate of the working day before each trade; this uses the rates in your books. IKE and IKZE accounts are exempt and not modelled.", pl = "Zasady robocze. 19% podatku liniowego od zysków (PIT-38) i dywidend. Kwoty trzeba przeliczać po kursie NBP z dnia roboczego poprzedzającego każdą transakcję; tu używane są kursy z twoich zapisów. Konta IKE i IKZE są zwolnione i nie są modelowane." }
 
 [capital_gains]
 rate = "0.19"
@@ -25,7 +25,7 @@ foreign_tax_credit = true
 # Coins and bars. UNVERIFIED.
 treatment = "other"
 exempt_after_months = 6
-note = "Sale of movable property: tax-free once six months have passed from the end of the month of purchase; otherwise the gain is income at the scale rates (12% or 32%). Not estimated here."
+note = { en = "Sale of movable property: tax-free once six months have passed from the end of the month of purchase; otherwise the gain is income at the scale rates (12% or 32%). Not estimated here.", pl = "Sprzedaż rzeczy ruchomych: bez podatku po sześciu miesiącach od końca miesiąca zakupu; wcześniej zysk jest dochodem według skali (12% lub 32%). Tu nie jest szacowany." }
 
 [deadlines]
 annual_return = "2027-04-30"

@@ -59,3 +59,13 @@ export function t(key: Key, params?: Record<string, string | number>): string {
   }
   return text
 }
+
+/** Text a tax pack gives in one language or several, by language code. */
+export type Local = string | Record<string, string>
+
+/** Pack text in the chosen language, else English, else any. */
+export function local(text: Local | null | undefined): string {
+  if (!text) return ''
+  if (typeof text === 'string') return text
+  return text[i18n.lang] ?? text.en ?? Object.values(text)[0] ?? ''
+}

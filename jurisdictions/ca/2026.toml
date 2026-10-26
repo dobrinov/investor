@@ -10,7 +10,7 @@ website = "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topi
 tax_year = 2026
 currency = "CAD"
 verified = false
-notes = "Draft rules. Half of the net capital gain is taxable (the planned rise to two thirds was cancelled) and is taxed at your combined federal and provincial marginal rate; 30% is assumed, so the estimate is 15% of the net gain. Cost is the average cost of identical shares (adjusted cost base), as Canada requires. The superficial loss rule (buying back within 30 days of a loss) is not modelled. TFSAs and RRSPs are tax-free and not modelled. Foreign property costing over CAD 100,000 must be reported on Form T1135. Amounts must be in Canadian dollars at the Bank of Canada rate."
+notes = { en = "Draft rules. Half of the net capital gain is taxable (the planned rise to two thirds was cancelled) and is taxed at your combined federal and provincial marginal rate; 30% is assumed, so the estimate is 15% of the net gain. Cost is the average cost of identical shares (adjusted cost base), as Canada requires. The superficial loss rule (buying back within 30 days of a loss) is not modelled. TFSAs and RRSPs are tax-free and not modelled. Foreign property costing over CAD 100,000 must be reported on Form T1135. Amounts must be in Canadian dollars at the Bank of Canada rate.", fr = "Règles provisoires. La moitié du gain en capital net est imposable (la hausse prévue aux deux tiers a été annulée), au taux marginal fédéral et provincial combiné ; 30 % est supposé, soit une estimation de 15 % du gain net. Le coût est le coût moyen des actions identiques (prix de base rajusté), comme l’exige le Canada. La règle des pertes apparentes (rachat dans les 30 jours suivant une perte) n’est pas modélisée. Le CELI et le REER sont exonérés et non modélisés. Les biens étrangers coûtant plus de 100 000 $ CA doivent être déclarés sur le formulaire T1135. Les montants doivent être en dollars canadiens au taux de la Banque du Canada." }
 
 [capital_gains]
 rate = "0.30"
@@ -27,7 +27,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "capital_gains"
-note = "Gold and silver held as an investment give a capital gain, half of which is taxed. Frequent buying and selling can make it business income instead."
+note = { en = "Gold and silver held as an investment give a capital gain, half of which is taxed. Frequent buying and selling can make it business income instead.", fr = "L’or et l’argent détenus comme placement donnent un gain en capital, dont la moitié est imposable. Des achats et ventes fréquents peuvent en faire un revenu d’entreprise." }
 
 [deadlines]
 annual_return = "2027-04-30"

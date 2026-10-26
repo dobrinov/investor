@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { describe } from '../lib/describe'
   // Coins and bars kept at home or in a safe. Weights are fine metal in
   // grams; troy ounces are converted on the way in. The price is typed in
   // now and then, so the value is only as fresh as the last price.
@@ -198,7 +199,7 @@
             {#if e}
               <li>
                 <span class="num">{date(e.date)}</span>
-                <span class="grow">{e.description}</span>
+                <span class="grow">{describe(e.description)}</span>
                 <button class="btn ghost small-btn" onclick={() => remove(id)}>{t('common.remove')}</button>
               </li>
             {/if}

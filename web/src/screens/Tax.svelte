@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { describe } from '../lib/describe'
   import { packs } from '../lib/configs'
   import type { Declaration, Gains, Metal, Realization, Treatment } from '../lib/core'
   import { country, date, money } from '../lib/format'
-  import { i18n, t } from '../lib/i18n.svelte'
+  import { i18n, local, t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
   const s = $derived(app.snapshot!)
@@ -112,9 +113,9 @@
     {#if !result.pack.verified}
       <p class="notice">{t('tax.draftPack', { id: result.pack.id, version: result.pack.version })}</p>
     {/if}
-    {#if result.pack.notes}<p class="muted pack-notes">{result.pack.notes}</p>{/if}
+    {#if result.pack.notes}<p class="muted pack-notes">{local(result.pack.notes)}</p>{/if}
     {#if result.pack.currency !== base}<p class="notice">{t('tax.currencyNote', { base, currency: result.pack.currency })}</p>{/if}
-    {#if result.metals?.note && result.rows.some((r) => r.physical)}<p class="muted pack-notes">{t('tax.metalsNote', { note: result.metals.note })}</p>{/if}
+    {#if result.metals?.note && result.rows.some((r) => r.physical)}<p class="muted pack-notes">{t('tax.metalsNote', { note: local(result.metals.note) })}</p>{/if}
 
     <section class="summary" aria-label={t('tax.summary')}>
       <div class="card kpi">
@@ -184,7 +185,7 @@
                               <button class="copy" onclick={() => copy(cell.text)} title={t('decl.copy')} aria-label="{t('decl.copy')} {cell.text}">
                                 {copied === cell.text ? t('decl.copied') : cell.text}
                               </button>
-                            {:else}{cell.text}{/if}
+                            {:else}{describe(cell.text)}{/if}
                           </td>
                         {/each}
                       </tr>
@@ -195,7 +196,7 @@
             {:else}
               <p class="muted small">{t('decl.nothing', { year: filing.year })}</p>
             {/if}
-            {#if section.note}<p class="muted small">{section.note}</p>{/if}
+            {#if section.note}<p class="muted small">{local(section.note)}</p>{/if}
           </article>
         {/each}
       </section>
@@ -214,7 +215,7 @@
             </thead>
             <tbody>
               {#each result.employment as r (r.entry_id)}
-                <tr><td>{date(r.date)}</td><td>{r.description}</td><td class="right num">{money(r.income)}</td><td class="right num">{money(r.withheld)}</td></tr>
+                <tr><td>{date(r.date)}</td><td>{describe(r.description)}</td><td class="right num">{money(r.income)}</td><td class="right num">{money(r.withheld)}</td></tr>
               {/each}
             </tbody>
           </table>
@@ -223,7 +224,7 @@
           {#if rule?.rate}{t('tax.employmentEstimate', { estimate: money(Math.max(0, income) * Number(rule.rate), base), rate: +(Number(rule.rate) * 100).toFixed(3), form: rule.form, withheld: money(withheld, base) })}
           {:else}{t('tax.employmentNoRule')}{/if}
         </p>
-        {#if rule?.note}<p class="muted small">{rule.note}</p>{/if}
+        {#if rule?.note}<p class="muted small">{local(rule.note)}</p>{/if}
       </section>
     {/if}
 

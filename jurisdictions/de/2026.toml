@@ -11,7 +11,7 @@ website = "https://www.elster.de"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. Abgeltungsteuer 25% plus 5.5% solidarity surcharge (26.375%); church tax, if you pay it, comes on top. The Sparer-Pauschbetrag (EUR 1,000 single, EUR 2,000 joint) covers gains and dividends together; this uses EUR 1,000 for gains only. Equity ETFs get a 30% partial exemption (Teilfreistellung) not modelled here. German brokers withhold the tax; gains at foreign brokers go on Anlage KAP."
+notes = { en = "Draft rules. Abgeltungsteuer 25% plus 5.5% solidarity surcharge (26.375%); church tax, if you pay it, comes on top. The Sparer-Pauschbetrag (EUR 1,000 single, EUR 2,000 joint) covers gains and dividends together; this uses EUR 1,000 for gains only. Equity ETFs get a 30% partial exemption (Teilfreistellung) not modelled here. German brokers withhold the tax; gains at foreign brokers go on Anlage KAP.", de = "Entwurf. Abgeltungsteuer 25 % plus 5,5 % Solidaritätszuschlag (26,375 %); Kirchensteuer, falls Sie sie zahlen, kommt hinzu. Der Sparer-Pauschbetrag (1.000 € allein, 2.000 € zusammen veranlagt) gilt für Gewinne und Dividenden zusammen; hier werden 1.000 € nur für Gewinne angesetzt. Die Teilfreistellung von 30 % für Aktien-ETFs ist nicht abgebildet. Deutsche Broker behalten die Steuer ein; Gewinne bei ausländischen Brokern gehören in die Anlage KAP." }
 
 [capital_gains]
 rate = "0.26375"
@@ -27,7 +27,7 @@ foreign_tax_credit = true
 # Coins and bars. UNVERIFIED.
 treatment = "other"
 exempt_after_months = 12
-note = "Private sale (§ 23 EStG): tax-free after one year; within a year the gain is taxed at your personal income tax rate, with a EUR 1,000 exemption limit for all such sales. Not estimated here."
+note = { en = "Private sale (§ 23 EStG): tax-free after one year; within a year the gain is taxed at your personal income tax rate, with a EUR 1,000 exemption limit for all such sales. Not estimated here.", de = "Privates Veräußerungsgeschäft (§ 23 EStG): nach einem Jahr steuerfrei; innerhalb eines Jahres wird der Gewinn mit Ihrem persönlichen Steuersatz besteuert, mit einer Freigrenze von 1.000 € für alle solchen Verkäufe. Hier nicht geschätzt." }
 
 [deadlines]
 annual_return = "2027-07-31"

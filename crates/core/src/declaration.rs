@@ -47,7 +47,7 @@ pub struct Section {
     #[serde(default)]
     pub optional: bool,
     #[serde(default)]
-    pub note: Option<String>,
+    pub note: Option<crate::jurisdiction::Text>,
 }
 
 /// What a section is filled from, and the values its columns can use.

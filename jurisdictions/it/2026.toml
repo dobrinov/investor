@@ -10,7 +10,7 @@ website = "https://www.agenziaentrate.gov.it"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. 26% substitute tax on gains and dividends (12.5% on Italian and white-list government bonds, not modelled). With a foreign broker you declare gains in quadro RT and pay IVAFE, 0.2% a year on the value of foreign holdings, in quadro RW."
+notes = { en = "Draft rules. 26% substitute tax on gains and dividends (12.5% on Italian and white-list government bonds, not modelled). With a foreign broker you declare gains in quadro RT and pay IVAFE, 0.2% a year on the value of foreign holdings, in quadro RW.", it = "Regole provvisorie. Imposta sostitutiva del 26 % su plusvalenze e dividendi (12,5 % sui titoli di Stato italiani e white list, non modellato). Con un broker estero dichiari le plusvalenze nel quadro RT e paghi l’IVAFE, lo 0,2 % annuo sul valore delle attività estere, nel quadro RW." }
 
 [capital_gains]
 rate = "0.26"
@@ -24,7 +24,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "capital_gains"
-note = "Gains on investment gold are redditi diversi at 26%. Without proof of purchase the cost is taken as 25% of the sale price."
+note = { en = "Gains on investment gold are redditi diversi at 26%. Without proof of purchase the cost is taken as 25% of the sale price.", it = "Le plusvalenze sull’oro da investimento sono redditi diversi al 26 %. Senza prova d’acquisto il costo è pari al 25 % del prezzo di vendita." }
 
 [deadlines]
 annual_return = "2027-10-31"

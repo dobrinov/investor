@@ -121,9 +121,29 @@ impl Book {
     }
 }
 
+/// The example's own names in `language`: savings account, startup stake,
+/// its condition, where it was paid from, a gold bar, and the two goals.
+fn words(language: &str) -> [&'static str; 7] {
+    match language {
+        "bg" => ["Спестовна сметка", "Дял в стартъп (ангелски кръг)", "При продажба на компанията", "Банка", "Кюлче", "Авариен фонд", "Първоначална вноска за жилище"],
+        "de" => ["Sparkonto", "Startup-Beteiligung (Angel-Runde)", "Beim Verkauf des Unternehmens", "Bank", "Barren", "Notgroschen", "Eigenkapital fürs Eigenheim"],
+        "el" => ["Λογαριασμός ταμιευτηρίου", "Μερίδιο σε startup (angel γύρος)", "Όταν πουληθεί η εταιρεία", "Τράπεζα", "Ράβδος", "Ταμείο έκτακτης ανάγκης", "Προκαταβολή για σπίτι"],
+        "es" => ["Cuenta de ahorro", "Participación en startup (ronda ángel)", "Cuando se venda la empresa", "Banco", "Lingote", "Fondo de emergencia", "Entrada para la casa"],
+        "fr" => ["Livret d’épargne", "Part de startup (tour business angels)", "À la vente de l’entreprise", "Banque", "Lingot", "Épargne de précaution", "Apport pour la maison"],
+        "it" => ["Conto deposito", "Quota in startup (round angel)", "Alla vendita della società", "Banca", "Lingotto", "Fondo di emergenza", "Anticipo per la casa"],
+        "nl" => ["Spaarrekening", "Belang in start-up (angelronde)", "Bij verkoop van het bedrijf", "Bank", "Baar", "Buffer", "Eigen inbreng voor een huis"],
+        "pl" => ["Konto oszczędnościowe", "Udział w startupie (runda anielska)", "Przy sprzedaży firmy", "Bank", "Sztabka", "Fundusz awaryjny", "Wkład własny na mieszkanie"],
+        "pt" => ["Conta poupança", "Participação em startup (ronda angel)", "Quando a empresa for vendida", "Banco", "Barra", "Fundo de emergência", "Entrada para a casa"],
+        "ro" => ["Cont de economii", "Participație la startup (rundă angel)", "La vânzarea companiei", "Bancă", "Lingou", "Fond de urgență", "Avans pentru casă"],
+        "uk" => ["Ощадний рахунок", "Частка в стартапі (ангельський раунд)", "Під час продажу компанії", "Банк", "Злиток", "Резервний фонд", "Перший внесок за житло"],
+        _ => ["Savings account", "Startup stake (angel round)", "When the company is sold", "Bank", "Bar", "Emergency fund", "House deposit"],
+    }
+}
+
 /// A complete example book as of `today`, in `language`.
 pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     let settings = Settings { base_currency: cur("EUR"), language: language.into(), tax_residency: "BG".into() };
+    let [savings, stake, condition, bank, bar, emergency, house] = words(language);
     let mut b = Book { vault: Vault::new(settings), today, next: 0 };
     use Side::{Buy, Sell};
 
@@ -157,7 +177,7 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
 
     // A savings account and a private stake.
     let savings = NewAccount {
-        name: "Savings account".into(),
+        name: savings.into(),
         currency: cur("EUR"),
         balance: BalanceInput { entry_id: "example-bank".into(), date: b.ago(1), balance: d("14000"), fx_rate: None },
     };
@@ -171,14 +191,14 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     bank::add(&mut b.vault, &pounds)?;
     let stake = PrivateInput {
         entry_id: "example-private".into(),
-        name: "Startup stake (angel round)".into(),
+        name: stake.into(),
         date: b.ago(15),
         amount: d("5000"),
         currency: cur("EUR"),
         fx_rate: None,
-        paid_from: "Bank".into(),
+        paid_from: bank.into(),
         payout: Payout::CapitalGains,
-        condition: "When the company is sold".into(),
+        condition: condition.into(),
     };
     private::add(&mut b.vault, &stake)?;
     let id = b.vault.private[0].id.clone();
@@ -186,7 +206,7 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
     private::set_estimate(&mut b.vault, &id, Some(estimate))?;
 
     // A gold coin and a small bar, kept at home.
-    for (id, months, grams, paid, what) in [("example-coin", 18, "31.1035", "2410", "Krugerrand 1 oz"), ("example-bar", 7, "20", "2140", "Bar")] {
+    for (id, months, grams, paid, what) in [("example-coin", 18, "31.1035", "2410", "Krugerrand 1 oz"), ("example-bar", 7, "20", "2140", bar)] {
         let input = MetalInput { entry_id: id.into(), date: b.ago(months), metal: Metal::Gold, grams: d(grams), amount: d(paid), currency: cur("EUR"), fx_rate: None, description: what.into() };
         metal::buy(&mut b.vault, &input)?;
     }
@@ -225,8 +245,8 @@ pub fn vault(today: NaiveDate, language: &str) -> Result<Vault> {
             retirement_spending: Some(d("2200")),
         }),
         goals: vec![
-            Goal { id: "example-emergency".into(), name: "Emergency fund".into(), kind: GoalKind::EmergencyFund, target: d("6"), year: None, monthly: Decimal::ZERO },
-            Goal { id: "example-house".into(), name: "House deposit".into(), kind: GoalKind::Savings, target: d("40000"), year: Some(today.year() + 4), monthly: d("500") },
+            Goal { id: "example-emergency".into(), name: emergency.into(), kind: GoalKind::EmergencyFund, target: d("6"), year: None, monthly: Decimal::ZERO },
+            Goal { id: "example-house".into(), name: house.into(), kind: GoalKind::Savings, target: d("40000"), year: Some(today.year() + 4), monthly: d("500") },
         ],
         what_if: vec![],
     };

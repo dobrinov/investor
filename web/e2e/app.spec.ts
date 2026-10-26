@@ -91,3 +91,13 @@ test('the tax screen says what to type into the return, with holdings at year en
   await expect(holdings.getByText('Bitcoin')).toHaveCount(0)
   await expect(declaration.locator('.form-part', { hasText: 'code 508' }).first().getByRole('button', { name: /Copy 1044.00/ })).toBeVisible()
 })
+
+test('entries, tax notes and the example read in the chosen language', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('investor.language', 'bg'))
+  await page.goto('/app/#example')
+  await expect(page.getByText('Продажба 10 VWCE за 1280 EUR')).toBeVisible()
+  await page.getByRole('tab', { name: /Банки/ }).click()
+  await expect(page.getByRole('cell', { name: 'Спестовна сметка' }).first()).toBeVisible()
+  await page.goto('/app/#example/tax')
+  await expect(page.getByText(/Работен вариант\. Капиталови печалби/)).toBeVisible()
+})

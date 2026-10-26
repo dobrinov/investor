@@ -10,6 +10,25 @@ use crate::ledger::Venue;
 use crate::reports::Realization;
 use crate::{Currency, Result};
 
+/// Text a pack gives in one language, or in several by language code
+/// (`{ en = "…", bg = "…" }`), English being the fallback.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Text {
+    One(String),
+    Many(BTreeMap<String, String>),
+}
+
+impl Text {
+    /// The text in `language`, else English, else any.
+    pub fn get(&self, language: &str) -> &str {
+        match self {
+            Text::One(text) => text,
+            Text::Many(texts) => texts.get(language).or_else(|| texts.get("en")).or_else(|| texts.values().next()).map_or("", String::as_str),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct JurisdictionPack {
@@ -44,7 +63,7 @@ pub struct PackInfo {
     /// False until a tax professional has reviewed the rules.
     pub verified: bool,
     #[serde(default)]
-    pub notes: Option<String>,
+    pub notes: Option<Text>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -113,7 +132,7 @@ pub struct EmploymentIncome {
     pub rate: Option<Decimal>,
     pub form: String,
     #[serde(default)]
-    pub note: Option<String>,
+    pub note: Option<Text>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -124,7 +143,7 @@ pub struct PhysicalMetals {
     #[serde(default)]
     pub exempt_after_months: Option<u32>,
     #[serde(default)]
-    pub note: Option<String>,
+    pub note: Option<Text>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]

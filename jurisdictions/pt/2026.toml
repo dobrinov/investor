@@ -10,7 +10,7 @@ website = "https://www.portaldasfinancas.gov.pt"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. 28% special rate on gains and dividends; you may choose to add them to your other income instead. Gains from foreign brokers go on Anexo J. Holdings kept under a year by high earners must be aggregated; not modelled."
+notes = { en = "Draft rules. 28% special rate on gains and dividends; you may choose to add them to your other income instead. Gains from foreign brokers go on Anexo J. Holdings kept under a year by high earners must be aggregated; not modelled.", pt = "Regras provisórias. Taxa especial de 28 % sobre mais-valias e dividendos; pode optar por englobá-los nos outros rendimentos. As mais-valias de corretoras estrangeiras vão no Anexo J. Títulos detidos menos de um ano por quem tem rendimentos elevados têm de ser englobados; não modelado." }
 
 [capital_gains]
 rate = "0.28"
@@ -24,7 +24,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "other"
-note = "Draft: gains on physical gold are not clearly within IRS category G; check how your sale is treated. Not estimated here."
+note = { en = "Draft: gains on physical gold are not clearly within IRS category G; check how your sale is treated. Not estimated here.", pt = "Provisório: as mais-valias com ouro físico não estão claramente na categoria G do IRS; confirme como a sua venda é tratada. Não estimado aqui." }
 
 [deadlines]
 annual_return = "2027-06-30"

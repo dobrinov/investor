@@ -10,7 +10,7 @@ website = "https://sede.agenciatributaria.gob.es"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. Savings income (gains and dividends together) is taxed by band: 19% up to EUR 6,000, 21% to EUR 50,000, 23% to EUR 200,000, 27% to EUR 300,000 and 30% above. A single sale is estimated at 19%. The two-month rule on buying back after a loss is not modelled. Holdings abroad over EUR 50,000 need form 720."
+notes = { en = "Draft rules. Savings income (gains and dividends together) is taxed by band: 19% up to EUR 6,000, 21% to EUR 50,000, 23% to EUR 200,000, 27% to EUR 300,000 and 30% above. A single sale is estimated at 19%. The two-month rule on buying back after a loss is not modelled. Holdings abroad over EUR 50,000 need form 720.", es = "Reglas en borrador. Las rentas del ahorro (ganancias y dividendos juntos) tributan por tramos: 19 % hasta 6.000 €, 21 % hasta 50.000 €, 23 % hasta 200.000 €, 27 % hasta 300.000 € y 30 % por encima. Una venta suelta se estima al 19 %. La regla de los dos meses al recomprar tras una pérdida no está modelada. Los bienes en el extranjero por encima de 50.000 € requieren el modelo 720." }
 
 [capital_gains]
 rate = "0.19"
@@ -31,7 +31,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "capital_gains"
-note = "Gains on gold are a ganancia patrimonial in the savings base, taxed with share gains."
+note = { en = "Gains on gold are a ganancia patrimonial in the savings base, taxed with share gains.", es = "Las ganancias del oro son una ganancia patrimonial de la base del ahorro y tributan junto con las de acciones." }
 
 [deadlines]
 annual_return = "2027-06-30"

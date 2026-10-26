@@ -11,7 +11,7 @@ website = "https://nra.bg"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. Capital gains: 10% on the net taxable result after the 10% of fixed costs the law allows (so 9% of the net gain); sales on EU regulated markets are exempt. Cost is the weighted average of each instrument. Amounts are converted at the BNB rate of each transaction day; this app uses the rates in your statements, so check them."
+notes = { en = "Draft rules. Capital gains: 10% on the net taxable result after the 10% of fixed costs the law allows (so 9% of the net gain); sales on EU regulated markets are exempt. Cost is the weighted average of each instrument. Amounts are converted at the BNB rate of each transaction day; this app uses the rates in your statements, so check them.", bg = "Работен вариант. Капиталови печалби: 10% върху нетния облагаем резултат след 10% нормативно признати разходи (т.е. 9% от нетната печалба); продажбите на регулирани пазари в ЕС са освободени. Цената на придобиване е средно претеглената за всеки инструмент. Сумите се преизчисляват по курса на БНБ за деня на всяка сделка; приложението ползва курсовете от извлеченията ви, затова ги проверете." }
 
 [capital_gains]
 rate = "0.10"
@@ -42,14 +42,14 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "exempt"
-note = "Draft: income from selling movable property is generally not taxed (ZDDFL art. 13(1)(2)); check that investment gold and silver are not among the exceptions."
+note = { en = "Draft: income from selling movable property is generally not taxed (ZDDFL art. 13(1)(2)); check that investment gold and silver are not among the exceptions.", bg = "Работен вариант: доходът от продажба на движими вещи по принцип не се облага (чл. 13, ал. 1, т. 2 ЗДДФЛ); проверете дали инвестиционното злато и сребро не са сред изключенията." }
 
 [employment_income]
 # Pay from work that is not salary, e.g. an employer co-investment paid out
 # through payroll. UNVERIFIED.
 rate = "0.10"
 form = "Приложение 1 (Appendix 1)"
-note = "Employment income is taxed at 10% flat. A Bulgarian employer withholds it through payroll; pay from an employer abroad you declare yourself, and social security contributions may apply. Only the gain over what you paid in is counted here: check whether all of the payout counts as income."
+note = { en = "Employment income is taxed at 10% flat. A Bulgarian employer withholds it through payroll; pay from an employer abroad you declare yourself, and social security contributions may apply. Only the gain over what you paid in is counted here: check whether all of the payout counts as income.", bg = "Доходите от трудови правоотношения се облагат с 10%. Български работодател удържа данъка чрез заплатата; доход от работодател в чужбина декларирате сами и може да дължите осигуровки. Тук се брои само печалбата над вложеното: проверете дали цялото изплащане не е доход." }
 
 [deadlines]
 annual_return = "2027-04-30"
@@ -88,7 +88,7 @@ title = "Облагаеми продажби на акции и фондове"
 form = "Приложение 5, Таблица 2"
 code = "508"
 columns = [["Кол. 3 Продажна цена", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"], ["Кол. 5 Печалба", "gains"], ["Кол. 6 Загуба", "losses"]]
-note = "One row with the totals for the year. Sales on markets outside the EU regulated markets, such as NASDAQ and NYSE."
+note = { en = "One row with the totals for the year. Sales on markets outside the EU regulated markets, such as NASDAQ and NYSE.", bg = "Един ред със сборовете за годината. Продажби на пазари извън регулираните пазари в ЕС, като NASDAQ и NYSE." }
 
 [[declaration.sections]]
 what = "crypto_sales"
@@ -96,7 +96,7 @@ title = "Продажби на криптоактиви"
 form = "Приложение 5, Таблица 2"
 code = "5082"
 columns = [["Кол. 3 Продажна цена", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"], ["Кол. 5 Печалба", "gains"], ["Кол. 6 Загуба", "losses"]]
-note = "Crypto is declared on its own row. Coins are recognised by their ticker (BTC, ETH and the like), so check the split."
+note = { en = "Crypto is declared on its own row. Coins are recognised by their ticker (BTC, ETH and the like), so check the split.", bg = "Криптоактивите се декларират на отделен ред. Монетите се разпознават по тикера (BTC, ETH и подобни), затова проверете разделянето." }
 
 [[declaration.sections]]
 what = "exempt_sales"
@@ -105,7 +105,7 @@ form = "Приложение 13, Част II"
 code = "5081"
 columns = [["Кол. 3 Брутен размер", "proceeds"], ["Кол. 4 Цена на придобиване", "cost"]]
 optional = true
-note = "Not taxed. Declaring it is optional but shows where the money came from."
+note = { en = "Not taxed. Declaring it is optional but shows where the money came from.", bg = "Не се облагат. Декларирането не е задължително, но показва откъде са парите." }
 
 [[declaration.sections]]
 what = "dividends"
@@ -113,7 +113,7 @@ title = "Дивиденти от чужбина"
 form = "Приложение 8, Част III"
 code = "8141"
 columns = [["Наименование на платеца", "name"], ["Държава", "country"], ["Брутен размер", "gross"], ["Платен данък в чужбина", "withheld"], ["Допустим данъчен кредит", "credit"], ["Дължим данък", "tax_due"]]
-note = "One row per paying company. 5% of the gross, less the tax kept back abroad (never below zero)."
+note = { en = "One row per paying company. 5% of the gross, less the tax kept back abroad (never below zero).", bg = "По един ред за всеки платец. 5% от брутния размер минус удържания в чужбина данък (никога под нула)." }
 
 [[declaration.sections]]
 what = "interest"
@@ -122,19 +122,19 @@ form = "Приложение 6"
 code = "603"
 rate = "0.10"
 columns = [["Размер на дохода", "amount"], ["Данък 10%", "tax_due"]]
-note = "Interest on cash at brokers. Interest on EU bank deposits and bonds can be exempt."
+note = { en = "Interest on cash at brokers. Interest on EU bank deposits and bonds can be exempt.", bg = "Лихви по пари при брокери. Лихвите по депозити в банки от ЕС и по облигации може да са освободени." }
 
 [[declaration.sections]]
 what = "holdings"
 title = "Притежавани акции и дялове в чужбина към 31 декември"
 form = "Приложение 8, Част I"
 columns = [["Наименование", "name"], ["ISIN", "isin"], ["Държава", "country"], ["Брой", "units"], ["Цена на придобиване", "cost"], ["Притежавани от", "since"]]
-note = "Information only, no tax. Coins and bars and crypto are left out. Columns not confirmed: check them against the form."
+note = { en = "Information only, no tax. Coins and bars and crypto are left out. Columns not confirmed: check them against the form.", bg = "Само за информация, без данък. Монетите, кюлчетата и криптоактивите не са включени. Колоните не са потвърдени: сверете ги с формуляра." }
 
 [[declaration.sections]]
 what = "employment_income"
 title = "Доходи от трудови правоотношения"
 form = "Приложение 1"
 columns = [["Дата", "date"], ["Описание", "description"], ["Доход", "income"], ["Удържан данък", "withheld"]]
-note = "Pay from work that is not salary, such as a co-investment paid out through payroll."
+note = { en = "Pay from work that is not salary, such as a co-investment paid out through payroll.", bg = "Доход от работа, който не е заплата, например съинвестиция, изплатена чрез заплатата." }
 

@@ -10,7 +10,7 @@ website = "https://www.impots.gouv.fr"
 tax_year = 2026
 currency = "EUR"
 verified = false
-notes = "Draft rules. Flat tax (PFU): 12.8% income tax plus social charges, which rise to 18.6% on most investment income from 2026, giving 31.4%; check the rate that applies to you. You can opt for the progressive scale instead. PEA and life-insurance wrappers have their own rules, not modelled."
+notes = { en = "Draft rules. Flat tax (PFU): 12.8% income tax plus social charges, which rise to 18.6% on most investment income from 2026, giving 31.4%; check the rate that applies to you. You can opt for the progressive scale instead. PEA and life-insurance wrappers have their own rules, not modelled.", fr = "Règles provisoires. Prélèvement forfaitaire unique (PFU) : 12,8 % d’impôt sur le revenu plus les prélèvements sociaux, qui passent à 18,6 % sur la plupart des revenus de placement à partir de 2026, soit 31,4 % ; vérifiez le taux qui vous concerne. Vous pouvez opter pour le barème progressif. Le PEA et l’assurance-vie ont leurs propres règles, non modélisées." }
 
 [capital_gains]
 rate = "0.314"
@@ -24,7 +24,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "other"
-note = "Precious metals pay the taxe forfaitaire of 11.5% of the sale price, or, with proof of purchase, 36.2% of the gain less 5% a year after the second year (tax-free after 22 years). Not estimated here."
+note = { en = "Precious metals pay the taxe forfaitaire of 11.5% of the sale price, or, with proof of purchase, 36.2% of the gain less 5% a year after the second year (tax-free after 22 years). Not estimated here.", fr = "Les métaux précieux paient la taxe forfaitaire de 11,5 % du prix de vente ou, avec justificatif d’achat, 36,2 % de la plus-value diminuée de 5 % par année au-delà de la deuxième (exonération après 22 ans). Non estimé ici." }
 
 [deadlines]
 annual_return = "2027-05-31"

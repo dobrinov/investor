@@ -10,7 +10,7 @@ website = "https://www.anaf.ro"
 tax_year = 2026
 currency = "RON"
 verified = false
-notes = "Draft rules. From 2026 gains at foreign brokers are taxed at 16% on the net yearly result and dividends at 16%. Romanian brokers withhold a lower rate depending on how long you held. The health contribution (CASS) may also be due on investment income; not modelled."
+notes = { en = "Draft rules. From 2026 gains at foreign brokers are taxed at 16% on the net yearly result and dividends at 16%. Romanian brokers withhold a lower rate depending on how long you held. The health contribution (CASS) may also be due on investment income; not modelled.", ro = "Reguli provizorii. Din 2026, câștigurile la brokeri străini se impozitează cu 16% pe rezultatul net anual, iar dividendele cu 16%. Brokerii români rețin o cotă mai mică, în funcție de cât timp ai deținut. Se poate datora și contribuția la sănătate (CASS) pe veniturile din investiții; nemodelată." }
 
 [capital_gains]
 rate = "0.16"
@@ -24,7 +24,7 @@ foreign_tax_credit = true
 [physical_metals]
 # Coins and bars. UNVERIFIED.
 treatment = "other"
-note = "Draft: how gains on physical gold are taxed is not modelled; check with ANAF. Not estimated here."
+note = { en = "Draft: how gains on physical gold are taxed is not modelled; check with ANAF. Not estimated here.", ro = "Provizoriu: impozitarea câștigurilor din aur fizic nu este modelată; verifică la ANAF. Nu se estimează aici." }
 
 [deadlines]
 annual_return = "2027-05-25"
