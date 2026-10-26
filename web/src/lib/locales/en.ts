@@ -801,6 +801,7 @@ export const en = {
   'overview.inLedger': "Show in the ledger",
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Your AI tool",
+  'bridge.waitingApproval': "{count} changes waiting for your approval",
 } as const
 
 export type Key = keyof typeof en

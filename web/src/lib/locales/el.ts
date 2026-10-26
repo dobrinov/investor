@@ -803,4 +803,5 @@ export const el: Record<Key, string> = {
   'overview.inLedger': "Εμφάνιση στο καθολικό",
   'assistant.tab.chat': "Συνομιλία",
   'assistant.tab.tool': "Το εργαλείο AI σας",
+  'bridge.waitingApproval': "{count} αλλαγές περιμένουν έγκριση",
 }

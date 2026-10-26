@@ -803,4 +803,5 @@ export const bg: Record<Key, string> = {
   'overview.inLedger': "Покажи в главната книга",
   'assistant.tab.chat': "Чат",
   'assistant.tab.tool': "Твоят AI инструмент",
+  'bridge.waitingApproval': "{count} промени чакат одобрение",
 }

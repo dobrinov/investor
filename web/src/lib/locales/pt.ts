@@ -803,4 +803,5 @@ export const pt: Record<Key, string> = {
   'overview.inLedger': "Ver no razão geral",
   'assistant.tab.chat': "Conversa",
   'assistant.tab.tool': "A sua ferramenta de IA",
+  'bridge.waitingApproval': "{count} alterações aguardam aprovação",
 }

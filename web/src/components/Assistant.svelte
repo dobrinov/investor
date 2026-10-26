@@ -104,6 +104,7 @@
     <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6zM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8zM5 15l.6 1.4L7 17l-1.4.6L5 19l-.6-1.4L3 17l1.4-.6z" />
   </svg>
   <span class="sr-only">{t('assistant.open')}</span>
+  {#if bridge.approvals.length}<span class="badge num" aria-label={t('bridge.waitingApproval', { count: bridge.approvals.length })}>{bridge.approvals.length}</span>{/if}
 </button>
 
 {#if open}
@@ -295,6 +296,22 @@
     box-shadow: 0 10px 28px rgb(17 24 33 / 0.28);
     cursor: pointer;
     transition: transform 0.15s;
+  }
+  .badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    border: 2px solid var(--surface);
+    background: var(--warn);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: grid;
+    place-items: center;
   }
   .magic:hover {
     transform: scale(1.06);

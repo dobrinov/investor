@@ -803,4 +803,5 @@ export const de: Record<Key, string> = {
   'overview.inLedger': "Im Hauptbuch zeigen",
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Ihr KI-Tool",
+  'bridge.waitingApproval': "{count} Änderungen warten auf Ihre Zustimmung",
 }

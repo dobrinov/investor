@@ -803,4 +803,5 @@ export const nl: Record<Key, string> = {
   'overview.inLedger': "Tonen in het grootboek",
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Je AI-tool",
+  'bridge.waitingApproval': "{count} wijzigingen wachten op je goedkeuring",
 }

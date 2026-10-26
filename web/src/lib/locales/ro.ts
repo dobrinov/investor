@@ -803,4 +803,5 @@ export const ro: Record<Key, string> = {
   'overview.inLedger': "Arată în cartea mare",
   'assistant.tab.chat': "Chat",
   'assistant.tab.tool': "Instrumentul tău AI",
+  'bridge.waitingApproval': "{count} modificări așteaptă aprobarea ta",
 }
