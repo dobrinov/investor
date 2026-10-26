@@ -3,12 +3,12 @@
   // this computer, then a conversation about any decision. Changes it
   // suggests wait for approval, like the assistant's.
   import { tick } from 'svelte'
-  import { available, findLocalModels, saveSettings, type Bubble } from '../lib/assistant.svelte'
+  import { available, findLocalModels, saveSettings, type Bubble, type Found } from '../lib/assistant.svelte'
   import { cfo, picture } from '../lib/cfo.svelte'
   import { t, translates } from '../lib/i18n.svelte'
 
   let settings = $state(cfo.settings)
-  let found = $state<{ server: string; url: string; model: string }[] | null>(null)
+  let found = $state<Found[] | null>(null)
   let looking = $state(false)
   let draft = $state('')
   let chat = $state<HTMLElement>()
@@ -19,8 +19,8 @@
     looking = false
   }
 
-  function use(m: { url: string; model: string }): void {
-    saveSettings({ kind: 'local', url: m.url, model: m.model, apiKey: '' })
+  function use(m: Found): void {
+    saveSettings({ kind: m.kind, url: m.url, model: m.model, apiKey: '' })
     settings = cfo.settings
   }
 
@@ -33,7 +33,7 @@
     await running
   }
 
-  const provider = $derived(settings?.kind === 'anthropic' ? 'Anthropic' : settings?.kind === 'openai' ? new URL(settings.url).host : '')
+  const provider = $derived(settings?.kind === 'claude_code' ? 'Anthropic (Claude Code)' : settings?.kind === 'anthropic' ? 'Anthropic' : settings?.kind === 'openai' ? new URL(settings.url).host : '')
   const toolName = (name: string) => (translates(`assistant.tool.${name}`) ? t(`assistant.tool.${name}` as 'assistant.tool.portfolio') : name.replaceAll('_', ' '))
 
   /** Plain text with **bold** and "- " bullets; everything is escaped first. */

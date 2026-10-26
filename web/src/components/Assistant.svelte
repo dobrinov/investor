@@ -6,7 +6,7 @@
   // own AI tool use the open file, and shows that tool's changes to approve.
   import { tick } from 'svelte'
   import { bridge } from '../lib/bridge.svelte'
-  import { available, Conversation, DEFAULTS, findLocalModels, loadSettings, saveSettings, skills, type Bubble, type ModelKind, type ModelSettings, type Skill } from '../lib/assistant.svelte'
+  import { available, Conversation, DEFAULTS, findLocalModels, type Found, loadSettings, saveSettings, skills, type Bubble, type ModelKind, type ModelSettings, type Skill } from '../lib/assistant.svelte'
   import { t, translates } from '../lib/i18n.svelte'
 
   let open = $state(false)
@@ -32,7 +32,7 @@
 
   // Setup form
   let form = $state<ModelSettings>(saved ?? { kind: 'local', ...DEFAULTS.local })
-  let found = $state<{ server: string; url: string; model: string }[] | null>(null)
+  let found = $state<Found[] | null>(null)
   let looking = $state(false)
 
   function choose(kind: ModelKind): void {
@@ -44,7 +44,7 @@
     looking = true
     found = await findLocalModels().catch(() => [])
     looking = false
-    if (found.length && !form.model) form = { ...form, url: found[0].url, model: found[0].model }
+    if (found.length && !form.model) form = { ...form, kind: found[0].kind, url: found[0].url, model: found[0].model }
   }
 
   function saveSetup(): void {
@@ -185,7 +185,7 @@
       <form class="body setup" onsubmit={(e) => (e.preventDefault(), saveSetup())}>
         <p class="muted">{t('assistant.setupLead')}</p>
         <div class="kinds" role="radiogroup" aria-label={t('assistant.kind')}>
-          {#each ['local', 'anthropic', 'openai'] as const as kind (kind)}
+          {#each ['local', 'claude_code', 'anthropic', 'openai'] as const as kind (kind)}
             <button type="button" role="radio" aria-checked={form.kind === kind} class:on={form.kind === kind} onclick={() => choose(kind)}>
               <strong>{t(`assistant.kind.${kind}`)}</strong>
               <span>{t(`assistant.kindHint.${kind}`)}</span>
@@ -198,7 +198,7 @@
             {#if found.length}
               <div class="found">
                 {#each found as m (m.server + m.model)}
-                  <button type="button" class:on={form.model === m.model && form.url === m.url} onclick={() => (form = { ...form, url: m.url, model: m.model })}>{m.model} <span class="muted">· {m.server}</span></button>
+                  <button type="button" class:on={form.model === m.model && form.url === m.url} onclick={() => (form = { ...form, kind: m.kind, url: m.url, model: m.model })}>{m.model} <span class="muted">· {m.server}</span></button>
                 {/each}
               </div>
             {:else}
@@ -206,9 +206,11 @@
             {/if}
           {/if}
         {/if}
-        <label class="field">{t('assistant.address')}<input bind:value={form.url} required /></label>
-        <label class="field">{t('assistant.modelName')}<input bind:value={form.model} required placeholder={form.kind === 'local' ? 'qwen3:8b' : ''} /></label>
-        {#if form.kind !== 'local'}
+        {#if form.kind !== 'claude_code'}
+          <label class="field">{t('assistant.address')}<input bind:value={form.url} required /></label>
+          <label class="field">{t('assistant.modelName')}<input bind:value={form.model} required placeholder={form.kind === 'local' ? 'qwen3:8b' : ''} /></label>
+        {/if}
+        {#if form.kind === 'anthropic' || form.kind === 'openai'}
           <label class="field">{t('assistant.apiKey')}<input type="password" bind:value={form.apiKey} required autocomplete="off" /><span class="hint">{t('assistant.apiKeyHint')}</span></label>
         {/if}
         <p class="muted small">{t(`assistant.privacy.${form.kind}`)}</p>

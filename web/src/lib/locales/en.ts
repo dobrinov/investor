@@ -878,10 +878,10 @@ export const en = {
   'cfo.webLead': "Your CFO reads your whole financial picture and tells you what to do first.",
   'cfo.webWhy': "It needs the desktop app, where it uses an AI model on your own computer, so your figures never pass through this website.",
   'cfo.download': "Download the desktop app",
-  'cfo.setupLead': "Your CFO uses an AI model on this computer. Start Ollama or LM Studio, then choose a model.",
+  'cfo.setupLead': "Your CFO uses an AI model: Claude Code if you have it, or a model on this computer through Ollama or LM Studio.",
   'cfo.find': "Find models on this computer",
   'cfo.looking': "Looking…",
-  'cfo.noneFound': "No models found. Start Ollama or LM Studio with its server on, and download a model such as qwen3 or llama3.1.",
+  'cfo.noneFound': "Nothing found. Install Claude Code, or start Ollama or LM Studio with its server on and download a model such as qwen3 or llama3.1.",
   'cfo.use': "Use {model}",
   'cfo.orCloud': "You can also use Claude or ChatGPT with your own key: set it up in the assistant (✦).",
   'cfo.model': "Using {model}",
@@ -919,6 +919,9 @@ export const en = {
   'strength.tip.short': "Longer is stronger: add another word or a few characters.",
   'strength.tip.words': "A few random words, like “river lamp quiet orbit”, are strong and easy to remember.",
   'strength.tip.good': "Good. Keep it somewhere safe: there is no password reset.",
+  'assistant.kind.claude_code': "Claude Code",
+  'assistant.kindHint.claude_code': "Uses your Claude Code sign-in, no key needed. It advises but cannot record changes.",
+  'assistant.privacy.claude_code': "Your messages and the figures they need go to Anthropic through Claude Code.",
 } as const
 
 export type Key = keyof typeof en

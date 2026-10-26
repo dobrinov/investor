@@ -11,7 +11,7 @@ import { i18n } from './i18n.svelte'
 import { app } from './state.svelte'
 import { recall, remember } from './storage'
 
-export type ModelKind = 'local' | 'anthropic' | 'openai'
+export type ModelKind = 'local' | 'claude_code' | 'anthropic' | 'openai'
 
 export interface ModelSettings {
   kind: ModelKind
@@ -24,6 +24,7 @@ export interface ModelSettings {
 
 export const DEFAULTS: Record<ModelKind, Omit<ModelSettings, 'kind'>> = {
   local: { url: 'http://localhost:11434/v1', model: '', apiKey: '' },
+  claude_code: { url: '', model: 'Claude Code', apiKey: '' },
   anthropic: { url: 'https://api.anthropic.com', model: 'claude-opus-5-5', apiKey: '' },
   openai: { url: 'https://api.openai.com/v1', model: '', apiKey: '' },
 }
@@ -70,12 +71,20 @@ async function request(method: 'GET' | 'POST', url: string, headers: Record<stri
 }
 
 /** Models served on this computer by Ollama or LM Studio, when they run. */
-export async function findLocalModels(): Promise<{ server: string; url: string; model: string }[]> {
-  const found: { server: string; url: string; model: string }[] = []
+export interface Found {
+  kind: ModelKind
+  server: string
+  url: string
+  model: string
+}
+
+export async function findLocalModels(): Promise<Found[]> {
+  const found: Found[] = []
+  if (invoke && (await invoke('claude_code_path').catch(() => null))) found.push({ kind: 'claude_code', ...DEFAULTS.claude_code, server: 'Claude Code' })
   const ollama = (await request('GET', 'http://localhost:11434/api/tags', {}).catch(() => null)) as { models?: { name: string }[] } | null
-  for (const m of ollama?.models ?? []) found.push({ server: 'Ollama', url: 'http://localhost:11434/v1', model: m.name })
+  for (const m of ollama?.models ?? []) found.push({ kind: 'local', server: 'Ollama', url: 'http://localhost:11434/v1', model: m.name })
   const studio = (await request('GET', 'http://localhost:1234/v1/models', {}).catch(() => null)) as { data?: { id: string }[] } | null
-  for (const m of studio?.data ?? []) found.push({ server: 'LM Studio', url: 'http://localhost:1234/v1', model: m.id })
+  for (const m of studio?.data ?? []) found.push({ kind: 'local', server: 'LM Studio', url: 'http://localhost:1234/v1', model: m.id })
   return found
 }
 
@@ -166,9 +175,25 @@ async function openaiCompatible(s: ModelSettings, system: string, items: Item[],
   return { text: message.content ?? '', calls, raw }
 }
 
+// Claude Code with the person's own sign-in, run by the desktop app with no
+// tools: it answers from what it is sent, so it can advise but not record.
+async function claudeCode(_s: ModelSettings, system: string, items: Item[]): Promise<Turn> {
+  const transcript = items
+    .map((i) => (i.role === 'user' ? `Person: ${i.text}` : i.role === 'assistant' ? `You: ${i.text}` : ''))
+    .filter(Boolean)
+    .join('\n\n')
+  const prompt = items.length === 1 && items[0].role === 'user' ? items[0].text : `The conversation so far:\n\n${transcript}\n\nAnswer the person's last message.`
+  const text = (await invoke!('claude_code_ask', { system, prompt })) as string
+  return { text, calls: [], raw: { role: 'assistant', content: text } }
+}
+
+function provider(kind: ModelKind) {
+  return kind === 'anthropic' ? anthropic : kind === 'claude_code' ? claudeCode : openaiCompatible
+}
+
 /** One answer to one message, without tools, e.g. for a briefing. */
 export async function complete(settings: ModelSettings, system: string, text: string): Promise<string> {
-  const turn = await (settings.kind === 'anthropic' ? anthropic : openaiCompatible)(settings, system, [{ role: 'user', text }], [])
+  const turn = await provider(settings.kind)(settings, system, [{ role: 'user', text }], [])
   return turn.text
 }
 
@@ -257,7 +282,7 @@ export class Conversation {
   private async run(): Promise<void> {
     const tools = app.book!.assistantTools(true)
     for (let step = 0; step < MAX_STEPS; step++) {
-      const turn = await (this.settings.kind === 'anthropic' ? anthropic : openaiCompatible)(this.settings, this.system(), this.items, tools)
+      const turn = await provider(this.settings.kind)(this.settings, this.system(), this.items, tools)
       this.items.push({ role: 'assistant', text: turn.text, calls: turn.calls, raw: turn.raw })
       if (turn.text.trim()) this.bubbles.push({ kind: 'assistant', text: turn.text.trim() })
       if (!turn.calls.length) return

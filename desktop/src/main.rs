@@ -136,6 +136,86 @@ async fn model_request(request: ModelRequest) -> Result<ModelReply, String> {
     .map_err(|e| e.to_string())?
 }
 
+/// Where the Claude Code command line is. Apps started from the Dock or
+/// Start menu do not get the shell's PATH, so the usual install places are
+/// tried too, then a login shell.
+fn claude_code() -> Option<PathBuf> {
+    let name = if cfg!(windows) { "claude.exe" } else { "claude" };
+    let home = std::env::var_os(if cfg!(windows) { "USERPROFILE" } else { "HOME" }).map(PathBuf::from);
+    let mut places: Vec<PathBuf> = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect()).unwrap_or_default();
+    if let Some(home) = &home {
+        for dir in [".local/bin", ".claude/local", ".npm-global/bin", ".bun/bin", "AppData/Roaming/npm"] {
+            places.push(home.join(dir));
+        }
+    }
+    places.extend(["/opt/homebrew/bin", "/usr/local/bin"].map(PathBuf::from));
+    if let Some(found) = places.iter().flat_map(|d| [d.join(name), d.join("claude.cmd")]).find(|p| p.is_file()) {
+        return Some(found);
+    }
+    #[cfg(unix)]
+    {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".into());
+        let out = std::process::Command::new(shell).args(["-lc", "command -v claude"]).output().ok()?;
+        let path = PathBuf::from(String::from_utf8_lossy(&out.stdout).trim());
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    None
+}
+
+/// Whether Claude Code is installed, so it can be offered as a model.
+#[tauri::command]
+async fn claude_code_path() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(|| claude_code().map(|p| p.to_string_lossy().into_owned())).await.ok().flatten()
+}
+
+#[derive(Deserialize)]
+struct ClaudeReply {
+    #[serde(default)]
+    result: String,
+    #[serde(default)]
+    is_error: bool,
+}
+
+/// One answer from Claude Code with the person's own sign-in. It runs with
+/// no tools and in an empty folder, so it only reads what it is sent.
+#[tauri::command]
+async fn claude_code_ask(system: String, prompt: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Write;
+        let program = claude_code().ok_or("Claude Code was not found on this computer")?;
+        let folder = std::env::temp_dir().join("investor-claude");
+        std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+        // Scripts installed with npm need node, which sits next to them or in the usual places.
+        let mut path = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect::<Vec<_>>()).unwrap_or_default();
+        path.extend(program.parent().map(PathBuf::from));
+        path.extend(["/opt/homebrew/bin", "/usr/local/bin"].map(PathBuf::from));
+        let mut child = std::process::Command::new(&program)
+            .args(["-p", "--output-format", "json", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--system-prompt", &system])
+            .current_dir(&folder)
+            .env("PATH", std::env::join_paths(path).map_err(|e| e.to_string())?)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("could not start Claude Code: {e}"))?;
+        child.stdin.take().ok_or("no input")?.write_all(prompt.as_bytes()).map_err(|e| e.to_string())?;
+        let out = child.wait_with_output().map_err(|e| e.to_string())?;
+        let reply: ClaudeReply = serde_json::from_slice(&out.stdout).map_err(|_| {
+            let err = String::from_utf8_lossy(&out.stderr);
+            let text = String::from_utf8_lossy(&out.stdout);
+            format!("Claude Code did not answer: {}", if err.trim().is_empty() { text.trim().chars().take(300).collect::<String>() } else { err.trim().chars().take(300).collect() })
+        })?;
+        if reply.is_error {
+            return Err(format!("Claude Code: {}", reply.result));
+        }
+        Ok(reply.result)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// When the file was last changed, in milliseconds since 1970.
 #[tauri::command]
 async fn modified_invest(path: String) -> Result<u64, String> {
@@ -193,6 +273,8 @@ fn main() {
             launch_file,
             model_request,
             modified_invest,
+            claude_code_path,
+            claude_code_ask,
             update_check,
             update_install,
             bridge::bridge_start,

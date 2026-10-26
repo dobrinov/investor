@@ -195,3 +195,33 @@ test('any password is allowed, with advice on how strong it is', async ({ page }
   await page.getByLabel('Repeat password').fill('abc')
   await expect(page.getByText('Use at least 10 characters.')).toHaveCount(0)
 })
+
+test('your CFO can use Claude Code with your own sign-in', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>
+    const asked: { system: string; prompt: string }[] = []
+    w.__asked = asked
+    w.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { system: string; prompt: string; request?: { method: string } }) => {
+        if (cmd === 'bridge_next') return await new Promise((r) => setTimeout(() => r(null), 2000))
+        if (cmd === 'claude_code_path') return '/Users/me/.local/bin/claude'
+        if (cmd === 'model_request') return { status: 404, body: '' }
+        if (cmd === 'claude_code_ask') {
+          asked.push(args)
+          return JSON.stringify({ headline: 'The car loan comes first.', summary: '', actions: [{ title: 'Pay down the car loan', why: '6.9%', impact: 'sure return', priority: 'now' }], watch: [], questions: [] })
+        }
+        return null
+      },
+    }
+  })
+  await page.goto('/app/#example')
+  await page.locator('aside nav').getByRole('button', { name: 'Your CFO' }).click()
+  await page.getByRole('button', { name: 'Find models on this computer' }).click()
+  await page.getByRole('button', { name: /Use Claude Code/ }).click()
+  await expect(page.getByText('Your figures are sent to Anthropic (Claude Code).')).toBeVisible()
+  await page.getByRole('button', { name: 'Get a briefing' }).click()
+  await expect(page.getByRole('heading', { name: 'The car loan comes first.' })).toBeVisible()
+  const asked = await page.evaluate(() => (window as unknown as { __asked: { system: string; prompt: string }[] }).__asked)
+  expect(asked[0].system).toContain('virtual CFO')
+  expect(asked[0].prompt).toContain('"high_interest_debt"')
+})
