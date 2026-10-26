@@ -98,6 +98,6 @@ test('entries, tax notes and the example read in the chosen language', async ({ 
   await expect(page.getByText('Продажба 10 VWCE за 1280 EUR')).toBeVisible()
   await page.getByRole('tab', { name: /Банки/ }).click()
   await expect(page.getByRole('cell', { name: 'Спестовна сметка' }).first()).toBeVisible()
-  await page.goto('/app/#example/tax')
+  await page.getByRole('navigation', { name: 'Основна навигация' }).or(page.locator('aside nav')).first().getByRole('button', { name: 'Данъци и отчитане' }).click()
   await expect(page.getByText(/Работен вариант\. Капиталови печалби/)).toBeVisible()
 })
