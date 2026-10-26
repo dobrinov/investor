@@ -21,183 +21,162 @@
         Investor
       </a>
       <nav aria-label="Page">
-        <a href="#features">Features</a>
-        <a href="#privacy">Privacy</a>
+        <a href="#how">How it works</a>
+        <a href="#install">Download</a>
         <a href="#assistant">AI assistant</a>
-        <a href="#install">Install</a>
         <a href="https://github.com/dobrinov/investor">GitHub</a>
-        <a class="btn small" href="./app/">Open the app</a>
+        <a class="btn small light" href="./app/">Open the app</a>
       </nav>
     </header>
 
     <main>
       <section class="hero">
-        <p class="eyebrow">Free · Open source · Runs in your browser</p>
-        <h1>Plan, track and rehearse your <span class="grad">investing decisions.</span></h1>
-        <p class="lede">Import your broker statements, see what you own and what it cost, try a trade before you make it, and see where your money could be in 20 years. Your portfolio lives in one encrypted file on your own computer.</p>
-        <div class="cta">
-          <a class="btn primary" href="./app/">Open the app</a>
-          <a class="btn" href="./app/#example">Try the example portfolio</a>
+        <div class="hero-text">
+          <h1>Plan, track and rehearse your investing decisions.</h1>
+          <p class="lede">Your portfolio, goals and taxes in one encrypted file on your computer. No account, no server, no tracking.</p>
+          <div class="cta">
+            <a class="btn primary" href="./app/#example">Try the example</a>
+            <a class="btn" href="#install">Download the app</a>
+          </div>
+          <p class="note">Free and open source · Windows, macOS, Linux and the browser · 12 languages</p>
         </div>
-        <p class="note">No sign-up, nothing to install, and it works on your phone. Or <a href="#install">install it</a> on Windows, macOS or Linux. In 12 languages.</p>
+        <figure class="mock" role="img" aria-label="A drawing of the Overview screen with the example portfolio: net worth of €63,240 split into four parts, and the largest holdings VWCE, AAPL, NOVO-B and NESN.">
+          <div class="mock-rail" aria-hidden="true">
+            <span class="bar w64"></span>
+            <span class="pill"></span>
+            <span class="bar w72"></span>
+            <span class="bar w60"></span>
+            <span class="bar w68"></span>
+          </div>
+          <div class="mock-main" aria-hidden="true">
+            <div class="mock-card">
+              <span class="mock-label">Net worth</span>
+              <span class="num big">€63,240</span>
+              <div class="alloc"><span class="a1"></span><span class="a2"></span><span class="a3"></span><span class="a4"></span></div>
+            </div>
+            <div class="mock-card rows">
+              <div><strong>VWCE</strong><span class="num">€22,338</span></div>
+              <div><strong>AAPL</strong><span class="num">€5,617</span></div>
+              <div><strong>NOVO-B</strong><span class="num">€4,536</span></div>
+              <div><strong>NESN</strong><span class="num">€3,604</span></div>
+            </div>
+          </div>
+        </figure>
       </section>
 
-      <figure class="shot">
-        <img src="/shots/overview.png" width="1440" height="900" alt="The example portfolio's Overview: net worth and holdings in euros, dollars, Swiss francs and Danish kroner at their latest prices." />
-      </figure>
+      <section id="how" aria-labelledby="how-title">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-title">Three things it does well</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Everything in one encrypted file</h3>
+            <p>Import statements from IBKR and Revolut, add bank accounts, gold and private stakes. It all stays in one <code>.invest</code> file you keep.</p>
+          </article>
+          <article class="card">
+            <h3>Rehearse before you trade</h3>
+            <p>See what a buy or sale does to your cash, your goals and your next 20 years before you record it.</p>
+          </article>
+          <article class="card">
+            <h3>Taxes by country</h3>
+            <p>What to declare, sale by sale, with rules for 13 countries. Draft rules, not tax advice.</p>
+          </article>
+        </div>
+      </section>
 
       <section id="example" class="example" aria-labelledby="example-title">
         <div class="example-text">
           <p class="eyebrow">Example portfolio</p>
-          <h2 id="example-title">See it with a portfolio that has a bit of everything</h2>
-          <p>Open a made-up investor's books and click around. Nothing you change is kept, and your own file is never touched.</p>
+          <h2 id="example-title">Click around a made-up portfolio</h2>
+          <p>Nothing you change is kept, and your own file is never touched.</p>
           <ul class="chips" aria-label="What the example holds">
             <li>Index ETFs <span>VWCE, EUNL</span></li>
-            <li>Shares <span>Apple, Microsoft, ASML, Nestlé, Novo Nordisk</span></li>
-            <li>Bonds <span>Global aggregate ETF</span></li>
-            <li>Gold <span>Xetra-Gold, a coin and a bar</span></li>
+            <li>Shares <span>Apple, ASML, Nestlé…</span></li>
+            <li>Bonds and gold <span>ETFs, a coin and a bar</span></li>
             <li>Crypto <span>Bitcoin, Ether</span></li>
-            <li>Five currencies <span>EUR, USD, CHF, DKK and GBP</span></li>
-            <li>Private <span>A startup stake</span></li>
-            <li>Plan <span>Emergency fund, house, retirement</span></li>
+            <li>Five currencies <span>EUR, USD, CHF, DKK, GBP</span></li>
+            <li>Goals <span>Emergency fund, house, retirement</span></li>
           </ul>
           <a class="btn primary" href="./app/#example">Open the example</a>
         </div>
         <figure class="phone">
-          <img src="/shots/phone.png" width="390" height="844" alt="The example portfolio on a phone: net worth, figures and holdings, with tabs at the bottom." />
+          <img src="/shots/phone.png" width="390" height="844" loading="lazy" alt="The example portfolio on a phone: net worth, figures and holdings, with tabs at the bottom." />
         </figure>
       </section>
 
-      <div class="duo">
+      <div class="shots">
         <figure>
-          <img src="/shots/projections.png" width="1440" height="900" alt="Projections for the example: a range of outcomes over 20 years." />
-          <figcaption>Twenty years ahead: the middle outcome and the range around it.</figcaption>
+          <img src="/shots/trade.png" width="1440" height="900" loading="lazy" alt="Plan a trade in the example: 20 more VWCE previewed with how the holdings shift, the emergency fund and a 20-year projection with and without it." />
+          <figcaption>Try a trade before you make it.</figcaption>
         </figure>
         <figure>
-          <img src="/shots/tax.png" width="1440" height="900" alt="Tax and reporting for the example: one taxable sale in the US and one exempt sale on an EU market." />
-          <figcaption>Each sale classified under your country's rules.</figcaption>
+          <img src="/shots/projections.png" width="1440" height="900" loading="lazy" alt="Projections for the example: a range of outcomes over 20 years." />
+          <figcaption>Twenty years ahead, with the range.</figcaption>
+        </figure>
+        <figure>
+          <img src="/shots/tax.png" width="1440" height="900" loading="lazy" alt="Tax and reporting for the example: one taxable sale in the US and one exempt sale on an EU market." />
+          <figcaption>Each sale under your country's rules.</figcaption>
         </figure>
       </div>
 
-      <section id="features" class="features" aria-labelledby="features-title">
-        <h2 id="features-title">Everything in one place</h2>
-        <div class="grid">
-          <article>
-            <h3>Import your statements</h3>
-            <p>Drop in a CSV from Interactive Brokers or Revolut. Re-importing the same file adds nothing twice. New brokers are one small config file.</p>
-          </article>
-          <article>
-            <h3>Real books, not a spreadsheet</h3>
-            <p>Every deposit, trade, dividend and fee becomes a balanced double-entry journal entry, with FIFO lots for what each share cost.</p>
-          </article>
-          <article>
-            <h3>Plan a trade first</h3>
-            <p>Before you buy or sell, see the fees, the profit and tax on a sale, how your holdings shift, and the effect on your money in 20 years. Record it only when you are sure.</p>
-          </article>
-          <article>
-            <h3>Goals and projections</h3>
-            <p>Set an emergency fund and savings goals, then see a range of outcomes, not one hopeful line. Try what-if moves and plan your retirement.</p>
-          </article>
-          <article>
-            <h3>Tax help in 13 countries</h3>
-            <p>Realised gains per year with an estimate of the tax, allowances, rate bands and holding periods for Austria, Bulgaria, Canada, France, Germany, Ireland, Italy, Poland, Portugal, Romania, Spain, the UK and the US. The rules are drafts, not tax advice.</p>
-          </article>
-          <article>
-            <h3>Gold coins, bank accounts and private stakes</h3>
-            <p>Physical gold and silver in grams or ounces, savings accounts with no statement to import, and an employer co-investment or private stake: all count in your net worth.</p>
-          </article>
+      <section id="install" aria-labelledby="install-title">
+        <p class="eyebrow">Download</p>
+        <h2 id="install-title">On your computer, or in the browser</h2>
+        <div class="grid four">
+          <a class="card dl" href="https://github.com/dobrinov/investor/releases/latest">
+            <strong>macOS</strong>
+            <span>Apple silicon and Intel · .dmg</span>
+            <span class="badge">Signed by Apple</span>
+          </a>
+          <a class="card dl" href="https://github.com/dobrinov/investor/releases/latest">
+            <strong>Windows</strong>
+            <span>.msi or setup.exe</span>
+            <span class="hint">First start: More info, then Run anyway</span>
+          </a>
+          <a class="card dl" href="https://github.com/dobrinov/investor/releases/latest">
+            <strong>Linux</strong>
+            <span>.AppImage, .deb or .rpm</span>
+          </a>
+          <a class="card dl" href="./app/">
+            <strong>Browser</strong>
+            <span>Nothing to install · works offline</span>
+          </a>
         </div>
-      </section>
-
-      <figure class="shot">
-        <img src="/shots/trade.png" width="1440" height="900" alt="Plan a trade in the example: 20 more VWCE previewed with how the holdings shift, the emergency fund and a 20-year projection with and without it." />
-      </figure>
-
-      <section id="privacy" class="privacy" aria-labelledby="privacy-title">
-        <h2 id="privacy-title">Your data never leaves your computer</h2>
-        <div class="grid three">
-          <article>
-            <h3>No account</h3>
-            <p>Nobody to sign up with. There is no server and no copy of your data anywhere but your own file.</p>
-          </article>
-          <article>
-            <h3>Encrypted file</h3>
-            <p>Your portfolio is one <code>.invest</code> file, encrypted with your password (Argon2id and AES-256-GCM). Keep a backup: a lost password cannot be recovered.</p>
-          </article>
-          <article>
-            <h3>No tracking</h3>
-            <p>No analytics, no cookies, no ads. The web app may only talk to the page it was loaded from, so nothing can be sent anywhere else. The desktop app's optional assistant talks only to the AI model you choose.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="steps" aria-labelledby="steps-title">
-        <h2 id="steps-title">Start in a minute</h2>
-        <ol>
-          <li><strong>Create a file.</strong> Pick a password and save your new <code>.invest</code> file somewhere safe.</li>
-          <li><strong>Import a statement.</strong> Export a CSV from your broker and drop it in.</li>
-          <li><strong>Plan.</strong> Add your goals, try a trade, and come back whenever you invest.</li>
-        </ol>
-        <a class="btn primary" href="./app/">Open the app</a>
-      </section>
-
-      <section id="install" class="install" aria-labelledby="install-title">
-        <h2 id="install-title">Install it on your computer</h2>
-        <div class="grid">
-          <article>
-            <h3>Desktop app</h3>
-            <p>A real app for Windows, macOS and Linux that opens and saves your <code>.invest</code> file in place and works without a connection.</p>
-            <div class="downloads">
-              <a class="btn small" href="https://github.com/dobrinov/investor/releases/latest">Windows</a>
-              <a class="btn small" href="https://github.com/dobrinov/investor/releases/latest">macOS</a>
-              <a class="btn small" href="https://github.com/dobrinov/investor/releases/latest">Linux</a>
-            </div>
-            <p class="small">The macOS app is signed and notarized by Apple. The Windows app is not signed yet, so the first start shows a warning: choose More info, then Run anyway.</p>
-          </article>
-          <article>
-            <h3>From your browser</h3>
-            <p>Open the app in Chrome or Edge and choose Install in the address bar, or in Safari on a Mac choose File, then Add to Dock. It gets its own window and keeps working offline.</p>
-            <div class="downloads"><a class="btn small" href="./app/">Open the app</a></div>
-          </article>
-        </div>
+        <p class="note">The desktop app updates itself when a new version is out.</p>
       </section>
 
       <section id="assistant" class="assistant" aria-labelledby="assistant-title">
         <p class="eyebrow">Optional AI assistant</p>
         <h2 id="assistant-title">Talk to your portfolio, with the AI you choose</h2>
         <p class="lede-small">A model on your own computer, or Claude, ChatGPT and others with your own key. Investor works fully without one.</p>
-        <div class="assistant-grid">
-          <figure class="chat" aria-label="An example conversation with the assistant, using the example portfolio">
-            <p class="msg me">I bought 20 more VWCE at 131.40 today, €1.25 in fees. Can you record it?</p>
-            <p class="msg ai">That is €2,628 plus fees. Cash at IBKR falls to €750 and your emergency fund stays covered. Shall I record it?</p>
-            <div class="card-approve">
-              <strong>Record a trade</strong>
-              <span>Buy 20 VWCE at IBKR · €131.40 · fee €1.25 · XETR</span>
-              <span class="buttons"><span class="b primary">Approve</span><span class="b">Decline</span></span>
-            </div>
-            <figcaption>Nothing changes until you approve it.</figcaption>
-          </figure>
-          <div class="ways">
-            <article>
-              <h3>In the desktop app</h3>
-              <p>Press ✦ and pick a model.</p>
-            </article>
-            <article>
-              <h3>From your own AI tool</h3>
-              <p>Claude Code, Cursor or VS Code: copy one command from the app.</p>
-            </article>
-            <article>
-              <h3>Ready-made skills</h3>
-              <p>Monthly check-up, trade rehearsal, taxes, retirement.</p>
-            </article>
-          </div>
+        <div class="grid">
+          <article class="card">
+            <h3>In the desktop app</h3>
+            <p>Press ✦ and pick a model.</p>
+          </article>
+          <article class="card">
+            <h3>From your own AI tool</h3>
+            <p>Claude Code, Cursor or VS Code: copy one command from the app.</p>
+          </article>
+          <article class="card">
+            <h3>Ready-made skills</h3>
+            <p>Monthly check-up, trade rehearsal, taxes, retirement.</p>
+          </article>
         </div>
+        <figure class="chat" aria-label="An example conversation with the assistant, using the example portfolio">
+          <p class="msg me">I bought 20 more VWCE at 131.40 today, €1.25 in fees. Can you record it?</p>
+          <div class="card-approve">
+            <strong>Record a trade</strong>
+            <span>Buy 20 VWCE at IBKR · €131.40 · fee €1.25</span>
+            <span class="buttons"><span class="b primary">Approve</span><span class="b">Decline</span></span>
+          </div>
+          <figcaption>Nothing changes until you approve it.</figcaption>
+        </figure>
         <p class="note">Not a financial adviser. <a href="https://github.com/dobrinov/investor#ask-an-ai-assistant">How to connect it</a></p>
       </section>
     </main>
 
     <footer>
-      <span>Investor is open source under the Apache 2.0 licence. Not financial or tax advice.</span>
+      <span>Open source under the Apache 2.0 licence. Not financial or tax advice.</span>
       <span class="links"><a href="https://github.com/dobrinov/investor">GitHub</a><a href="https://dobrinov.github.io/products/">More tools</a><a href="https://dobrinov.github.io/">Deyan Dobrinov</a></span>
     </footer>
     <script type="module" src="/src/landing.ts"></script>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RowMenu from './RowMenu.svelte'
   // Bank accounts kept by hand: no statement to import, so the balance is
   // typed in now and then. Their money is cash like a broker's: it fills the
   // emergency fund and counts in net worth and projections.
@@ -139,10 +140,15 @@
               <td><strong>{a.name}</strong></td>
               <td class="num">{a.updated ? date(a.updated) : '—'}</td>
               <td class="right num">{money(a.balance, a.currency)}{#if a.currency !== base && a.value !== undefined}<span class="muted block">{money(a.value, base)}</span>{/if}</td>
-              <td class="right nowrap">
-                <button class="btn ghost small-btn" onclick={() => edit(a)}>{t('bank.update')}</button>
-                <button class="btn ghost small-btn" onclick={() => startRename(a)}>{t('bank.rename')}</button>
-                <button class="btn ghost small-btn" onclick={() => remove(a)}>{t('common.remove')}</button>
+              <td class="right">
+                <RowMenu
+                  label={t('common.moreFor', { name: a.name })}
+                  items={[
+                    { label: t('bank.update'), run: () => edit(a) },
+                    { label: t('bank.rename'), run: () => startRename(a) },
+                    { label: t('common.remove'), run: () => remove(a), danger: true },
+                  ]}
+                />
               </td>
             </tr>
             {#if renaming === a.id}
@@ -199,9 +205,6 @@
       padding: 0 12px;
       font-size: 14px;
     }
-    .nowrap {
-      white-space: normal;
-    }
   }
   .small {
     font-size: 13px;
@@ -210,9 +213,6 @@
   .block {
     display: block;
     font-size: 12px;
-  }
-  .nowrap {
-    white-space: nowrap;
   }
   .add {
     display: grid;
@@ -229,11 +229,6 @@
   .actions {
     display: flex;
     gap: 12px;
-  }
-  .small-btn {
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 13px;
   }
   .editor td {
     background: var(--surface-2);

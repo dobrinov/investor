@@ -2,6 +2,8 @@
   import BankAccounts from '../components/BankAccounts.svelte'
   import PhysicalMetals from '../components/PhysicalMetals.svelte'
   import PrivateHoldings from '../components/PrivateHoldings.svelte'
+  import RowMenu from '../components/RowMenu.svelte'
+  import { tick } from 'svelte'
   import type { Valuation } from '../lib/core'
   import { date, money, rate as formatRate, units } from '../lib/format'
   import { t } from '../lib/i18n.svelte'
@@ -47,6 +49,52 @@
   const fxRates = $derived(new Map(s.fx))
 
   const ageDays = (iso: string) => Math.floor((Date.parse(today) - Date.parse(iso)) / 86_400_000)
+
+  // Net worth and what it is made of.
+  const metals = $derived(s.valuations.filter((v) => v.broker === 'PHYSICAL').reduce((sum, v) => sum + Number(v.value ?? v.cost), 0))
+  const worth = $derived(value + cash + privately)
+  const putIn = $derived(contributed + opening)
+  const growth = $derived(worth - putIn)
+  const parts = $derived(
+    [
+      { key: 'securities', amount: value - metals, color: 'var(--accent)' },
+      { key: 'cash', amount: cash, color: 'var(--side-accent)' },
+      { key: 'private', amount: privately, color: '#2a9ba3' },
+      { key: 'metals', amount: metals, color: '#c08a1e' },
+    ].filter((p) => p.amount > 0),
+  )
+  const percent = (part: number, whole: number) => (whole ? `${((part / whole) * 100).toFixed(1)}%` : '')
+
+  // Things that need the person, gathered in one place.
+  const attention = $derived([
+    ...securities.flatMap((v) => {
+      if (!v.quote) return [{ id: `p:${v.broker}:${v.symbol}`, text: t('overview.attn.noPrice', { symbol: v.symbol }), action: t('overview.updatePrice'), run: () => fixPrice(v) }]
+      const days = ageDays(v.quote.date)
+      return days > STALE_DAYS ? [{ id: `p:${v.broker}:${v.symbol}`, text: t('overview.attn.stale', { symbol: v.symbol, days }), action: t('overview.updatePrice'), run: () => fixPrice(v) }] : []
+    }),
+    ...fxNeeded.filter((c) => !fxRates.has(c)).map((c) => ({ id: `fx:${c}`, text: t('overview.attn.noRate', { currency: c }), action: t('overview.attn.addRate'), run: () => fixRate(c) })),
+  ])
+
+  function fixPrice(v: Valuation): void {
+    tab = 'securities'
+    editPrice(v)
+    void tick().then(() => document.getElementById('holdings-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  function fixRate(currency: string): void {
+    editFx(currency)
+    void tick().then(() => document.getElementById('cash-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  // What you own, one kind at a time.
+  type Kind = 'securities' | 'banks' | 'metals' | 'private'
+  let tab = $state<Kind>('securities')
+  const kinds = $derived<{ id: Kind; count: number }[]>([
+    { id: 'securities', count: securities.length },
+    { id: 'banks', count: s.banks.length },
+    { id: 'metals', count: new Set(s.valuations.filter((v) => v.broker === 'PHYSICAL').map((v) => v.symbol)).size },
+    { id: 'private', count: s.private.length },
+  ])
 
   // Inline editors
   let editing = $state<string | null>(null)
@@ -107,29 +155,58 @@
   <PhysicalMetals />
   <PrivateHoldings />
 {:else}
-  <section class="kpis" aria-label={t('overview.keyFigures')}>
-    <div class="card kpi">
-      <span class="label">{t('overview.netWorth')}</span>
-      <span class="value num">{money(value + cash + privately, base)}</span>
-      <span class="hint">{t('overview.netWorthSplit', { holdings: money(value, base), cash: money(cash, base) })}{#if open.length}{' · '}{t('overview.netWorthPrivate', { amount: money(privately, base) })}{/if}</span>
+  <section class="card hero" aria-labelledby="worth-title">
+    <div class="worth">
+      <h2 id="worth-title" class="label">{t('overview.netWorth')}</h2>
+      <span class="value num">{money(worth, base)}</span>
+      {#if putIn > 0}
+        <span class="change" class:loss={growth < 0}>{t('overview.vsPutIn', { amount: `${growth >= 0 ? '+' : ''}${money(growth, base)}`, percent: `${growth >= 0 ? '+' : ''}${percent(growth, putIn)}` })}</span>
+      {/if}
     </div>
-    <div class="card kpi">
-      <span class="label">{t('overview.unrealised')}</span>
-      <span class="value num" class:loss={unrealised < 0}>{unrealised >= 0 ? '+' : ''}{money(unrealised, base)}</span>
-      <span class="hint">{unpriced ? t('overview.unpriced', { count: unpriced }) : t('overview.onCost', { cost: money(cost, base) })}</span>
-    </div>
-    <div class="card kpi">
-      <span class="label">{t('overview.contributed')}</span>
-      <span class="value num">{money(contributed, base)}</span>
-      {#if opening}<span class="hint">{t('overview.plusOpening', { amount: money(opening, base) })}</span>{/if}
-    </div>
-    <div class="card kpi">
-      <span class="label">{t('overview.realised')}</span>
-      <span class="value num">{money(realised, base)}</span>
-      <span class="hint">{t('overview.dividends', { amount: money(dividends, base) })} · {t('overview.costsSplit', { fees: money(fees, base), tax: money(withheld, base) })}</span>
+    <div class="split">
+      {#if parts.length}
+        <div class="bar" role="img" aria-label={parts.map((p) => `${t(`overview.part.${p.key}` as 'overview.part.cash')} ${percent(p.amount, worth)}`).join(', ')}>
+          {#each parts as p (p.key)}<span style="flex: {p.amount}; background: {p.color}"></span>{/each}
+        </div>
+        <div class="legend">
+          {#each parts as p (p.key)}
+            <div><span class="key"><i style="background: {p.color}"></i>{t(`overview.part.${p.key}` as 'overview.part.cash')}</span><span class="num">{money(p.amount, base)}</span></div>
+          {/each}
+        </div>
+      {/if}
+      <dl class="facts">
+        <div><dt>{t('overview.unrealised')}</dt><dd class="num" class:loss={unrealised < 0}>{unrealised >= 0 ? '+' : ''}{money(unrealised, base)}</dd></div>
+        <div><dt>{t('overview.putIn')}</dt><dd class="num">{money(putIn, base)}</dd></div>
+        <div><dt>{t('overview.realised')}</dt><dd class="num">{money(realised, base)}</dd></div>
+        <div><dt>{t('overview.dividendsLabel')}</dt><dd class="num">{money(dividends, base)}</dd></div>
+      </dl>
     </div>
   </section>
 
+  {#if attention.length}
+    <section class="attention" aria-labelledby="attention-title">
+      <h2 id="attention-title">{t('overview.attention')} <span class="count num">{attention.length}</span></h2>
+      <ul>
+        {#each attention as item (item.id)}
+          <li><span>{item.text}</span><button class="btn ghost warn-btn" onclick={item.run}>{item.action}</button></li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
+
+  <div class="owned">
+    <h2>{t('overview.owned')}</h2>
+    <div class="tabs" role="tablist" aria-label={t('overview.tabs')}>
+      {#each kinds as kind (kind.id)}
+        <button role="tab" id="tab-{kind.id}" aria-selected={tab === kind.id} aria-controls="panel-{kind.id}" onclick={() => (tab = kind.id)}>
+          {t(`overview.tab.${kind.id}` as 'overview.tab.banks')}<span class="num tab-count">{kind.count}</span>
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  <div role="tabpanel" id="panel-{tab}" aria-labelledby="tab-{tab}" class="panel">
+  {#if tab === 'securities'}
   <section class="card" aria-labelledby="holdings-title">
     <h2 id="holdings-title">{t('overview.holdings')}</h2>
     <p class="muted small">{t('overview.pricesNote')}</p>
@@ -137,7 +214,7 @@
       <table>
         <thead>
           <tr>
-            <th>{t('common.instrument')}</th><th>{t('common.broker')}</th><th class="right">{t('common.units')}</th>
+            <th>{t('common.instrument')}</th><th class="right">{t('common.units')}</th>
             <th class="right">{t('overview.cost', { currency: base })}</th><th>{t('overview.price')}</th>
             <th class="right">{t('overview.value', { currency: base })}</th><th class="right">{t('overview.gain')}</th><th></th>
           </tr>
@@ -146,30 +223,37 @@
           {#each securities as v (v.broker + v.symbol)}
             {@const key = `${v.broker}:${v.symbol}`}
             <tr>
-              <td><strong class="num">{v.symbol}</strong> <span class="muted">{names.get(v.symbol)?.name ?? ''}</span></td>
-              <td>{v.broker}</td>
+              <td><strong class="num">{v.symbol}</strong><span class="muted sub-line">{[names.get(v.symbol)?.name, v.broker].filter(Boolean).join(' · ')}</span></td>
               <td class="right num">{units(v.units)}</td>
               <td class="right num">{money(v.cost)}</td>
               <td>
                 {#if v.quote}
                   <span class="num">{money(v.quote.price.amount, v.quote.price.currency)}</span>
-                  <span class="muted small-inline">{date(v.quote.date)} · {t(`source.${v.quote.source}`)}</span>
-                  {#if ageDays(v.quote.date) > STALE_DAYS}<span class="pill warn">{t('overview.stale')}</span>{/if}
+                  {#if ageDays(v.quote.date) > STALE_DAYS}<span class="pill warn sub-pill">{t('overview.stale')}</span>{:else}<span class="muted sub-line">{date(v.quote.date)} · {t(`source.${v.quote.source}`)}</span>{/if}
                 {:else}
                   <span class="pill warn">{t('overview.noPrice')}</span>
                 {/if}
               </td>
               <td class="right num">{v.value !== undefined ? money(v.value) : v.missing_fx ? t('overview.needsRate') : '—'}</td>
               <td class="right num" class:loss={Number(v.gain ?? 0) < 0}>{v.gain !== undefined ? money(v.gain) : ''}</td>
-              <td class="right"><button class="btn ghost small-btn" onclick={() => editPrice(v)}>{t('overview.updatePrice')}</button></td>
+              <td class="right">
+                <RowMenu
+                  label={t('common.moreFor', { name: v.symbol })}
+                  items={[
+                    { label: t('overview.updatePrice'), run: () => editPrice(v) },
+                    { label: t('overview.trade'), run: () => (app.view = 'trade') },
+                    { label: t('overview.inLedger'), run: () => (app.view = 'ledger') },
+                  ]}
+                />
+              </td>
             </tr>
             {#if editing === key}
               <tr class="editor">
-                <td colspan="8">{@render priceForm(v)}</td>
+                <td colspan="7">{@render priceForm(v)}</td>
               </tr>
             {/if}
           {:else}
-            <tr><td colspan="8" class="muted">{t('overview.noHoldings')}</td></tr>
+            <tr><td colspan="7" class="muted">{t('overview.noHoldings')}</td></tr>
           {/each}
         </tbody>
       </table>
@@ -208,9 +292,14 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   {/snippet}
 
-  <BankAccounts />
-  <PhysicalMetals />
-  <PrivateHoldings />
+  {:else if tab === 'banks'}
+    <BankAccounts />
+  {:else if tab === 'metals'}
+    <PhysicalMetals />
+  {:else}
+    <PrivateHoldings />
+  {/if}
+  </div>
 
   <div class="row">
     <section class="card" aria-labelledby="cash-title">
@@ -304,24 +393,202 @@
     max-width: 560px;
     line-height: 1.55;
   }
-  .kpis {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
+  .hero {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px 40px;
+    padding: 28px;
   }
-  .kpi {
+  .hero .worth {
+    flex: 1 1 260px;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
+    text-align: left;
   }
-  .label,
-  .hint {
-    font-size: 13px;
+  .label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--muted);
   }
   .value {
-    font-size: 26px;
+    font-size: 44px;
     font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .change {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--gain, #1d6b3a);
+  }
+  .split {
+    flex: 2 1 420px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    justify-content: center;
+  }
+  .bar {
+    display: flex;
+    gap: 2px;
+    height: 14px;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .bar span {
+    min-width: 4px;
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    font-size: 14px;
+  }
+  .legend div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .key {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-2);
+  }
+  .key i {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+  .legend .num {
+    font-size: 16px;
+  }
+  .facts {
+    margin: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    font-size: 13px;
+  }
+  .facts dt {
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 2px 0 0;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .attention {
+    background: var(--warn-soft);
+    border: 1px solid var(--warn-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .attention h2 {
+    margin: 0;
+    padding: 14px 20px 8px;
+    font-size: 15px;
+    color: var(--warn-ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .count {
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--warn);
+    color: var(--surface);
+    font-size: 12px;
+  }
+  .attention ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .attention li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--warn-line);
+    font-size: 15px;
+  }
+  .attention li span {
+    flex: 1 1 280px;
+  }
+  .warn-btn {
+    min-height: 40px;
+    border-color: var(--warn-line);
+    color: var(--warn-ink);
+  }
+  .warn-btn:hover {
+    background: var(--warn-tint);
+  }
+  .owned {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 20px;
+    margin-top: 8px;
+  }
+  .owned h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ink-2);
+    font: 500 14px var(--sans);
+    cursor: pointer;
+  }
+  .tabs button:hover {
+    background: var(--surface-2);
+  }
+  .tabs button[aria-selected='true'] {
+    background: var(--accent-tint);
+    color: var(--accent-strong);
+    font-weight: 600;
+  }
+  .tab-count {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: -8px;
+  }
+  .sub-line {
+    display: block;
+    font-size: 13px;
+  }
+  .sub-pill {
+    display: table;
+    margin-top: 2px;
   }
   .loss {
     color: var(--warn);
@@ -447,31 +714,26 @@
   }
 
   @media (max-width: 720px) {
-    .kpis {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+    .hero {
+      padding: 18px;
+      gap: 16px;
     }
-    .kpi {
-      padding: 12px;
-      gap: 2px;
+    .value {
+      font-size: 34px;
     }
-    .kpi:first-child {
-      grid-column: 1 / -1;
-      padding: 16px;
+    .facts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .kpi:not(:first-child) .hint {
-      display: none;
+    .owned {
+      flex-direction: column;
+      align-items: stretch;
     }
-    .kpi:not(:first-child) .label {
-      font-size: 12px;
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .kpi:not(:first-child) {
-      padding: 10px;
-    }
-    .kpi:not(:first-child) .value {
-      font-size: 14px;
-      white-space: nowrap;
-      letter-spacing: -0.02em;
+    .tabs button {
+      justify-content: center;
     }
     .table-wrap {
       display: none;

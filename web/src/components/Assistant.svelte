@@ -110,11 +110,6 @@
   <aside id="assistant" class="panel" aria-label={t('assistant.title')}>
     <header>
       <h2>{t('assistant.title')}</h2>
-      {#if available}
-        <button class="icon" class:on={mode === 'connect'} onclick={() => (mode = mode === 'connect' ? 'chat' : 'connect')} title={t('bridge.open')} aria-label={t('bridge.open')} aria-pressed={mode === 'connect'}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" /></svg>
-        </button>
-      {/if}
       {#if available && settings && !setup && mode === 'chat'}
         <span class="model muted" title={settings.url}>{settings.model}</span>
         <button class="icon" onclick={() => ((setup = true), (form = { ...settings! }))} title={t('assistant.settings')} aria-label={t('assistant.settings')}>
@@ -129,6 +124,14 @@
       </button>
     </header>
 
+    {#if available}
+      <div class="modes" role="tablist" aria-label={t('assistant.title')}>
+        <button role="tab" aria-selected={mode === 'chat'} onclick={() => (mode = 'chat')}>{t('assistant.tab.chat')}</button>
+        <button role="tab" aria-selected={mode === 'connect'} onclick={() => (mode = 'connect')}>
+          {t('assistant.tab.tool')}{#if bridge.on}<span class="live-dot" class:live={bridge.client}></span>{/if}
+        </button>
+      </div>
+    {/if}
     {#if bridge.approvals.length}
       {@const a = bridge.approvals[0]}
       <div class="approve waiting outside">
@@ -176,7 +179,6 @@
         {/if}
         {#if bridge.error}<p class="error">{t('bridge.failed', { reason: bridge.error })}</p>{/if}
         <p class="muted small">{t('bridge.privacy')}</p>
-        <button class="link left" onclick={() => (mode = 'chat')}>{t('bridge.backToChat')}</button>
       </div>
     {:else if setup || !settings}
       <form class="body setup" onsubmit={(e) => (e.preventDefault(), saveSetup())}>
@@ -214,7 +216,6 @@
           {#if settings}<button type="button" class="btn ghost" onclick={() => (setup = false)}>{t('common.cancel')}</button>{/if}
           {#if settings}<button type="button" class="link" onclick={forget}>{t('assistant.forget')}</button>{/if}
         </div>
-        <button type="button" class="link left" onclick={() => (mode = 'connect')}>{t('bridge.open')}</button>
       </form>
     {:else if conversation}
       <div class="body chat" bind:this={list} aria-live="polite">
@@ -289,14 +290,53 @@
     border-radius: 50%;
     display: grid;
     place-items: center;
-    color: #fff;
-    background: linear-gradient(135deg, #4a6cff, #2a9ba3 60%, #45c75b);
+    color: var(--on-accent);
+    background: var(--accent);
     box-shadow: 0 10px 28px rgb(17 24 33 / 0.28);
     cursor: pointer;
     transition: transform 0.15s;
   }
   .magic:hover {
     transform: scale(1.06);
+    background: var(--accent-strong);
+  }
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    margin: 12px 16px 0;
+    padding: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+  }
+  .modes button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ink-2);
+    font: 500 14px var(--sans);
+    cursor: pointer;
+  }
+  .modes button[aria-selected='true'] {
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgb(17 24 33 / 0.12);
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .live-dot.live {
+    background: #1d6b3a;
   }
   .magic.on {
     transform: rotate(20deg);
@@ -354,8 +394,7 @@
     color: var(--ink-2);
     cursor: pointer;
   }
-  .icon:hover,
-  .icon.on {
+  .icon:hover {
     background: var(--surface-2);
   }
   .outside {

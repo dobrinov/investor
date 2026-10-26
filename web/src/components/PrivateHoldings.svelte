@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RowMenu from './RowMenu.svelte'
   // Private holdings: money in something without a market price, such as an
   // employer co-investment. Added here, valued at cost or at a value set by
   // hand, and left out of projections.
@@ -171,15 +172,19 @@
               </td>
               <td><span class="pill" class:warn={!h.paid_out && h.payout === 'unknown'}>{t(`private.payout.${h.paid_out?.taxed_as ?? h.payout}`)}</span></td>
               <td class="right">
-                <div class="row-actions">
-                {#if h.paid_out}
-                  <button class="btn ghost small-btn" onclick={() => undoPayout(h)}>{t('private.undoPayout')}</button>
-                {:else}
-                  <button class="btn ghost small-btn" onclick={() => startPayout(h)}>{t('private.recordPayout')}</button>
-                  <button class="btn ghost small-btn" onclick={() => editValue(h)}>{t('private.setValue')}</button>
-                {/if}
-                <button class="btn ghost small-btn" onclick={() => remove(h)}>{t('common.remove')}</button>
-                </div>
+                <RowMenu
+                  label={t('common.moreFor', { name: h.name })}
+                  items={h.paid_out
+                    ? [
+                        { label: t('private.undoPayout'), run: () => undoPayout(h) },
+                        { label: t('common.remove'), run: () => remove(h), danger: true },
+                      ]
+                    : [
+                        { label: t('private.recordPayout'), run: () => startPayout(h) },
+                        { label: t('private.setValue'), run: () => editValue(h) },
+                        { label: t('common.remove'), run: () => remove(h), danger: true },
+                      ]}
+                />
               </td>
             </tr>
             {#if paying === h.id}
@@ -279,19 +284,6 @@
   .hint {
     font-weight: 400;
     color: var(--muted);
-  }
-  /* Buttons wrap onto a second line rather than push past the card. */
-  .row-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 6px;
-  }
-  .small-btn {
-    white-space: nowrap;
-    min-height: 36px;
-    padding: 0 12px;
-    font-size: 13px;
   }
   .editor td {
     background: var(--surface-2);

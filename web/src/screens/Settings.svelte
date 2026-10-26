@@ -2,6 +2,7 @@
   import { keepSessionKey, setStaysUnlocked, staysUnlocked } from '../lib/storage'
   import { countries } from '../lib/configs'
   import { country } from '../lib/format'
+  import LanguagePicker from '../components/LanguagePicker.svelte'
   import { t } from '../lib/i18n.svelte'
   import { app } from '../lib/state.svelte'
 
@@ -47,6 +48,11 @@
   <h1>{t('nav.settings')}</h1>
   <p class="muted">{t('settings.subtitle')}</p>
 </header>
+
+<section class="card" aria-labelledby="lang-title">
+  <h2 id="lang-title">{t('common.language')}</h2>
+  <LanguagePicker light />
+</section>
 
 <section class="card" aria-labelledby="pw-title">
   <h2 id="pw-title">{t('settings.passwordTitle')}</h2>

@@ -2,7 +2,6 @@
   import { desktop, savesInPlace } from '../lib/files'
   import Assistant from '../components/Assistant.svelte'
   import ExitLink from '../components/ExitLink.svelte'
-  import LanguagePicker from '../components/LanguagePicker.svelte'
   import Logo from '../components/Logo.svelte'
   import { t } from '../lib/i18n.svelte'
   import { app, type View } from '../lib/state.svelte'
@@ -18,16 +17,16 @@
 
   const IDLE_LOCK_MS = 15 * 60 * 1000
 
-  const nav: { view: View; label: () => string; icon: string }[] = [
+  const nav: { view: View; label: () => string; icon: string; records?: boolean }[] = [
     { view: 'overview', label: () => t('nav.overview'), icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z' },
     { view: 'trade', label: () => t('nav.trade'), icon: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4' },
     { view: 'goals', label: () => t('nav.goals'), icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z' },
     { view: 'projections', label: () => t('nav.projections'), icon: 'M3 20h18M4 16l5-6 4 3 7-8' },
-    { view: 'ledger', label: () => t('nav.ledger'), icon: 'M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h8' },
-    { view: 'import', label: () => t('nav.import'), icon: 'M12 3v12M7 10l5 5 5-5M4 19h16' },
     { view: 'tax', label: () => t('nav.tax'), icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h7M14 3v5h5' },
-    { view: 'guide', label: () => t('nav.guide'), icon: 'M12 4c-2-1-5-1-8 0v15c3-1 6-1 8 0 2-1 5-1 8 0V4c-3-1-6-1-8 0zM12 4v15' },
-    { view: 'settings', label: () => t('nav.settings'), icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4' },
+    { view: 'ledger', label: () => t('nav.ledger'), icon: 'M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4zM8 9h8M8 13h8', records: true },
+    { view: 'import', label: () => t('nav.import'), icon: 'M12 3v12M7 10l5 5 5-5M4 19h16', records: true },
+    { view: 'guide', label: () => t('nav.guide'), icon: 'M12 4c-2-1-5-1-8 0v15c3-1 6-1 8 0 2-1 5-1 8 0V4c-3-1-6-1-8 0zM12 4v15', records: true },
+    { view: 'settings', label: () => t('nav.settings'), records: true, icon: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4' },
   ]
 
   // On a phone the sidebar becomes a top bar, these tabs and a "More" sheet.
@@ -123,26 +122,17 @@
         <span>{t('example.text')}</span>
       </div>
       <button class="save" onclick={lock}>{t('example.close')}</button>
-    {:else}
-    <div class="file">
-      <span class="name num">{app.fileName}</span>
-      {#if app.changes > 0}
-        <span class="unsaved">{t('shell.unsaved', { count: app.changes })}</span>
-        <span>{app.draftKept ? t('shell.keptInBrowser') : t('shell.notKept')}</span>
-      {:else}
-        <span>{t('shell.allSaved')}</span>
-      {/if}
-    </div>
-    <button class="save" onclick={() => save()} disabled={saving} title={app.hasFile ? t('shell.saveHint', { name: app.fileName }) : undefined}>
-      {saving ? t('shell.saving') : t('shell.save')}
-    </button>
-    <button class="save-as" onclick={() => save(true)} disabled={saving}>{t('shell.saveAs')}</button>
-    {#if !savesInPlace}<p class="save-note">{t('open.downloads')}</p>{/if}
-    {#if saveError}<p class="save-error" role="alert">{saveError}</p>{/if}
     {/if}
 
     <nav aria-label={t('nav.label')}>
-      {#each nav as item (item.view)}
+      {#each nav.filter((n) => !n.records) as item (item.view)}
+        <button class="nav" class:on={app.view === item.view} aria-current={app.view === item.view ? 'page' : undefined} onclick={() => (app.view = item.view)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d={item.icon} /></svg>
+          {item.label()}
+        </button>
+      {/each}
+      <span class="group">{t('nav.records')}</span>
+      {#each nav.filter((n) => n.records) as item (item.view)}
         <button class="nav" class:on={app.view === item.view} aria-current={app.view === item.view ? 'page' : undefined} onclick={() => (app.view = item.view)}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d={item.icon} /></svg>
           {item.label()}
@@ -151,16 +141,34 @@
     </nav>
 
     <div class="bottom">
-      <LanguagePicker />
-      <p class="privacy">{t('shell.privacy')}</p>
-      <button class="nav" onclick={lock}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-        {t('shell.lock')}
-      </button>
+      {#if !app.example}
+        <div class="file">
+          <span class="name num">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            {app.fileName}
+          </span>
+          {#if app.changes > 0}
+            <span class="unsaved">{t('shell.unsaved', { count: app.changes })}</span>
+            <span>{app.draftKept ? t('shell.keptInBrowser') : t('shell.notKept')}</span>
+          {:else}
+            <span>{t('shell.allSaved')}</span>
+          {/if}
+          <button class="lock-side" onclick={lock}>{t('shell.lock')}</button>
+        </div>
+      {/if}
     </div>
   </aside>
 
   <main>
+    {#if !app.example}
+      <div class="savebar">
+        {#if app.changes > 0}<span class="pill-unsaved">{t('shell.unsavedShort', { count: app.changes })}</span>{/if}
+        {#if saveError}<span class="save-error" role="alert">{saveError}</span>{/if}
+        <button class="btn ghost" onclick={() => save(true)} disabled={saving}>{t('shell.saveAs')}</button>
+        <button class="btn" onclick={() => save()} disabled={saving} title={app.hasFile ? t('shell.saveHint', { name: app.fileName }) : undefined}>{saving ? t('shell.saving') : t('shell.saveShort')}</button>
+      </div>
+      {#if !savesInPlace && app.changes > 0}<p class="save-note-main muted">{t('open.downloads')}</p>{/if}
+    {/if}
     {#if app.example}<p class="example-banner phone-only" role="status"><strong>{t('example.title')}</strong> {t('example.text')}</p>{/if}
     {#if saveError}<p class="save-error phone-only" role="alert">{saveError}</p>{/if}
     {#if app.view === 'overview'}
@@ -233,7 +241,6 @@
       </div>
       {#if !desktop}<a class="more-exit" href="../">{t('shell.exitLong')}</a>{/if}
       <div class="more-bottom">
-        <LanguagePicker light />
         <button class="lock" onclick={lock}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
           {t('shell.lock')}
@@ -387,12 +394,76 @@
     gap: 10px;
     padding-top: 16px;
   }
-  .privacy {
-    margin: 0;
-    padding: 0 4px;
-    font-size: 12px;
-    line-height: 1.45;
+  .group {
+    margin-top: 14px;
+    padding: 12px 12px 6px;
+    border-top: 1px solid var(--side-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: #9aa5b1;
+  }
+  .name svg {
+    vertical-align: -2px;
+    margin-right: 4px;
+    color: var(--side-accent);
+  }
+  .lock-side {
+    margin-top: 6px;
+    min-height: 40px;
+    border: 1px solid #2c3a4c;
+    border-radius: 8px;
+    background: none;
+    color: var(--side-text);
+    font: 500 14px var(--sans);
+    cursor: pointer;
+  }
+  .lock-side:hover {
+    background: var(--side-active);
+    color: #fff;
+  }
+  /* Save sits above every screen and stays in view while it scrolls. */
+  .savebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin: -32px -32px -8px;
+    padding: 12px 32px;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .pill-unsaved {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--warn-tint);
+    color: var(--warn-ink);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .pill-unsaved::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warn);
+  }
+  .savebar .save-error {
+    color: var(--warn);
+    font-size: 13px;
+  }
+  .save-note-main {
+    margin: 0;
+    text-align: right;
+    font-size: 13px;
   }
   .topbar,
   .tabbar,
@@ -522,6 +593,9 @@
     }
   }
   @media (max-width: 720px) {
+    .shell {
+      flex-direction: column;
+    }
     aside {
       display: none;
     }
@@ -571,6 +645,10 @@
     main {
       padding: 20px 16px calc(96px + env(safe-area-inset-bottom));
       gap: 16px;
+    }
+    .savebar,
+    .save-note-main {
+      display: none;
     }
     .phone-only {
       display: block;
