@@ -6,6 +6,7 @@ use chrono::{Datelike, NaiveDate};
 use rust_decimal::Decimal;
 use serde::Serialize;
 
+use crate::jurisdiction::CostBasis;
 use crate::ledger::{self, AccountKind, Ledger, Venue};
 use crate::lots::{Lot, Lots};
 use crate::metal;
@@ -79,7 +80,16 @@ pub struct Realization {
 }
 
 pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
+    realized_gains_by(ledger, year, CostBasis::Fifo)
+}
+
+/// Realised gains with the cost worked out the way a country taxes them.
+/// With an average cost, each sale is one row whose cost is its share of
+/// everything held at the time; the books themselves stay first in, first out.
+pub fn realized_gains_by(ledger: &Ledger, year: i32, basis: CostBasis) -> Vec<Realization> {
     let mut out = Vec::new();
+    // Units and cost held per account, for an average cost.
+    let mut pools: BTreeMap<String, (Decimal, Decimal)> = BTreeMap::new();
     let mut lots = Lots::default();
     let mut first_paid: BTreeMap<&str, NaiveDate> = BTreeMap::new();
     for entry in ledger.entries_by_date() {
@@ -87,10 +97,21 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             first_paid.entry(p.account.as_str()).or_insert(entry.date);
         }
         let mut disposals = Vec::new();
+        let mut average_cost = None;
         for p in &entry.postings {
             match p.units {
-                Some(u) if u > Decimal::ZERO => lots.open(&p.account, entry.date, &entry.id, u, p.base),
-                Some(u) if u < Decimal::ZERO => disposals.push(lots.dispose(&p.account, -u).ok()),
+                Some(u) if u > Decimal::ZERO => {
+                    lots.open(&p.account, entry.date, &entry.id, u, p.base);
+                    let pool = pools.entry(p.account.clone()).or_default();
+                    *pool = (pool.0 + u, pool.1 + p.base);
+                }
+                Some(u) if u < Decimal::ZERO => {
+                    disposals.push(lots.dispose(&p.account, -u).ok());
+                    let pool = pools.entry(p.account.clone()).or_default();
+                    let cost = if pool.0.is_zero() { Decimal::ZERO } else { (pool.1 * -u / pool.0).round_dp(2) };
+                    *pool = (pool.0 + u, pool.1 - cost);
+                    average_cost.get_or_insert(cost);
+                }
                 _ => {}
             }
         }
@@ -132,8 +153,12 @@ pub fn realized_gains(ledger: &Ledger, year: i32) -> Vec<Realization> {
             held_from: disposal.as_ref().and_then(|d| d.lots.first()).map(|l| l.opened),
             private: false,
         };
-        match disposal {
-            Some(d) if d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
+        match (basis, disposal) {
+            (CostBasis::Average, _) => {
+                let cost = average_cost.unwrap_or(sale.cost);
+                out.push(Realization { cost, gain: sale.proceeds - cost, ..sale });
+            }
+            (CostBasis::Fifo, Some(d)) if d.lots.len() > 1 => out.extend(by_lot(&sale, &d.lots)),
             _ => out.push(sale),
         }
     }

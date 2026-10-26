@@ -294,7 +294,7 @@ pub fn outlook(ledger: &Ledger, prices: &PriceBook, plan: &Plan, input: &TradeIn
             // Classify each purchase the sale draws on, so a holding period counts.
             let (mut after, mut after_prices) = (ledger.clone(), prices.clone());
             let entry = record(&mut after, &mut after_prices, input)?;
-            let parts: Vec<_> = reports::realized_gains(&after, entry.date.year()).into_iter().filter(|r| r.entry_id == entry.id).collect();
+            let parts: Vec<_> = reports::realized_gains_by(&after, entry.date.year(), pack.capital_gains.cost_basis).into_iter().filter(|r| r.entry_id == entry.id).collect();
             let treatments: Vec<Treatment> = parts.iter().map(|r| pack.classify(r)).collect();
             let treatment = if treatments.contains(&Treatment::Taxable) {
                 Treatment::Taxable

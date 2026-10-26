@@ -10,12 +10,14 @@ website = "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topi
 tax_year = 2026
 currency = "CAD"
 verified = false
-notes = "Draft rules. Half of the net capital gain is taxable (the planned rise to two thirds was cancelled) and is taxed at your combined federal and provincial marginal rate; 30% is assumed, so the estimate is 15% of the net gain. Canada works out cost as the average cost of identical shares (adjusted cost base), not first in, first out, so the gain can differ when you bought at several prices. The superficial loss rule (buying back within 30 days of a loss) is not modelled. TFSAs and RRSPs are tax-free and not modelled. Foreign property costing over CAD 100,000 must be reported on Form T1135. Amounts must be in Canadian dollars at the Bank of Canada rate."
+notes = "Draft rules. Half of the net capital gain is taxable (the planned rise to two thirds was cancelled) and is taxed at your combined federal and provincial marginal rate; 30% is assumed, so the estimate is 15% of the net gain. Cost is the average cost of identical shares (adjusted cost base), as Canada requires. The superficial loss rule (buying back within 30 days of a loss) is not modelled. TFSAs and RRSPs are tax-free and not modelled. Foreign property costing over CAD 100,000 must be reported on Form T1135. Amounts must be in Canadian dollars at the Bank of Canada rate."
 
 [capital_gains]
 rate = "0.30"
 form = "Schedule 3 (T1)"
 inclusion_rate = "0.5"
+# Adjusted cost base: the average cost of all identical units held.
+cost_basis = "average"
 
 [dividends]
 rate = "0.30"

@@ -114,3 +114,25 @@ fn an_amount_buys_units_rounded_down() {
     assert!(trade::units_for(dec("1000"), dec("132.275"), false) * dec("132.275") <= dec("1000"));
     assert_eq!(trade::units_for(dec("1000"), Decimal::ZERO, false), Decimal::ZERO);
 }
+
+#[test]
+fn an_average_cost_shares_the_cost_of_every_purchase() {
+    use investor_core::jurisdiction::CostBasis;
+    use investor_core::reports;
+    let (mut ledger, mut prices) = books();
+    // 4 VUAA at 110 from the statement, 4 more at 150 now, then 4 sold.
+    let bought = trade::record(&mut ledger, &mut prices, &trade(Side::Buy, "VUAA", "4", "150", "EUR")).unwrap();
+    let mut sale = trade(Side::Sell, "VUAA", "4", "160", "EUR");
+    sale.id = "sell".into();
+    sale.date = NaiveDate::from_ymd_opt(2026, 12, 2).unwrap();
+    let sold = trade::record(&mut ledger, &mut prices, &sale).unwrap();
+    let bought_cost: Decimal = bought.postings.iter().filter(|p| p.units.is_some()).map(|p| p.base).sum();
+
+    let fifo = reports::realized_gains_by(&ledger, 2026, CostBasis::Fifo);
+    let average = reports::realized_gains_by(&ledger, 2026, CostBasis::Average);
+    let (fifo, average) = (fifo.iter().find(|r| r.entry_id == sold.id).unwrap(), average.iter().find(|r| r.entry_id == sold.id).unwrap());
+    assert_eq!(fifo.cost, dec("440"));
+    assert_eq!(average.cost, ((dec("440") + bought_cost) / dec("2")).round_dp(2));
+    assert_eq!(average.proceeds, fifo.proceeds);
+    assert_eq!(average.gain, average.proceeds - average.cost);
+}

@@ -368,11 +368,12 @@ fn record_trade(v: &mut Vault, args: &Value, env: &Env) -> Result<Value> {
 
 fn realized_gains(v: &Vault, args: &Value, env: &Env) -> Result<Value> {
     let year = args["year"].as_i64().ok_or_else(|| bad("year is required"))? as i32;
-    let gains = reports::realized_gains(&v.ledger, year);
     let employment = reports::employment_income(&v.ledger, year);
     let Some(pack) = (env.pack)(&v.settings.tax_residency, year) else {
+        let gains = reports::realized_gains(&v.ledger, year);
         return Ok(json!({ "sales": gains, "employment_income": employment, "tax": format!("no tax pack for {} {year}", v.settings.tax_residency) }));
     };
+    let gains = reports::realized_gains_by(&v.ledger, year, pack.capital_gains.cost_basis);
     let sales: Vec<Value> = gains.iter().map(|g| json!({ "sale": g, "treatment": pack.classify(g) })).collect();
     Ok(json!({
         "sales": sales,

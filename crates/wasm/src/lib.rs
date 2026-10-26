@@ -199,7 +199,7 @@ impl Session {
     /// Realised gains for a year under a jurisdiction pack, as JSON.
     pub fn gains(&self, year: i32, pack_toml: &str) -> Result<String, JsError> {
         let pack = JurisdictionPack::from_toml(pack_toml).map_err(core_error)?;
-        let rows: Vec<GainRow> = reports::realized_gains(&self.vault.ledger, year)
+        let rows: Vec<GainRow> = reports::realized_gains_by(&self.vault.ledger, year, pack.capital_gains.cost_basis)
             .into_iter()
             .map(|r| GainRow { treatment: pack.classify(&r), realization: r })
             .collect();

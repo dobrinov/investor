@@ -69,6 +69,19 @@ pub struct CapitalGains {
     /// The share of the net gain that is taxed, e.g. 0.5 in Canada.
     #[serde(default)]
     pub inclusion_rate: Option<Decimal>,
+    /// How the cost of units sold is worked out for tax.
+    #[serde(default)]
+    pub cost_basis: CostBasis,
+}
+
+/// First in, first out (most countries), or the average cost of all the
+/// identical units held (Canada's adjusted cost base).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CostBasis {
+    #[default]
+    Fifo,
+    Average,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
