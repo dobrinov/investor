@@ -541,3 +541,57 @@ footer a {
   min-height: 44px;
   color: var(--muted);
 }
+
+/* Changelog, filled from CHANGELOG.md by landing.ts */
+.releases {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.release h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.release .version {
+  font-family: var(--mono);
+  font-weight: 400;
+}
+.release time {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.release ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #c3ccd8;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.release li + li {
+  margin-top: 6px;
+}
+.release li::marker {
+  color: var(--muted);
+}
+#changelog .more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 15px;
+}
+@media (max-width: 600px) {
+  .releases {
+    grid-template-columns: 1fr;
+  }
+  .release {
+    padding: 20px;
+  }
+  footer .links {
+    flex-wrap: wrap;
+    gap: 0 20px;
+  }
+}
