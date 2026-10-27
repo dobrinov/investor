@@ -30,6 +30,15 @@
   --part-private: #2a9ba3;
   --part-metals: #c08a1e;
   --part-crypto: #7a4fc2;
+  /* Chart series, in this order; checked for colour-blind readers. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
   --sans: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   color-scheme: light;
@@ -65,6 +74,14 @@
     --part-private: #2a9ba3;
     --part-metals: #d6a23a;
     --part-crypto: #b799ea;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
     color-scheme: dark;
   }
 }

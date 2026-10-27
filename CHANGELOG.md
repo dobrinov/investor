@@ -3,6 +3,10 @@
 What changed in each release of Investor, newest first. Downloads are on
 [GitHub](https://github.com/dobrinov/investor/releases).
 
+## 0.8.0 — 2026-10-27
+
+- Your CFO draws charts: where your money is, debts against savings, the plan against what you did, or anything you ask about. Every chart can also be shown as a table.
+
 ## 0.7.2 — 2026-10-26
 
 - On macOS, .invest files are a file type of their own, so Finder shows them as Investor files and opens them with the app.

@@ -226,6 +226,48 @@ test('your CFO can use Claude Code with your own sign-in', async ({ page }) => {
   expect(asked[0].prompt).toContain('"high_interest_debt"')
 })
 
+test('your CFO draws charts in the briefing and in answers', async ({ page }) => {
+  await page.addInitScript(() => {
+    const briefing = {
+      headline: 'You are in good shape.',
+      summary: '',
+      actions: [],
+      watch: [],
+      questions: [],
+      charts: [
+        { type: 'share', title: 'Where your money is', unit: 'EUR', items: [{ label: 'Securities', value: 30000 }, { label: 'Cash', value: 10000 }] },
+        { type: 'bar', title: 'Emergency fund', unit: 'EUR', items: [{ label: 'Cash', value: 10000, target: 12000 }] },
+        { type: 'nonsense', title: 'Dropped' },
+      ],
+    }
+    const answer = 'Here is the trend.\n```chart\n{"type":"line","title":"Net worth","unit":"EUR","labels":["Jan","Feb","Mar"],"series":[{"name":"Net worth","values":[1,2,3]}]}\n```\nIt keeps rising.'
+    ;(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { system: string }) => {
+        if (cmd === 'bridge_next') return await new Promise((r) => setTimeout(() => r(null), 2000))
+        if (cmd === 'claude_code_path') return '/Users/me/.local/bin/claude'
+        if (cmd === 'model_request') return { status: 404, body: '' }
+        if (cmd === 'claude_code_ask') return args.system.includes('```chart') ? answer : JSON.stringify(briefing)
+        return null
+      },
+    }
+  })
+  await page.goto('/app/#example')
+  await page.locator('aside nav').getByRole('button', { name: 'Your CFO' }).click()
+  await page.getByRole('button', { name: 'Find models on this computer' }).click()
+  await page.getByRole('button', { name: /Use Claude Code/ }).click()
+  await page.getByRole('button', { name: 'Get a briefing' }).click()
+  const charts = page.getByRole('region', { name: 'Charts' })
+  await expect(charts.locator('figure')).toHaveCount(2)
+  await expect(charts.getByRole('img', { name: 'Where your money is' })).toBeVisible()
+  await expect(charts.getByText('75%').first()).toBeVisible()
+  await expect(charts.getByText('Emergency fund')).toBeVisible()
+  await page.getByLabel('Ask about a decision').fill('How is my net worth going?')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('img', { name: 'Net worth' })).toBeVisible()
+  await expect(page.getByText('It keeps rising.')).toBeVisible()
+  await expect(page.getByText('```chart')).toHaveCount(0)
+})
+
 test('crypto has its own tab and slice of net worth', async ({ page }) => {
   await page.goto('/app/#example')
   await expect(page.getByRole('img', { name: /Crypto/ })).toBeVisible()

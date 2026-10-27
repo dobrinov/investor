@@ -3,6 +3,7 @@
 // from the app; the model explains them and puts them in order. Briefings
 // stay in memory only, never in browser storage.
 import { complete, Conversation, loadSettings, type ModelSettings } from './assistant.svelte'
+import { CHART_GUIDE, figure, type Figure } from './figure'
 import { i18n } from './i18n.svelte'
 import { app } from './state.svelte'
 
@@ -19,6 +20,8 @@ export interface Briefing {
   actions: Action[]
   watch: string[]
   questions: string[]
+  /** Charts that make the picture clearer, drawn by the app. */
+  charts: Figure[]
   /** The model's answer as written, when it was not the JSON asked for. */
   text?: string
 }
@@ -41,7 +44,7 @@ You are not a licensed adviser: do not name specific securities to buy; talk in 
 
 /** The CFO's role and the picture, for the system prompt of a conversation. */
 export function persona(): string {
-  return `${ROLE}\n\nTheir financial picture now (the financial_picture tool's result):\n${picture()}`
+  return `${ROLE}\n\n${CHART_GUIDE}\nTo draw one in an answer, put its JSON alone in a fenced block: \`\`\`chart, then the JSON, then \`\`\`.\n\nTheir financial picture now (the financial_picture tool's result):\n${picture()}`
 }
 
 const FORMAT = `Write a short briefing. Reply with JSON only, no other text, in this shape:
@@ -49,8 +52,12 @@ const FORMAT = `Write a short briefing. Reply with JSON only, no other text, in 
  "summary": "two or three sentences",
  "actions": [{"title": "what to do, as an instruction", "why": "the reason, with their figures", "impact": "what it is worth or changes", "priority": "now" | "soon" | "later"}],
  "watch": ["a risk to keep an eye on"],
- "questions": ["a question worth asking themselves"]}
-Three to five actions, most important first; at most three items in watch and in questions.`
+ "questions": ["a question worth asking themselves"],
+ "charts": [a chart, as described below]}
+Three to five actions, most important first; at most three items in watch and in questions.
+Add one to three charts that show where they stand at a glance, for example where their money is, debts against what they own, or the plan against what they did.
+
+${CHART_GUIDE}`
 
 /** Reads the briefing out of the model's answer, which may be wrapped in a code fence or text. */
 export function parse(text: string): Briefing {
@@ -68,9 +75,10 @@ export function parse(text: string): Briefing {
         .map((a) => ({ title: a.title, why: String(a.why ?? ''), impact: String(a.impact ?? ''), priority: priorities.includes(a.priority) ? a.priority : 'soon' })),
       watch: (data.watch ?? []).map(String),
       questions: (data.questions ?? []).map(String),
+      charts: (Array.isArray(data.charts) ? data.charts : []).map(figure).filter((f): f is Figure => f !== null).slice(0, 3),
     }
   } catch {
-    return { headline: '', summary: '', actions: [], watch: [], questions: [], text: text.trim() }
+    return { headline: '', summary: '', actions: [], watch: [], questions: [], charts: [], text: text.trim() }
   }
 }
 

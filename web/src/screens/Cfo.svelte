@@ -5,6 +5,8 @@
   import { tick } from 'svelte'
   import { available, findLocalModels, saveSettings, type Bubble, type Found } from '../lib/assistant.svelte'
   import { cfo, picture } from '../lib/cfo.svelte'
+  import { parts } from '../lib/figure'
+  import Figure from '../components/Figure.svelte'
   import { t, translates } from '../lib/i18n.svelte'
 
   let settings = $state(cfo.settings)
@@ -93,13 +95,21 @@
     <section class="card briefing" aria-labelledby="brief-title">
       {#if b.text}
         <h2 id="brief-title" class="sr-only">{t('cfo.actions')}</h2>
-        <div class="text">{@html render(b.text)}</div>
+        {#each parts(b.text) as part, j (j)}
+          {#if part.kind === 'chart'}<Figure figure={part.figure} />{:else}<div class="text">{@html render(part.text)}</div>{/if}
+        {/each}
       {:else}
         <h2 id="brief-title">{b.headline}</h2>
         {#if b.summary}<p>{b.summary}</p>{/if}
       {/if}
       {#if cfo.at}<p class="muted small">{t('cfo.asOf', { time: cfo.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}</p>{/if}
     </section>
+
+    {#if b.charts.length}
+      <section class="charts" aria-label={t('cfo.charts')}>
+        {#each b.charts as f, i (i)}<Figure figure={f} />{/each}
+      </section>
+    {/if}
 
     {#if b.actions.length}
       <section aria-labelledby="actions-title">
@@ -149,7 +159,12 @@
           {#if bubble.kind === 'user'}
             <p class="bubble user">{bubble.text}</p>
           {:else if bubble.kind === 'assistant'}
-            <p class="bubble assistant">{@html render(bubble.text)}</p>
+            {@const shown = parts(bubble.text)}
+            <div class="bubble assistant" class:wide={shown.some((p) => p.kind === 'chart')}>
+              {#each shown as part, j (j)}
+                {#if part.kind === 'chart'}<Figure figure={part.figure} />{:else}<p>{@html render(part.text)}</p>{/if}
+              {/each}
+            </div>
           {:else if bubble.kind === 'read'}
             <p class="read muted">{t('assistant.looked', { what: toolName(bubble.name) })}</p>
           {:else if bubble.kind === 'write'}
@@ -355,6 +370,21 @@
     align-self: flex-start;
     max-width: 100%;
     background: var(--surface-2);
+    display: grid;
+    gap: 10px;
+    white-space: normal;
+  }
+  .bubble.assistant.wide {
+    align-self: stretch;
+  }
+  .bubble.assistant p {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
   }
   .read {
     margin: 0;
